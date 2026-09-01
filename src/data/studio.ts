@@ -25,8 +25,8 @@ export const initialAssets: Asset[] = [
 
 export const initialBrand: BrandKit = {
   name: 'Pitch AI',
-  colors: ['#A775FF', '#FF8A98', '#17131D', '#F6F4F9'],
-  headingFont: 'Manrope',
-  bodyFont: 'DM Sans',
+  colors: ['#BE93FF', '#FF8A98', '#17131D', '#F6F4F9'],
+  headingFont: 'Space Grotesk',
+  bodyFont: 'Inter',
   voice: 'Clara, confiante e inventiva. Frases curtas, linguagem acessível e foco em transformação.',
 }

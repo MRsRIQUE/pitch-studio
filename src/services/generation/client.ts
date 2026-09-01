@@ -1,5 +1,4 @@
-import type { MediaMode } from '../../types/studio'
-import type { Asset, BrandKit } from '../../types/studio'
+import type { Asset, BrandKit, MediaMode, ModelDescriptor } from '../../types/studio'
 
 export type GenerationJob = {
   id: string
@@ -9,11 +8,27 @@ export type GenerationJob = {
   error?: string
 }
 
-type CreateInput = { prompt: string; kind: MediaMode; projectId: string; presetId: string; brandSnapshot: BrandKit; style: string; aspectRatio?: string }
+type CreateInput = {
+  prompt: string
+  kind: MediaMode
+  projectId: string
+  presetId: string
+  brandSnapshot: BrandKit
+  style: string
+  modelId: string
+  aspectRatio: string
+}
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init)
-  if (!response.ok) throw new Error(`API_${response.status}`)
+  if (!response.ok) {
+    let code = `API_${response.status}`
+    try {
+      const body = await response.json() as { error?: string }
+      if (body?.error) code = body.error
+    } catch { /* corpo não-JSON: mantém o código HTTP */ }
+    throw new Error(code)
+  }
   return response.json() as Promise<T>
 }
 
@@ -21,17 +36,21 @@ function wait(milliseconds: number) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds))
 }
 
+export async function getModels(): Promise<ModelDescriptor[]> {
+  const response = await request<{ data: ModelDescriptor[] }>('/api/v1/models')
+  return response.data
+}
+
 export async function generateMedia(input: CreateInput, onStatus?: (status: GenerationJob['status']) => void) {
-  const modelId = input.kind === 'image' ? 'mock-flux-ultra' : 'mock-kling-motion'
   const created = await request<{ data: GenerationJob }>('/api/v1/generations', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ ...input, workspaceId: 'demo-workspace', modelId, aspectRatio: input.aspectRatio ?? '1:1' }),
+    body: JSON.stringify({ ...input, workspaceId: 'demo-workspace' }),
   })
 
   let job = created.data
   onStatus?.(job.status)
-  for (let attempt = 0; attempt < 30 && !['succeeded', 'failed'].includes(job.status); attempt += 1) {
+  for (let attempt = 0; attempt < 40 && !['succeeded', 'failed'].includes(job.status); attempt += 1) {
     await wait(350)
     job = (await request<{ data: GenerationJob }>(`/api/v1/generations/${job.id}`)).data
     onStatus?.(job.status)
@@ -47,5 +66,11 @@ export async function getCreditBalance() {
 
 export async function getAssets(): Promise<Asset[]> {
   const response = await request<{ data: Array<{ id: string; kind: MediaMode; createdAt: string; input: { prompt: string }; metadata: { art: string } }> }>('/api/v1/assets')
-  return response.data.map((asset) => ({ id: asset.id, name: asset.input.prompt.slice(0, 34), kind: asset.kind, art: asset.metadata.art, createdAt: new Date(asset.createdAt).toLocaleDateString('pt-BR') }))
+  return response.data.map((asset) => ({
+    id: asset.id,
+    name: asset.input.prompt.slice(0, 40),
+    kind: asset.kind,
+    art: asset.metadata.art,
+    createdAt: new Date(asset.createdAt).toLocaleDateString('pt-BR'),
+  }))
 }
