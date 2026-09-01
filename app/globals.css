@@ -1,5 +1,51 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════
+   IDENTIDADE PITCH AI
+   Fonte: "Pitch AI Brand Kit". Uma marca (violeta), uma base
+   (noite) e cinco sinais semânticos.
+
+   Regra do kit: cores de sinal só aparecem em texto, ícone e
+   tinta a 14–18% — nunca em áreas grandes.
+
+   Em superfície escura o Violeta #4318FF não tem contraste
+   suficiente para texto e ícone, então o acento interativo é o
+   Lilás #868CFF. O Violeta fica no gradiente: logo, botão
+   primário e realces de marca.
+   ═══════════════════════════════════════════════════════ */
+:root {
+  /* Marca */
+  --brand-violet: #4318FF;
+  --brand-lilac: #868CFF;
+  --brand-lilac-soft: #A9ADFF;      /* tinta clara derivada, para hover/realce */
+  --brand-gradient: linear-gradient(135deg, #868CFF, #4318FF);
+
+  /* Superfícies · painel escuro */
+  --surface-night: #0F0F1A;         /* Noite — fundo base */
+  --surface-card: #171728;          /* Cartão */
+  --surface-inset: #12121F;         /* campos e áreas rebaixadas */
+  --border: #262640;                /* Borda */
+  --border-strong: #33334F;
+
+  /* Texto */
+  --text: #FFFFFF;
+  --text-bright: #C9D2EA;
+  --text-muted: #8B9CC7;            /* Texto fraco */
+  --text-faint: #5A6795;
+
+  /* Sinais */
+  --signal-success: #01B574;        /* no ar, conversões, IA respondeu */
+  --signal-warning: #FFB547;        /* moderação, limite de plano, atraso */
+  --signal-critical: #E31A1A;       /* bloqueio, erro */
+  --signal-critical-soft: #FF8A8A;
+  --signal-voice: #0BC5EA;          /* áudio em tempo real */
+  --signal-info: #1B84FF;           /* dicas, avisos neutros, links */
+
+  /* Tipografia: DM Sans na interface, JetBrains Mono só para
+     números que mudam ao vivo (tabular, não "dança"). */
+  --font-ui: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-metric: var(--font-jetbrains-mono), ui-monospace, "SF Mono", monospace;
+}
 
 /* ── Base ─────────────────────────────────────────────── */
 html,
@@ -9,10 +55,18 @@ body,
 }
 
 body {
-  background: #0B0E14;
-  color: #FFFFFF;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--surface-night);
+  color: var(--text);
+  font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Números que mudam ao vivo — créditos, contadores, tempo.
+   Tabular para a largura não oscilar a cada atualização. */
+.metric,
+.tabular-nums {
+  font-family: var(--font-metric);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Prevent iOS Safari zoom on input focus ─────────── */
@@ -24,7 +78,7 @@ body {
 
 /* ── Node design system ──────────────────────────────── */
 .node-card {
-  background: #141820;
+  background: #171728;
   border: 1px solid transparent;
   border-radius: 8px;
   overflow: visible;
@@ -38,7 +92,7 @@ body {
 }
 
 .node-card:hover .node-above-label {
-  color: #A0A0A0;
+  color: #8B9CC7;
 }
 
 .node-header {
@@ -46,13 +100,13 @@ body {
   align-items: center;
   gap: 6px;
   padding: 7px 10px;
-  border-bottom: 1px solid #1C2436;
+  border-bottom: 1px solid #262640;
 }
 
 .node-label {
   font-size: 12px;
   font-weight: 500;
-  color: #A0A0A0;
+  color: #8B9CC7;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -60,15 +114,15 @@ body {
 .node-field-label {
   display: block;
   font-size: 11px;
-  color: #A0A0A0;
+  color: #8B9CC7;
   margin-bottom: 4px;
   letter-spacing: 0.02em;
 }
 
 .node-textarea {
   width: 100%;
-  background: #0D1119;
-  border: 1px solid #1A2030;
+  background: #12121F;
+  border: 1px solid #262640;
   border-radius: 5px;
   color: #FFFFFF;
   font-size: 13px;
@@ -81,17 +135,17 @@ body {
 }
 
 .node-textarea::placeholder {
-  color: #3A4055;
+  color: #33334F;
 }
 
 .node-textarea:focus {
-  border-color: #3A4055;
+  border-color: #33334F;
 }
 
 .node-input {
   width: 100%;
-  background: #0D1119;
-  border: 1px solid #1A2030;
+  background: #12121F;
+  border: 1px solid #262640;
   border-radius: 5px;
   color: #FFFFFF;
   font-size: 12px;
@@ -102,19 +156,19 @@ body {
 }
 
 .node-input::placeholder {
-  color: #3A4055;
+  color: #33334F;
 }
 
 .node-input:focus {
-  border-color: #3A4055;
+  border-color: #33334F;
 }
 
 .node-select {
   width: 100%;
-  background: #0D1119;
-  border: 1px solid #1A2030;
+  background: #12121F;
+  border: 1px solid #262640;
   border-radius: 5px;
-  color: #A0A0A0;
+  color: #8B9CC7;
   font-size: 12px;
   padding: 5px 8px;
   outline: none;
@@ -125,7 +179,7 @@ body {
 }
 
 .node-select:focus {
-  border-color: #1E2840;
+  border-color: #262640;
 }
 
 /* ── Floating node label (above frame) ───────────────── */
@@ -134,7 +188,7 @@ body {
   top: -20px;
   left: 2px;
   font-size: 11px;
-  color: #6A7080;
+  color: #5A6795;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 500;
@@ -150,7 +204,7 @@ body {
   width: 14px !important;
   height: 14px !important;
   border-radius: 50% !important;
-  border: 2px solid #0B0E14 !important;
+  border: 2px solid #0F0F1A !important;
   background: #1A2235 !important;
   /* neutral — role color when connected or selected */
   z-index: 10;
@@ -210,17 +264,17 @@ body {
 
 .node-handle-prompt.react-flow__handle.node-handle-connected,
 .react-flow__node.selected .node-handle-prompt.react-flow__handle {
-  background: #2DD4BF !important;
+  background: #868CFF !important;
 }
 
 .node-handle-source.react-flow__handle.node-handle-connected,
 .react-flow__node.selected .node-handle-source.react-flow__handle {
-  background: #34d399 !important;
+  background: #01b574 !important;
 }
 
 .node-handle-video.react-flow__handle.node-handle-connected,
 .react-flow__node.selected .node-handle-video.react-flow__handle {
-  background: #22d3ee !important;
+  background: #0bc5ea !important;
 }
 
 /* ── Icon handles ────────────────────────────────────────────────────────── */
@@ -228,7 +282,7 @@ body {
   width: 28px !important;
   height: 28px !important;
   border-radius: 50% !important;
-  background: #0D1119 !important;
+  background: #12121F !important;
   border: 1.5px solid #1E2540 !important;
   /* neutral — role color only when connected */
   display: flex !important;
@@ -294,76 +348,76 @@ body {
 /* Connected or selected: full role color — input handles */
 .node-handle-icon-prompt.react-flow__handle.node-handle-connected,
 .react-flow__node.selected .node-handle-icon-prompt.react-flow__handle {
-  border-color: #2DD4BF !important;
-  --handle-color: #2DD4BF;
+  border-color: #868CFF !important;
+  --handle-color: #868CFF;
 }
 
 .node-handle-icon-image.react-flow__handle.node-handle-connected,
 .react-flow__node.selected .node-handle-icon-image.react-flow__handle {
-  border-color: #2DD4BF !important;
-  --handle-color: #2DD4BF;
+  border-color: #868CFF !important;
+  --handle-color: #868CFF;
 }
 
 .node-handle-icon-resource.react-flow__handle.node-handle-connected,
 .react-flow__node.selected .node-handle-icon-resource.react-flow__handle {
-  border-color: #fb923c !important;
-  --handle-color: #fb923c;
+  border-color: #ffb547 !important;
+  --handle-color: #ffb547;
 }
 
 .node-handle-icon-videoref.react-flow__handle.node-handle-connected,
 .react-flow__node.selected .node-handle-icon-videoref.react-flow__handle {
-  border-color: #22d3ee !important;
-  --handle-color: #22d3ee;
+  border-color: #0bc5ea !important;
+  --handle-color: #0bc5ea;
 }
 
 .node-handle-icon-refvideo.react-flow__handle.node-handle-connected,
 .react-flow__node.selected .node-handle-icon-refvideo.react-flow__handle {
-  border-color: #38bdf8 !important;
-  --handle-color: #38bdf8;
+  border-color: #1b84ff !important;
+  --handle-color: #1b84ff;
 }
 
 .node-handle-icon-audioref.react-flow__handle.node-handle-connected,
 .react-flow__node.selected .node-handle-icon-audioref.react-flow__handle {
-  border-color: #5EEAD4 !important;
-  --handle-color: #5EEAD4;
+  border-color: #A9ADFF !important;
+  --handle-color: #A9ADFF;
 }
 
 .node-handle-icon-character.react-flow__handle.node-handle-connected,
 .react-flow__node.selected .node-handle-icon-character.react-flow__handle {
-  border-color: #f472b6 !important;
-  --handle-color: #f472b6;
+  border-color: #01b574 !important;
+  --handle-color: #01b574;
 }
 
 /* Output handle colors — always visible when the handle is shown (hover/selected/connected) */
 .react-flow__node:hover .node-handle-icon-out-text.react-flow__handle,
 .react-flow__node.selected .node-handle-icon-out-text.react-flow__handle,
 .node-handle-icon-out-text.react-flow__handle.node-handle-connected {
-  border-color: #2DD4BF !important;
+  border-color: #868CFF !important;
 }
 
 .react-flow__node:hover .node-handle-icon-out-image.react-flow__handle,
 .react-flow__node.selected .node-handle-icon-out-image.react-flow__handle,
 .node-handle-icon-out-image.react-flow__handle.node-handle-connected {
-  border-color: #2DD4BF !important;
+  border-color: #868CFF !important;
 }
 
 .react-flow__node:hover .node-handle-icon-out-video.react-flow__handle,
 .react-flow__node.selected .node-handle-icon-out-video.react-flow__handle,
 .node-handle-icon-out-video.react-flow__handle.node-handle-connected {
-  border-color: #22d3ee !important;
+  border-color: #0bc5ea !important;
 }
 
 .react-flow__node:hover .node-handle-icon-out-audio.react-flow__handle,
 .react-flow__node.selected .node-handle-icon-out-audio.react-flow__handle,
 .node-handle-icon-out-audio.react-flow__handle.node-handle-connected {
-  border-color: #5EEAD4 !important;
+  border-color: #A9ADFF !important;
 }
 
 /* Assistant output — yellow, overrides the inherited out-text blue */
 .react-flow__node:hover .node-handle-icon-out-assistant.react-flow__handle,
 .react-flow__node.selected .node-handle-icon-out-assistant.react-flow__handle,
 .node-handle-icon-out-assistant.react-flow__handle.node-handle-connected {
-  border-color: #FBBF24 !important;
+  border-color: #FFB547 !important;
 }
 
 /* Selected + unconnected: dim input (left) handles only; output handles keep full opacity */
@@ -398,51 +452,51 @@ body {
 
 /* Connecting handle: show its type color */
 .node-handle-icon-prompt.react-flow__handle.node-handle-connecting {
-  border-color: #2DD4BF !important;
+  border-color: #868CFF !important;
 }
 
 .node-handle-icon-image.react-flow__handle.node-handle-connecting {
-  border-color: #2DD4BF !important;
+  border-color: #868CFF !important;
 }
 
 .node-handle-icon-resource.react-flow__handle.node-handle-connecting {
-  border-color: #fb923c !important;
+  border-color: #ffb547 !important;
 }
 
 .node-handle-icon-videoref.react-flow__handle.node-handle-connecting {
-  border-color: #22d3ee !important;
+  border-color: #0bc5ea !important;
 }
 
 .node-handle-icon-refvideo.react-flow__handle.node-handle-connecting {
-  border-color: #38bdf8 !important;
+  border-color: #1b84ff !important;
 }
 
 .node-handle-icon-audioref.react-flow__handle.node-handle-connecting {
-  border-color: #5EEAD4 !important;
+  border-color: #A9ADFF !important;
 }
 
 .node-handle-icon-character.react-flow__handle.node-handle-connecting {
-  border-color: #f472b6 !important;
+  border-color: #01b574 !important;
 }
 
 .node-handle-icon-out-text.react-flow__handle.node-handle-connecting {
-  border-color: #2DD4BF !important;
+  border-color: #868CFF !important;
 }
 
 .node-handle-icon-out-assistant.react-flow__handle.node-handle-connecting {
-  border-color: #FBBF24 !important;
+  border-color: #FFB547 !important;
 }
 
 .node-handle-icon-out-image.react-flow__handle.node-handle-connecting {
-  border-color: #2DD4BF !important;
+  border-color: #868CFF !important;
 }
 
 .node-handle-icon-out-video.react-flow__handle.node-handle-connecting {
-  border-color: #22d3ee !important;
+  border-color: #0bc5ea !important;
 }
 
 .node-handle-icon-out-audio.react-flow__handle.node-handle-connecting {
-  border-color: #5EEAD4 !important;
+  border-color: #A9ADFF !important;
 }
 
 /* ── Show only compatible input handles while connecting ─────────────────── */
@@ -490,7 +544,7 @@ body {
   flex: 1;
   height: 3px;
   border-radius: 99px;
-  background: #1C2436;
+  background: #262640;
   outline: none;
   cursor: pointer;
 }
@@ -536,8 +590,8 @@ body {
 
 /* ── Selection rectangle (drag) + post-release overlay ── */
 .react-flow__selection {
-  background: rgba(45, 212, 191, 0.04) !important;
-  border: 1px solid rgba(45, 212, 191, 0.3) !important;
+  background: rgba(134, 140, 255, 0.04) !important;
+  border: 1px solid rgba(134, 140, 255, 0.3) !important;
   border-radius: 3px;
   z-index: 0 !important;
   pointer-events: none;
@@ -550,20 +604,20 @@ body {
 }
 
 .react-flow__nodesselection-rect {
-  background: rgba(45, 212, 191, 0.03) !important;
-  border: 1px solid rgba(45, 212, 191, 0.2) !important;
+  background: rgba(134, 140, 255, 0.03) !important;
+  border: 1px solid rgba(134, 140, 255, 0.2) !important;
   border-radius: 3px;
 }
 
 /* ── React Flow overrides ────────────────────────────── */
 .react-flow {
-  --xy-background-color-default: #0B0E14;
-  background: #0B0E14;
+  --xy-background-color-default: #0F0F1A;
+  background: #0F0F1A;
 }
 
 .react-flow__node.selected .node-card {
-  border-color: #2DD4BF !important;
-  box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.25), 0 2px 16px rgba(0, 15, 30, 0.5);
+  border-color: #868CFF !important;
+  box-shadow: 0 0 0 1px rgba(134, 140, 255, 0.25), 0 2px 16px rgba(0, 15, 30, 0.5);
 }
 
 .react-flow__node.selected .node-card.node-generating {
@@ -574,8 +628,8 @@ body {
 .react-flow__node .node-card.node-over-limit,
 .react-flow__node.selected .node-card.node-over-limit,
 .react-flow__node.node-ancestor .node-card.node-over-limit {
-  border-color: #ef4444 !important;
-  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2), 0 2px 14px rgba(239, 68, 68, 0.12) !important;
+  border-color: #e31a1a !important;
+  box-shadow: 0 0 0 1px rgba(227, 26, 26, 0.2), 0 2px 14px rgba(227, 26, 26, 0.12) !important;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
@@ -584,8 +638,8 @@ body {
 
 /* ── Ancestor highlight (upstream nodes of selected node) ── */
 .react-flow__node.node-ancestor .node-card {
-  border-color: #2DD4BF !important;
-  box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.15), 0 2px 16px rgba(0, 0, 0, 0.5);
+  border-color: #868CFF !important;
+  box-shadow: 0 0 0 1px rgba(134, 140, 255, 0.15), 0 2px 16px rgba(0, 0, 0, 0.5);
   transition: border-color 150ms, box-shadow 150ms;
 }
 
@@ -617,20 +671,20 @@ body {
 
 .react-flow__controls {
   box-shadow: none !important;
-  border: 1px solid #1A2030 !important;
+  border: 1px solid #262640 !important;
   border-radius: 6px !important;
   overflow: hidden;
 }
 
 .react-flow__controls-button {
-  background: #0B0E14 !important;
+  background: #0F0F1A !important;
   border: none !important;
-  border-bottom: 1px solid #1A2030 !important;
-  color: #A0A0A0 !important;
+  border-bottom: 1px solid #262640 !important;
+  color: #8B9CC7 !important;
 }
 
 .react-flow__controls-button:hover {
-  background: #131720 !important;
+  background: #171728 !important;
   color: #FFFFFF !important;
 }
 
@@ -650,7 +704,7 @@ body {
 
   20%,
   55% {
-    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35), 0 0 28px rgba(239, 68, 68, 0.25);
+    box-shadow: 0 0 0 2px rgba(227, 26, 26, 0.35), 0 0 28px rgba(227, 26, 26, 0.25);
   }
 
   37%,
@@ -669,7 +723,7 @@ body {
 
   20%,
   55% {
-    border-color: #ef4444;
+    border-color: #e31a1a;
   }
 
   37%,
@@ -682,17 +736,17 @@ body {
 
   0%,
   100% {
-    color: #6A7080;
+    color: #5A6795;
   }
 
   20%,
   55% {
-    color: #f87171;
+    color: #ff8a8a;
   }
 
   37%,
   72% {
-    color: #6A7080;
+    color: #5A6795;
   }
 }
 
@@ -716,9 +770,9 @@ body {
 /* Applied via an injected <style> tag (not via classList) so React can't wipe it */
 @keyframes node-identify-input-blink {
   0%, 100% { box-shadow: 0 2px 16px rgba(0,0,0,0.5); border-color: transparent; }
-  18%       { box-shadow: 0 0 0 3px rgba(45,212,191,0.55), 0 0 30px rgba(45,212,191,0.15); border-color: rgba(45,212,191,0.65); }
+  18%       { box-shadow: 0 0 0 3px rgba(134, 140, 255,0.55), 0 0 30px rgba(134, 140, 255,0.15); border-color: rgba(134, 140, 255,0.65); }
   35%       { box-shadow: 0 2px 16px rgba(0,0,0,0.5); border-color: transparent; }
-  58%       { box-shadow: 0 0 0 2px rgba(45,212,191,0.35), 0 0 20px rgba(45,212,191,0.08); border-color: rgba(45,212,191,0.45); }
+  58%       { box-shadow: 0 0 0 2px rgba(134, 140, 255,0.35), 0 0 20px rgba(134, 140, 255,0.08); border-color: rgba(134, 140, 255,0.45); }
   75%       { box-shadow: 0 2px 16px rgba(0,0,0,0.5); border-color: transparent; }
 }
 
@@ -785,9 +839,9 @@ body {
 .toolbar-btn {
   font-size: 13px;
   font-weight: 500;
-  color: #A0A0A0;
-  background: #0B0E14;
-  border: 1px solid #1E2840;
+  color: #8B9CC7;
+  background: #0F0F1A;
+  border: 1px solid #262640;
   border-radius: 6px;
   padding: 5px 12px;
   cursor: pointer;
@@ -797,7 +851,7 @@ body {
 
 .toolbar-btn:hover:not(:disabled) {
   color: #FFFFFF;
-  border-color: #243050;
+  border-color: #262640;
 }
 
 .toolbar-btn:disabled {
@@ -809,8 +863,8 @@ body {
   font-size: 13px;
   font-weight: 500;
   color: #FFFFFF;
-  background: #2DD4BF;
-  border: 1px solid #2DD4BF;
+  background: #868CFF;
+  border: 1px solid #868CFF;
   border-radius: 6px;
   padding: 5px 14px;
   cursor: pointer;
@@ -819,9 +873,9 @@ body {
 }
 
 .toolbar-btn-primary:hover:not(:disabled) {
-  background: #2DD4BF;
-  border-color: #2DD4BF;
-  box-shadow: 0 0 12px rgba(45, 212, 191, 0.35);
+  background: #868CFF;
+  border-color: #868CFF;
+  box-shadow: 0 0 12px rgba(134, 140, 255, 0.35);
 }
 
 .toolbar-btn-primary:disabled {
@@ -831,23 +885,23 @@ body {
 
 /* ── Video Generator node — subtle border ────────────── */
 .video-node-card.node-card {
-  border-color: #1C2436;
+  border-color: #262640;
   box-shadow: 0 0 0 1px rgba(80, 80, 80, 0.08), 0 2px 16px rgba(0, 0, 0, 0.5);
 }
 
 .video-node-card.node-card:hover {
   border-color: #2A3550;
-  box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.12), 0 2px 20px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1px rgba(134, 140, 255, 0.12), 0 2px 20px rgba(0, 0, 0, 0.6);
 }
 
 .react-flow__node.selected .video-node-card.node-card {
-  border-color: #2DD4BF !important;
-  box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.25), 0 2px 16px rgba(0, 15, 30, 0.5);
+  border-color: #868CFF !important;
+  box-shadow: 0 0 0 1px rgba(134, 140, 255, 0.25), 0 2px 16px rgba(0, 15, 30, 0.5);
 }
 
 .react-flow__node.node-ancestor .video-node-card.node-card {
-  border-color: #2DD4BF !important;
-  box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.15), 0 0 18px rgba(0, 0, 0, 0.5);
+  border-color: #868CFF !important;
+  box-shadow: 0 0 0 1px rgba(134, 140, 255, 0.15), 0 0 18px rgba(0, 0, 0, 0.5);
 }
 
 /* ── Carousel slide ─────────────────────────────────────────────────────── */
@@ -979,7 +1033,7 @@ body {
 
   20%,
   55% {
-    stroke: #ef4444;
+    stroke: #e31a1a;
   }
 
   37%,
@@ -1000,7 +1054,7 @@ body {
 
   20%,
   55% {
-    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+    box-shadow: 0 0 8px rgba(227, 26, 26, 0.5);
   }
 
   37%,
@@ -1019,7 +1073,7 @@ body {
 
   20%,
   55% {
-    border-color: #ef4444;
+    border-color: #e31a1a;
   }
 
   37%,
@@ -1108,11 +1162,11 @@ body {
 .node-card.node-generating {
   border: 2px solid transparent;
   background:
-    linear-gradient(#141820, #141820) padding-box,
+    linear-gradient(#171728, #171728) padding-box,
     conic-gradient(
       from var(--border-angle, 0deg),
-      rgba(45, 212, 191, 0.05) 0deg,
-      rgba(45, 212, 191, 0.05) 150deg,
+      rgba(134, 140, 255, 0.05) 0deg,
+      rgba(134, 140, 255, 0.05) 150deg,
       #00266A 200deg,
       #005FCC 250deg,
       #00AEFF 305deg,
@@ -1188,7 +1242,7 @@ body {
   height: 12px;
   margin: -6px 0 0 -6px;
   border-radius: 50%;
-  border: 2px solid var(--primary, #8b7dd8);
+  border: 2px solid var(--primary, #868cff);
   pointer-events: none;
   animation: shock 0.62s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
 }

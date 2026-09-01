@@ -1,15 +1,29 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-// Migration: move saved data from old localStorage key to new key.
+// Migration: move saved data from old localStorage keys to the current one.
 // Always overwrite — the old key is the source of truth if it still exists,
 // because the new key may only contain an empty placeholder written before
 // the DB load restored the real workflows.
+//
+// Cadeia de chaves: "ai-workflow" -> "heliosgen" -> "pitch-studio".
+// A renomeacao para a marca Pitch Studio migra os workflows ja salvos em vez
+// de orfanar o que o usuario criou antes do rebrand.
 if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_GUEST_MODE !== "true") {
-  const old = localStorage.getItem("ai-workflow");
+  for (const legacyKey of ["ai-workflow", "heliosgen"]) {
+    const old = localStorage.getItem(legacyKey);
+    if (old) {
+      localStorage.setItem("pitch-studio", old);
+      localStorage.removeItem(legacyKey);
+    }
+  }
+}
+
+if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_GUEST_MODE === "true") {
+  const old = localStorage.getItem("heliosgen-guest");
   if (old) {
-    localStorage.setItem("heliosgen", old);
-    localStorage.removeItem("ai-workflow");
+    localStorage.setItem("pitch-studio-guest", old);
+    localStorage.removeItem("heliosgen-guest");
   }
 }
 import { edgeStyle } from "./edgeStyles";
@@ -730,7 +744,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
       };
     },
     {
-      name: process.env.NEXT_PUBLIC_GUEST_MODE === "true" ? "heliosgen-guest" : "heliosgen",
+      name: process.env.NEXT_PUBLIC_GUEST_MODE === "true" ? "pitch-studio-guest" : "pitch-studio",
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         spaces: s.spaces.map((sp) => ({

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Doto } from "next/font/google";
+import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AppSidebar } from "@/components/AppSidebar";
 import GlobalModals from "@/components/GlobalModals";
@@ -9,25 +9,23 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cookies } from "next/headers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Tipografia da marca: DM Sans na interface, JetBrains Mono nas metricas
+// que mudam ao vivo. Ver o bloco IDENTIDADE PITCH AI em globals.css.
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
-});
-
-const doto = Doto({
-  variable: "--font-doto",
-  subsets: ["latin"],
-  weight: ["900"],
+  weight: ["400", "500", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "HeliosGen",
-  description: "Build AI image & video generation workflows visually",
+  title: "Pitch Studio",
+  description: "Crie e edite imagens e videos com IA em pipelines visuais.",
 };
 
 export const viewport: Viewport = {
@@ -46,11 +44,11 @@ export default async function RootLayout({
 
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${doto.variable} antialiased dark`}
+      lang="pt-BR"
+      className={`${dmSans.variable} ${jetbrainsMono.variable} antialiased dark`}
       style={{ height: "100%" }}
     >
-      <body className="bg-black text-white h-full overflow-hidden">
+      <body className="text-white h-full overflow-hidden" style={{ background: "var(--surface-night)" }}>
         <TooltipProvider>
           <SidebarProvider defaultOpen={sidebarOpen} className="h-full">
             <AppSidebar />

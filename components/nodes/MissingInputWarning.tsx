@@ -21,7 +21,7 @@ export default function MissingInputWarning({ messages }: { messages: string[] }
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ display: "block", cursor: "default" }}>
         <path
           d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-          fill="#ef4444"
+          fill="#e31a1a"
         />
         <line x1="12" y1="9" x2="12" y2="13" stroke="white" strokeWidth="2" strokeLinecap="round" />
         <line x1="12" y1="17" x2="12.01" y2="17" stroke="white" strokeWidth="2" strokeLinecap="round" />
@@ -34,13 +34,13 @@ export default function MissingInputWarning({ messages }: { messages: string[] }
             position: "absolute",
             top: "calc(100% + 5px)",
             right: 0,
-            background: "#1A1A1A",
-            border: "1px solid rgba(239,68,68,0.3)",
+            background: "#171728",
+            border: "1px solid rgba(227, 26, 26,0.3)",
             borderRadius: 6,
             padding: "5px 9px",
             whiteSpace: "nowrap",
             fontSize: 11,
-            color: "#CCCCCC",
+            color: "#C9D2EA",
             boxShadow: "0 4px 14px rgba(0,0,0,0.55)",
             zIndex: 200,
             pointerEvents: "none",
@@ -48,7 +48,7 @@ export default function MissingInputWarning({ messages }: { messages: string[] }
         >
           {messages.map((msg, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ color: "#ef4444", fontSize: 8 }}>●</span>
+              <span style={{ color: "#e31a1a", fontSize: 8 }}>●</span>
               {msg}
             </div>
           ))}

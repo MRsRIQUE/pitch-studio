@@ -110,12 +110,12 @@ export function WorkflowHero() {
           <div className="flex items-center gap-[2px]">
             <span className="size-1 shrink-0 rounded-full border border-black/25 bg-[linear-gradient(180deg,#7D7D7D_0%,#92AFAD_100%)]" />
             <div className="relative flex w-[min(430px,calc(100vw-48px))] flex-col items-center justify-center gap-2 py-4 text-center">
-              <div className="pointer-events-none absolute inset-0 rounded-md border-[1.5px] border-[#2DD4BF]" />
+              <div className="pointer-events-none absolute inset-0 rounded-md border-[1.5px] border-[#868CFF]" />
               <p className="hero-label font-mono text-[14px] leading-5 font-bold tracking-[-0.16px] uppercase bg-clip-text text-transparent whitespace-nowrap" style={{ backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.36), rgba(255,255,255,0.72), rgba(255,255,255,0.36))" }}>
-                HeliosGen
+                PITCH STUDIO
               </p>
               <h1 className="hero-title text-[32px] leading-[34px] font-bold tracking-[-1.28px] text-white uppercase md:text-[40px] md:leading-[40px] md:tracking-[-1.6px]">
-                Build AI workflows<br />and generate stunning media
+                Crie pipelines de IA<br />e gere imagem e vídeo
               </h1>
             </div>
             <span className="size-1 shrink-0 rounded-full border border-black/25 bg-[linear-gradient(180deg,#7D7D7D_0%,#92AFAD_100%)]" />

@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import GitHubButton from "react-github-btn";
 import {
   ReactFlow,
   Background,
@@ -83,7 +82,7 @@ export default function PublicWorkflowViewer({ id }: { id: string }) {
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "center",
         width: "100vw", height: "100vh",
-        background: "#0a0a0c", color: "rgba(255,255,255,0.4)",
+        background: "#0f0f1a", color: "rgba(255,255,255,0.4)",
         fontSize: 14,
       }}>
         {error}
@@ -96,7 +95,7 @@ export default function PublicWorkflowViewer({ id }: { id: string }) {
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "center",
         width: "100vw", height: "100vh",
-        background: "#0a0a0c",
+        background: "#0f0f1a",
       }}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "spin 0.9s linear infinite" }}>
           <circle cx="12" cy="12" r="10" strokeOpacity="0.3" />
@@ -110,7 +109,7 @@ export default function PublicWorkflowViewer({ id }: { id: string }) {
 
   return (
     <ReadOnlyCtx.Provider value={true}>
-      <div style={{ width: "100vw", height: "100vh", background: "#0a0a0c" }}>
+      <div style={{ width: "100vw", height: "100vh", background: "#0f0f1a" }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -132,10 +131,10 @@ export default function PublicWorkflowViewer({ id }: { id: string }) {
           style={{ background: "transparent" }}
           proOptions={{ hideAttribution: true }}
         >
-          <Background variant={BackgroundVariant.Dots} gap={28} size={1.5} color="#888888" />
+          <Background variant={BackgroundVariant.Dots} gap={28} size={1.5} color="#8B9CC7" />
           <Controls
             showInteractive={false}
-            className="[&>button]:!bg-[#0B0E14] [&>button]:!border-[#1A2030] [&>button]:!text-[#A0A0A0] [&>button:hover]:!text-white"
+            className="[&>button]:!bg-[#0F0F1A] [&>button]:!border-[#262640] [&>button]:!text-[#8B9CC7] [&>button:hover]:!text-white"
           />
         </ReactFlow>
 
@@ -177,32 +176,6 @@ export default function PublicWorkflowViewer({ id }: { id: string }) {
               </button>
             );
           })}
-        </div>
-
-        <div style={{
-          position: "fixed", top: 16, right: 16,
-          zIndex: 100, display: "flex", gap: "8px", alignItems: "center",
-        }}>
-          <GitHubButton
-            href="https://github.com/segfault42/HeliosGen"
-            data-color-scheme="no-preference: light; light: light; dark: dark;"
-            data-icon="octicon-star"
-            data-size="large"
-            data-show-count="true"
-            aria-label="Star segfault42/HeliosGen on GitHub"
-          >
-            Star
-          </GitHubButton>
-          <GitHubButton
-            href="https://github.com/segfault42/HeliosGen/fork"
-            data-color-scheme="no-preference: light; light: light; dark: dark;"
-            data-icon="octicon-repo-forked"
-            data-size="large"
-            data-show-count="true"
-            aria-label="Fork segfault42/HeliosGen on GitHub"
-          >
-            Fork
-          </GitHubButton>
         </div>
 
         <div style={{

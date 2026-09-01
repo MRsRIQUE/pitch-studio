@@ -542,7 +542,7 @@ function splitByMentions(
     nodes.push(
       <span
         key={k++}
-        style={{ color: "#2DD4BF", fontWeight: 500, cursor: "text", pointerEvents: "auto", userSelect: "none", background: "rgba(119,229,68,0.15)", boxShadow: "0 0 0 3px rgba(119,229,68,0.15)", borderRadius: "3px" }}
+        style={{ color: "#868CFF", fontWeight: 500, cursor: "text", pointerEvents: "auto", userSelect: "none", background: "rgba(1, 181, 116,0.15)", boxShadow: "0 0 0 3px rgba(1, 181, 116,0.15)", borderRadius: "3px" }}
         onMouseEnter={e => onEnter(tag, e.currentTarget.getBoundingClientRect())}
         onMouseLeave={onLeave}
         onMouseDown={e => { e.preventDefault(); onMouseDown(tag); }}
@@ -563,7 +563,7 @@ function renderGalleryMentions(
   onMouseDown: (tag: TaggedImage) => void,
 ): React.ReactNode {
   if (!text) return null;
-  if (!tagged.length) return <span style={{ color: "#e8e8e6" }}>{text}</span>;
+  if (!tagged.length) return <span style={{ color: "#c9d2ea" }}>{text}</span>;
 
   const sorted = [...tagged].sort((a, b) => b.label.length - a.label.length);
   const parts: React.ReactNode[] = [];
@@ -576,20 +576,20 @@ function renderGalleryMentions(
       const idx = rest.indexOf(`@${tag.label}`);
       if (idx !== -1 && (earliest === null || idx < earliest.idx)) earliest = { idx, tag };
     }
-    if (!earliest) { parts.push(<span key={key++} style={{ color: "#e8e8e6" }}>{rest}</span>); break; }
-    if (earliest.idx > 0) parts.push(<span key={key++} style={{ color: "#e8e8e6" }}>{rest.slice(0, earliest.idx)}</span>);
+    if (!earliest) { parts.push(<span key={key++} style={{ color: "#c9d2ea" }}>{rest}</span>); break; }
+    if (earliest.idx > 0) parts.push(<span key={key++} style={{ color: "#c9d2ea" }}>{rest.slice(0, earliest.idx)}</span>);
     const tag = earliest.tag;
     parts.push(
       <span
         key={key++}
         style={{
-          color: "#2DD4BF",
+          color: "#868CFF",
           fontWeight: 500,
           cursor: "text",
           pointerEvents: "auto",
           userSelect: "none",
-          background: "rgba(119,229,68,0.15)",
-          boxShadow: "0 0 0 3px rgba(119,229,68,0.15)",
+          background: "rgba(1, 181, 116,0.15)",
+          boxShadow: "0 0 0 3px rgba(1, 181, 116,0.15)",
           borderRadius: "3px",
         }}
         onMouseEnter={e => onEnter(tag, e.currentTarget.getBoundingClientRect())}
@@ -736,7 +736,7 @@ function PendingGenTile({ pg, onCancel }: { pg: PendingGen; onCancel: () => void
           display: "flex", alignItems: "center", gap: "6px",
           height: "26px", padding: "0 10px", borderRadius: "999px",
           background: "rgba(0,0,0,0.58)", backdropFilter: "blur(10px)",
-          border: pg.prePending ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(45,212,191,0.25)",
+          border: pg.prePending ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(134, 140, 255,0.25)",
           pointerEvents: "none", flexShrink: 0,
         }}>
           {pg.prePending ? (
@@ -746,11 +746,11 @@ function PendingGenTile({ pg, onCancel }: { pg: PendingGen; onCancel: () => void
             </svg>
           ) : (
             <svg width="9" height="9" viewBox="0 0 10 10" fill="none" style={{ animation: "spin 0.9s linear infinite", flexShrink: 0 }}>
-              <circle cx="5" cy="5" r="4" stroke="rgba(45,212,191,0.25)" strokeWidth="1.5" />
-              <path d="M5 1 A4 4 0 0 1 9 5" stroke="#2DD4BF" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="5" cy="5" r="4" stroke="rgba(134, 140, 255,0.25)" strokeWidth="1.5" />
+              <path d="M5 1 A4 4 0 0 1 9 5" stroke="#868CFF" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           )}
-          <span style={{ fontSize: "11px", color: pg.prePending ? "#888" : "#2DD4BF", fontWeight: 500 }}>
+          <span style={{ fontSize: "11px", color: pg.prePending ? "#888" : "#868CFF", fontWeight: 500 }}>
             {pg.prePending ? "Pending" : "Generating…"}
           </span>
         </div>
@@ -807,7 +807,7 @@ function EmptyFan({ blur }: { blur?: boolean }) {
       {configs.map((c, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: c.mr, zIndex: c.z }}>
           <div style={{ transform: `rotate(${c.rot})${c.rounded ? " scaleY(-1)" : ""}` }}>
-            <div style={{ position: "relative", overflow: "hidden", width: "clamp(64px,min(12vw,16vh),172px)", height: "clamp(64px,min(12vw,16vh),172px)", borderRadius: c.rounded ? "50%" : "12px", border: c.border ? "3px solid rgba(45,212,191,0.75)" : undefined, boxShadow: c.border ? "0 0 14px rgba(45,212,191,0.35), 0 0 4px rgba(45,212,191,0.2)" : undefined }}>
+            <div style={{ position: "relative", overflow: "hidden", width: "clamp(64px,min(12vw,16vh),172px)", height: "clamp(64px,min(12vw,16vh),172px)", borderRadius: c.rounded ? "50%" : "12px", border: c.border ? "3px solid rgba(134, 140, 255,0.75)" : undefined, boxShadow: c.border ? "0 0 14px rgba(134, 140, 255,0.35), 0 0 4px rgba(134, 140, 255,0.2)" : undefined }}>
               <img src={EMPTY_IMGS[i]} alt="" style={{ objectFit: "cover", width: "100%", height: "100%", display: "block" }} />
             </div>
           </div>
@@ -839,13 +839,13 @@ function GalleryLoggedOut({ tab }: { tab: Tab }) {
   }, [names]);
 
   return (
-    <div style={{ flex: 1, background: "#0B0E14", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ flex: 1, background: "#0F0F1A", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: "clamp(12px,2.5vh,32px)", alignItems: "center", width: "100%", position: "relative" }}>
         {tab === "videos" ? <><VideoFan blur /><VideoFan /></> : <><EmptyFan blur /><EmptyFan /></>}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "8px" }}>
           <div style={{ fontFamily: "var(--font-grotesk, sans-serif)", fontWeight: 700, fontSize: "clamp(20px,min(3vw,4.5vh),36px)", lineHeight: 1, letterSpacing: "-0.56px", textTransform: "uppercase" }}>
             <p style={{ color: "#fff", margin: 0 }}>Start creating with</p>
-            <p style={{ color: "#2DD4BF", margin: 0, transition: "opacity 380ms ease, transform 380ms ease", opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(6px)" }}>
+            <p style={{ color: "#868CFF", margin: 0, transition: "opacity 380ms ease, transform 380ms ease", opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(6px)" }}>
               {names[idx]}
             </p>
           </div>
@@ -3080,11 +3080,11 @@ function GalleryInner() {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  if (!authLoaded) return <div style={{ flex: 1, background: "#0B0E14" }} />;
+  if (!authLoaded) return <div style={{ flex: 1, background: "#0F0F1A" }} />;
 
 
   return (
-    <div style={{ flex: 1, background: "#0B0E14", display: "flex", flexDirection: "column", overflow: "hidden", color: "#fff", position: "relative" }}>
+    <div style={{ flex: 1, background: "#0F0F1A", display: "flex", flexDirection: "column", overflow: "hidden", color: "#fff", position: "relative" }}>
       <DotCanvasBackground />
 
       {/* ── Sub-navbar ── */}
@@ -3094,7 +3094,7 @@ function GalleryInner() {
         justifyContent: "space-between",
         padding: "0 14px",
         height: "44px",
-        background: "#0B0E14",
+        background: "#0F0F1A",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
         flexShrink: 0,
         position: "relative",
@@ -3139,7 +3139,7 @@ function GalleryInner() {
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
               )}
-              {src === "generated" ? "Generated" : "Uploaded"}
+              {src === "generated" ? "Geradas" : "Enviadas"}
             </button>
           ))}
         </div>
@@ -3236,7 +3236,7 @@ function GalleryInner() {
                     height: "100%",
                     position: "relative",
                     overflow: "hidden",
-                    background: pg.error ? "#2a2427" : "#2a2d35",
+                    background: pg.error ? "#262640" : "#262640",
                   }}>
                         {pg.error ? (
                           <>
@@ -3256,17 +3256,17 @@ function GalleryInner() {
                               {/* Icon with border ring + glow */}
                               <div style={{
                                 width: 40, height: 40, borderRadius: "50%",
-                                border: "1px solid rgba(248,113,113,0.45)",
-                                boxShadow: "0 0 18px 4px rgba(200,50,50,0.35), inset 0 0 8px rgba(248,113,113,0.08)",
+                                border: "1px solid rgba(255, 138, 138,0.45)",
+                                boxShadow: "0 0 18px 4px rgba(200,50,50,0.35), inset 0 0 8px rgba(255, 138, 138,0.08)",
                                 background: "rgba(30,10,10,0.6)",
                                 display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                               }}>
-                                <ShieldAlert size={18} strokeWidth={1.75} style={{ color: "#f87171" }} />
+                                <ShieldAlert size={18} strokeWidth={1.75} style={{ color: "#ff8a8a" }} />
                               </div>
                               {/* Tag */}
                               <span style={{
                                 fontSize: "10px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase",
-                                color: "rgba(248,113,113,0.8)",
+                                color: "rgba(255, 138, 138,0.8)",
                                 background: "rgba(120,30,30,0.35)",
                                 padding: "2px 8px", borderRadius: "4px",
                               }}>
@@ -3433,8 +3433,8 @@ function GalleryInner() {
           top: marqueeRect.y,
           width: marqueeRect.w,
           height: marqueeRect.h,
-          border: "2px solid #2dd4bf",
-          background: "rgba(45,212,191,0.08)",
+          border: "2px solid #868cff",
+          background: "rgba(134, 140, 255,0.08)",
           borderRadius: 3,
           pointerEvents: "none",
           zIndex: 9999,
@@ -3471,7 +3471,7 @@ function GalleryInner() {
         alignItems: "center",
         gap: "6px",
         padding: "8px 8px 8px 16px",
-        background: "rgba(14,16,18,0.92)",
+        background: "rgba(15, 15, 26,0.92)",
         backdropFilter: "blur(24px)",
         WebkitBackdropFilter: "blur(24px)",
         border: "1px solid rgba(255,255,255,0.1)",
@@ -3509,7 +3509,7 @@ function GalleryInner() {
             fontSize: "13px", fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
             transition: "background 140ms, color 140ms",
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.15)"; e.currentTarget.style.color = "#f87171"; }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(227, 26, 26,0.15)"; e.currentTarget.style.color = "#ff8a8a"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.color = "rgba(255,255,255,0.85)"; }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3528,8 +3528,8 @@ function GalleryInner() {
                 style={{
                   display: "flex", alignItems: "center", gap: "7px",
                   padding: "7px 14px", borderRadius: "10px", border: "none",
-                  background: folderPickerOpen ? "rgba(45,212,191,0.12)" : "rgba(255,255,255,0.07)",
-                  color: folderPickerOpen ? "#2DD4BF" : "rgba(255,255,255,0.85)",
+                  background: folderPickerOpen ? "rgba(134, 140, 255,0.12)" : "rgba(255,255,255,0.07)",
+                  color: folderPickerOpen ? "#868CFF" : "rgba(255,255,255,0.85)",
                   fontSize: "13px", fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
                   transition: "background 140ms, color 140ms",
                 }}
@@ -3631,7 +3631,7 @@ function GalleryInner() {
                               </div>
 
                               {/* Folder icon */}
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={allChecked ? "#2DD4BF" : someChecked ? "rgba(45,212,191,0.5)" : "rgba(255,255,255,0.35)"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: "stroke 150ms" }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={allChecked ? "#868CFF" : someChecked ? "rgba(134, 140, 255,0.5)" : "rgba(255,255,255,0.35)"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: "stroke 150ms" }}>
                                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                               </svg>
 
@@ -3659,13 +3659,13 @@ function GalleryInner() {
                                 }}
                               >
                                 {allChecked && (
-                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0B0E14" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0F0F1A" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M20 6 9 17l-5-5"/>
                                   </svg>
                                 )}
                                 {someChecked && !allChecked && (
                                   <svg width="10" height="2" viewBox="0 0 10 2" fill="none">
-                                    <rect width="10" height="2" rx="1" fill="#0B0E14"/>
+                                    <rect width="10" height="2" rx="1" fill="#0F0F1A"/>
                                   </svg>
                                 )}
                               </div>
@@ -3726,11 +3726,11 @@ function GalleryInner() {
           <div style={{
             marginBottom: "8px",
             padding: "8px 14px",
-            background: "rgba(248,113,113,0.1)",
-            border: "1px solid rgba(248,113,113,0.2)",
+            background: "rgba(255, 138, 138,0.1)",
+            border: "1px solid rgba(255, 138, 138,0.2)",
             borderRadius: "10px",
             fontSize: "12px",
-            color: "#f87171",
+            color: "#ff8a8a",
           }}>
             {genError}
           </div>
@@ -3738,7 +3738,7 @@ function GalleryInner() {
 
         <div style={{
           position: "relative",
-          background: "rgba(14,16,18,0.55)",
+          background: "rgba(15, 15, 26,0.55)",
           backdropFilter: "blur(48px)",
           WebkitBackdropFilter: "blur(48px)",
           border: "1px solid rgba(255,255,255,0.08)",
@@ -3785,7 +3785,7 @@ function GalleryInner() {
                 transition: "background 140ms, color 140ms",
                 flexShrink: 0,
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(248,113,113,0.15)"; e.currentTarget.style.color = "rgba(248,113,113,0.8)"; }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255, 138, 138,0.15)"; e.currentTarget.style.color = "rgba(255, 138, 138,0.8)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.35)"; }}
             >
               <X size={12} strokeWidth={2.5} />
@@ -3833,15 +3833,15 @@ function GalleryInner() {
                   const isHovered = hoveredRefId === img.id;
                   const isDragging = draggingId === img.id;
                   return (
-                    <div key={img.id} onMouseDown={e => e.preventDefault()} onPointerDown={e => { if (refImages.length <= 1 || img.uploading || img.error) return; _reorderDragItem = { id: img.id, listTarget: "refImage" }; _reorderOverId = null; setDraggingId(img.id); }} onPointerEnter={() => { if (!_reorderDragItem || _reorderDragItem.id === img.id || _reorderDragItem.listTarget !== "refImage") return; _reorderOverId = img.id; setReorderOverId(img.id); }} onPointerUp={e => { const info = _reorderDragItem; if (!info || info.listTarget !== "refImage") return; e.stopPropagation(); if (_reorderOverId) e.preventDefault(); const target = _reorderOverId ?? img.id; handleReorderDrop(target, "refImage"); }} onMouseEnter={() => { if (!draggingId) setHoveredRefId(img.id); }} onMouseLeave={() => setHoveredRefId(null)} onClick={() => { if (_reorderJustDropped) { _reorderJustDropped = false; return; } if (!img.uploading && !img.error && !draggingId) setRefPreview({ url: img.objectUrl, mediaKind: "image" }); }} onDragOver={e => { if (!e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(`refimg-filled-${img.id}`); }} onDragLeave={() => setDragOverSlotKey(null)} onDrop={e => handleGalleryItemDrop(e, "refImage", "image")} style={{ position: "relative", width: "64px", height: "64px", borderRadius: "8px", overflow: "hidden", background: "#1A1C1F", flexShrink: 0, touchAction: refImages.length > 1 ? "none" : undefined, transition: "border 120ms, box-shadow 120ms, opacity 120ms", border: img.error ? "1px solid rgba(248,113,113,0.4)" : dragOverSlotKey === `refimg-filled-${img.id}` ? "2.5px solid #2DD4BF" : taggedImages.some(t => t.refId === img.id) ? "2.5px solid #10b981" : "1px solid rgba(255,255,255,0.08)", boxShadow: dragOverSlotKey === `refimg-filled-${img.id}` ? "0 0 0 3px rgba(45,212,191,0.25)" : undefined, cursor: (!img.uploading && !img.error) ? (refImages.length > 1 ? (draggingId === img.id ? "grabbing" : "grab") : "zoom-in") : "default", animation: isRemoving ? "none" : (isDragging ? "none" : "refImgIn 260ms cubic-bezier(0.16,1,0.3,1) backwards"), opacity: isDragging ? 0.3 : undefined, ...(isRemoving ? { transition: "opacity 170ms, transform 170ms", opacity: 0, transform: "translateY(-10px) scale(0.92)" } : {}) }}>
+                    <div key={img.id} onMouseDown={e => e.preventDefault()} onPointerDown={e => { if (refImages.length <= 1 || img.uploading || img.error) return; _reorderDragItem = { id: img.id, listTarget: "refImage" }; _reorderOverId = null; setDraggingId(img.id); }} onPointerEnter={() => { if (!_reorderDragItem || _reorderDragItem.id === img.id || _reorderDragItem.listTarget !== "refImage") return; _reorderOverId = img.id; setReorderOverId(img.id); }} onPointerUp={e => { const info = _reorderDragItem; if (!info || info.listTarget !== "refImage") return; e.stopPropagation(); if (_reorderOverId) e.preventDefault(); const target = _reorderOverId ?? img.id; handleReorderDrop(target, "refImage"); }} onMouseEnter={() => { if (!draggingId) setHoveredRefId(img.id); }} onMouseLeave={() => setHoveredRefId(null)} onClick={() => { if (_reorderJustDropped) { _reorderJustDropped = false; return; } if (!img.uploading && !img.error && !draggingId) setRefPreview({ url: img.objectUrl, mediaKind: "image" }); }} onDragOver={e => { if (!e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(`refimg-filled-${img.id}`); }} onDragLeave={() => setDragOverSlotKey(null)} onDrop={e => handleGalleryItemDrop(e, "refImage", "image")} style={{ position: "relative", width: "64px", height: "64px", borderRadius: "8px", overflow: "hidden", background: "#171728", flexShrink: 0, touchAction: refImages.length > 1 ? "none" : undefined, transition: "border 120ms, box-shadow 120ms, opacity 120ms", border: img.error ? "1px solid rgba(255, 138, 138,0.4)" : dragOverSlotKey === `refimg-filled-${img.id}` ? "2.5px solid #868CFF" : taggedImages.some(t => t.refId === img.id) ? "2.5px solid #01b574" : "1px solid rgba(255,255,255,0.08)", boxShadow: dragOverSlotKey === `refimg-filled-${img.id}` ? "0 0 0 3px rgba(134, 140, 255,0.25)" : undefined, cursor: (!img.uploading && !img.error) ? (refImages.length > 1 ? (draggingId === img.id ? "grabbing" : "grab") : "zoom-in") : "default", animation: isRemoving ? "none" : (isDragging ? "none" : "refImgIn 260ms cubic-bezier(0.16,1,0.3,1) backwards"), opacity: isDragging ? 0.3 : undefined, ...(isRemoving ? { transition: "opacity 170ms, transform 170ms", opacity: 0, transform: "translateY(-10px) scale(0.92)" } : {}) }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={thumbSrc(img.objectUrl, snapWidth(64))} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                       {isHovered && !img.uploading && !img.error && (
                         <div onClick={e => { if (_reorderJustDropped || draggingId) { _reorderJustDropped = false; e.stopPropagation(); return; } e.stopPropagation(); setRefPreview({ url: img.objectUrl, mediaKind: "image" }); }} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-in" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></div>
                       )}
                       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 4px 3px", background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)", textAlign: "center" }}><span style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.04em", color: "rgba(255,255,255,0.85)", textTransform: "uppercase" }}>Image</span></div>
-                      {img.uploading && (<div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ width: "14px", height: "14px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.2)", borderTopColor: "#2DD4BF", display: "inline-block", animation: "spin 0.75s linear infinite" }} /></div>)}
-                      {img.error && (<div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg></div>)}
+                      {img.uploading && (<div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ width: "14px", height: "14px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.2)", borderTopColor: "#868CFF", display: "inline-block", animation: "spin 0.75s linear infinite" }} /></div>)}
+                      {img.error && (<div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff8a8a" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg></div>)}
                       <button onClick={e => { e.stopPropagation(); removeImage(img.id); }} style={{ position: "absolute", top: "3px", right: "3px", width: "16px", height: "16px", borderRadius: "50%", background: "rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.85)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontSize: "10px", zIndex: 2 }}>
 <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
                     </div>
@@ -3854,9 +3854,9 @@ function GalleryInner() {
                     onDragOver={e => { if (!e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey("refImage-add"); }}
                     onDragLeave={() => setDragOverSlotKey(null)}
                     onDrop={e => handleGalleryItemDrop(e, "refImage", "image")}
-                    style={{ width: "64px", height: "64px", borderRadius: "8px", border: dragOverSlotKey === "refImage-add" ? "2.5px solid #2DD4BF" : "1.5px dashed rgba(255,255,255,0.2)", boxShadow: dragOverSlotKey === "refImage-add" ? "0 0 0 3px rgba(45,212,191,0.25)" : undefined, background: dragOverSlotKey === "refImage-add" ? "rgba(45,212,191,0.07)" : "rgba(255,255,255,0.03)", cursor: submitting ? "not-allowed" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", color: dragOverSlotKey === "refImage-add" ? "#2DD4BF" : "rgba(255,255,255,0.45)", flexShrink: 0, transition: "all 140ms" }}>
+                    style={{ width: "64px", height: "64px", borderRadius: "8px", border: dragOverSlotKey === "refImage-add" ? "2.5px solid #868CFF" : "1.5px dashed rgba(255,255,255,0.2)", boxShadow: dragOverSlotKey === "refImage-add" ? "0 0 0 3px rgba(134, 140, 255,0.25)" : undefined, background: dragOverSlotKey === "refImage-add" ? "rgba(134, 140, 255,0.07)" : "rgba(255,255,255,0.03)", cursor: submitting ? "not-allowed" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", color: dragOverSlotKey === "refImage-add" ? "#868CFF" : "rgba(255,255,255,0.45)", flexShrink: 0, transition: "all 140ms" }}>
                     <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.04em" }}>IMAGE</span>
-                    <span style={{ fontSize: "8px", color: dragOverSlotKey === "refImage-add" ? "#2DD4BF" : "rgba(255,255,255,0.3)" }}>
+                    <span style={{ fontSize: "8px", color: dragOverSlotKey === "refImage-add" ? "#868CFF" : "rgba(255,255,255,0.3)" }}>
                       {maxImgs - refImages.length} left
                     </span>
 
@@ -3925,7 +3925,7 @@ function GalleryInner() {
                     if (slot.kind === "element-filled") {
                       const el = slot.element; const thumb = el.imageUrls[0]; const hovId = `elem-${el.id}`;
                       return (
-                        <div key={el.id} onMouseEnter={() => setHoveredRefId(hovId)} onMouseLeave={() => setHoveredRefId(null)} style={{ position: "relative", width: "64px", height: "64px", borderRadius: "8px", overflow: "hidden", flexShrink: 0, background: "#1a1c1f", border: "1px solid rgba(255,255,255,0.12)" }}>
+                        <div key={el.id} onMouseEnter={() => setHoveredRefId(hovId)} onMouseLeave={() => setHoveredRefId(null)} style={{ position: "relative", width: "64px", height: "64px", borderRadius: "8px", overflow: "hidden", flexShrink: 0, background: "#171728", border: "1px solid rgba(255,255,255,0.12)" }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                           {hoveredRefId === hovId && (
@@ -3950,7 +3950,7 @@ function GalleryInner() {
                         const listForSlot = slot.target === "resource" ? vidResources : slot.target === "referenceVideo" ? vidRefVideos : vidRefAudios;
                         const isSlotDragging = draggingId === r.id;
                         return (
-                        <div key={r.id} onMouseDown={e => e.preventDefault()} onPointerDown={e => { if (!isMultiTarget || listForSlot.length <= 1 || r.uploading || r.error) return; _reorderDragItem = { id: r.id, listTarget: slot.target as "resource"|"referenceVideo"|"audioRef" }; _reorderOverId = null; setDraggingId(r.id); }} onPointerEnter={() => { if (!_reorderDragItem || _reorderDragItem.id === r.id || _reorderDragItem.listTarget !== slot.target) return; _reorderOverId = r.id; setReorderOverId(r.id); }} onPointerUp={e => { const info = _reorderDragItem; if (!info || info.listTarget !== slot.target) return; e.stopPropagation(); if (_reorderOverId) e.preventDefault(); const target = _reorderOverId ?? r.id; handleReorderDrop(target, slot.target as "resource"|"referenceVideo"|"audioRef"); }} onMouseEnter={() => { if (!draggingId) setHoveredRefId(hovId); }} onMouseLeave={() => setHoveredRefId(null)} onDragOver={e => { if (slot.mediaKind === "audio" || !e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(dragKey); }} onDragLeave={() => setDragOverSlotKey(null)} onDrop={e => { if (slot.mediaKind !== "audio") handleGalleryItemDrop(e, slot.target as any, slot.mediaKind as "image" | "video"); }} style={{ position: "relative", width: "64px", height: "64px", borderRadius: "8px", overflow: "hidden", flexShrink: 0, background: "#1a1c1f", touchAction: (isMultiTarget && listForSlot.length > 1) ? "none" : undefined, transition: "border 120ms, box-shadow 120ms, opacity 120ms", border: r.error ? "1px solid rgba(248,113,113,0.4)" : dragOverSlotKey === dragKey ? "2.5px solid #2DD4BF" : taggedImages.some(t => t.refId === r.id) ? "2.5px solid #10b981" : "1px solid rgba(255,255,255,0.12)", boxShadow: dragOverSlotKey === dragKey ? "0 0 0 3px rgba(45,212,191,0.25)" : undefined, opacity: isSlotDragging ? 0.3 : undefined, cursor: (isMultiTarget && listForSlot.length > 1 && !r.uploading && !r.error) ? (draggingId === r.id ? "grabbing" : "grab") : undefined }}>
+                        <div key={r.id} onMouseDown={e => e.preventDefault()} onPointerDown={e => { if (!isMultiTarget || listForSlot.length <= 1 || r.uploading || r.error) return; _reorderDragItem = { id: r.id, listTarget: slot.target as "resource"|"referenceVideo"|"audioRef" }; _reorderOverId = null; setDraggingId(r.id); }} onPointerEnter={() => { if (!_reorderDragItem || _reorderDragItem.id === r.id || _reorderDragItem.listTarget !== slot.target) return; _reorderOverId = r.id; setReorderOverId(r.id); }} onPointerUp={e => { const info = _reorderDragItem; if (!info || info.listTarget !== slot.target) return; e.stopPropagation(); if (_reorderOverId) e.preventDefault(); const target = _reorderOverId ?? r.id; handleReorderDrop(target, slot.target as "resource"|"referenceVideo"|"audioRef"); }} onMouseEnter={() => { if (!draggingId) setHoveredRefId(hovId); }} onMouseLeave={() => setHoveredRefId(null)} onDragOver={e => { if (slot.mediaKind === "audio" || !e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(dragKey); }} onDragLeave={() => setDragOverSlotKey(null)} onDrop={e => { if (slot.mediaKind !== "audio") handleGalleryItemDrop(e, slot.target as any, slot.mediaKind as "image" | "video"); }} style={{ position: "relative", width: "64px", height: "64px", borderRadius: "8px", overflow: "hidden", flexShrink: 0, background: "#171728", touchAction: (isMultiTarget && listForSlot.length > 1) ? "none" : undefined, transition: "border 120ms, box-shadow 120ms, opacity 120ms", border: r.error ? "1px solid rgba(255, 138, 138,0.4)" : dragOverSlotKey === dragKey ? "2.5px solid #868CFF" : taggedImages.some(t => t.refId === r.id) ? "2.5px solid #01b574" : "1px solid rgba(255,255,255,0.12)", boxShadow: dragOverSlotKey === dragKey ? "0 0 0 3px rgba(134, 140, 255,0.25)" : undefined, opacity: isSlotDragging ? 0.3 : undefined, cursor: (isMultiTarget && listForSlot.length > 1 && !r.uploading && !r.error) ? (draggingId === r.id ? "grabbing" : "grab") : undefined }}>
                           {slot.mediaKind === "image" ? <img src={thumbSrc(r.objectUrl, snapWidth(64))} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : slot.mediaKind === "video" ? <video src={r.objectUrl} autoPlay muted loop playsInline style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.04)" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>}
                           {hoveredRefId === hovId && !r.uploading && !r.error && slot.mediaKind !== "audio" && (
                             <div onClick={() => { if (_reorderJustDropped || draggingId) { _reorderJustDropped = false; return; } setRefPreview({ url: r.objectUrl, mediaKind: slot.mediaKind }); }} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-in", zIndex: 1 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></div>
@@ -3962,9 +3962,9 @@ function GalleryInner() {
                         }
                         const vidAddKey = `vidadd-${slot.target}-${idx}`;
                         return (
-                        <button key={`${slot.target}-add-${idx}`} onClick={() => slot.mediaKind === "audio" ? (vidPickTarget.current = slot.target, vidAudioInputRef.current?.click()) : openPicker(slot.target as any, slot.mediaKind)} disabled={submitting} onDragOver={e => { if (slot.mediaKind === "audio" || !e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(vidAddKey); }} onDragLeave={() => setDragOverSlotKey(null)} onDrop={e => { if (slot.mediaKind !== "audio") handleGalleryItemDrop(e, slot.target as any, slot.mediaKind as "image" | "video"); }} style={{ width: "64px", height: "64px", borderRadius: "8px", flexShrink: 0, border: dragOverSlotKey === vidAddKey ? "2.5px solid #2DD4BF" : "1.5px dashed rgba(255,255,255,0.2)", boxShadow: dragOverSlotKey === vidAddKey ? "0 0 0 3px rgba(45,212,191,0.25)" : undefined, background: dragOverSlotKey === vidAddKey ? "rgba(45,212,191,0.07)" : "rgba(255,255,255,0.03)", cursor: submitting ? "not-allowed" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", color: dragOverSlotKey === vidAddKey ? "#2DD4BF" : "rgba(255,255,255,0.4)", transition: "all 140ms" }}>
+                        <button key={`${slot.target}-add-${idx}`} onClick={() => slot.mediaKind === "audio" ? (vidPickTarget.current = slot.target, vidAudioInputRef.current?.click()) : openPicker(slot.target as any, slot.mediaKind)} disabled={submitting} onDragOver={e => { if (slot.mediaKind === "audio" || !e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(vidAddKey); }} onDragLeave={() => setDragOverSlotKey(null)} onDrop={e => { if (slot.mediaKind !== "audio") handleGalleryItemDrop(e, slot.target as any, slot.mediaKind as "image" | "video"); }} style={{ width: "64px", height: "64px", borderRadius: "8px", flexShrink: 0, border: dragOverSlotKey === vidAddKey ? "2.5px solid #868CFF" : "1.5px dashed rgba(255,255,255,0.2)", boxShadow: dragOverSlotKey === vidAddKey ? "0 0 0 3px rgba(134, 140, 255,0.25)" : undefined, background: dragOverSlotKey === vidAddKey ? "rgba(134, 140, 255,0.07)" : "rgba(255,255,255,0.03)", cursor: submitting ? "not-allowed" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", color: dragOverSlotKey === vidAddKey ? "#868CFF" : "rgba(255,255,255,0.4)", transition: "all 140ms" }}>
                         <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.04em" }}>{slot.label === "Ref Video" ? "VIDEO" : slot.label === "Audio" ? "AUDIO" : slot.label.toUpperCase()}</span>
-                        <span style={{ fontSize: "8px", color: dragOverSlotKey === vidAddKey ? "#2DD4BF" : "rgba(255,255,255,0.3)" }}>{slot.countLeft} left</span>
+                        <span style={{ fontSize: "8px", color: dragOverSlotKey === vidAddKey ? "#868CFF" : "rgba(255,255,255,0.3)" }}>{slot.countLeft} left</span>
                         </button>
                         );
                   })}
@@ -3989,8 +3989,8 @@ function GalleryInner() {
                 fontSize: "11px", fontWeight: 500, color: "rgba(255,255,255,0.45)",
                 letterSpacing: "0.02em", marginBottom: "-2px",
               }}>
-                <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#2DD4BF", flexShrink: 0 }} />
-                Multi <strong style={{ color: "#2DD4BF", fontWeight: 600 }}>on</strong>
+                <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#868CFF", flexShrink: 0 }} />
+                Multi <strong style={{ color: "#868CFF", fontWeight: 600 }}>on</strong>
                 {" · "}
                 {prompt.split(/\n\n+/).filter(p => p.trim()).length} prompt{prompt.split(/\n\n+/).filter(p => p.trim()).length !== 1 ? "s" : ""}
               </div>
@@ -4043,7 +4043,7 @@ function GalleryInner() {
                   border: "none",
                   outline: "none",
                   color: "transparent",
-                  caretColor: "#2DD4BF",
+                  caretColor: "#868CFF",
                   fontSize: "14.5px",
                   fontFamily: promptTextMode !== "text" ? "monospace" : "inherit",
                   lineHeight: "22px",
@@ -4094,7 +4094,7 @@ function GalleryInner() {
                           inputRef.current?.setSelectionRange(pos, pos);
                         },
                       )}
-                      <span style={{ background: "rgba(239,68,68,0.22)", color: "#f87171", borderRadius: 2 }}>
+                      <span style={{ background: "rgba(227, 26, 26,0.22)", color: "#ff8a8a", borderRadius: 2 }}>
                         {prompt.slice(promptMaxLength)}
                       </span>
                     </>
@@ -4127,7 +4127,7 @@ function GalleryInner() {
                     pointerEvents: "none",
                   }}
                 >
-                  {isVideo ? "Describe the video you imagine…" : "Describe the scene you imagine…"}
+                  {isVideo ? "Descreva o vídeo que você imagina…" : "Descreva a cena que você imagina…"}
                 </div>
               )}
             </div>
@@ -4168,8 +4168,8 @@ function GalleryInner() {
                         style={{
                           position: "relative",
                           display: "flex", alignItems: "flex-start", gap: "8px",
-                          background: isExpanded ? "rgba(45,212,191,0.04)" : "rgba(255,255,255,0.03)",
-                          border: `1px solid ${isExpanded ? "rgba(45,212,191,0.18)" : isNonEmpty ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.04)"}`,
+                          background: isExpanded ? "rgba(134, 140, 255,0.04)" : "rgba(255,255,255,0.03)",
+                          border: `1px solid ${isExpanded ? "rgba(134, 140, 255,0.18)" : isNonEmpty ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.04)"}`,
                           borderRadius: "8px", padding: "7px 24px 7px 10px",
                           opacity: isNonEmpty ? 1 : 0.4,
                           cursor: isExpanded ? "default" : "pointer",
@@ -4179,7 +4179,7 @@ function GalleryInner() {
                       >
                         <span style={{
                           fontSize: "10px", fontWeight: 700, letterSpacing: "0.06em",
-                          color: isNonEmpty ? "#2DD4BF" : "rgba(255,255,255,0.25)",
+                          color: isNonEmpty ? "#868CFF" : "rgba(255,255,255,0.25)",
                           fontFamily: "monospace", lineHeight: "22px", flexShrink: 0, minWidth: "18px",
                         }}>
                           {displayIdx !== null ? String(displayIdx).padStart(2, '0') : "—"}
@@ -4189,7 +4189,7 @@ function GalleryInner() {
                           value={block}
                           rows={1}
                           data-prompt-input=""
-                          placeholder={blockIdx === 0 && !isNonEmpty ? "Describe the scene you imagine…" : undefined}
+                          placeholder={blockIdx === 0 && !isNonEmpty ? "Descreva a cena que você imagina…" : undefined}
                           onClick={e => { if (isExpanded) e.stopPropagation(); }}
                           onFocus={e => {
                             activeBlockRef.current = e.currentTarget;
@@ -4295,7 +4295,7 @@ function GalleryInner() {
                             display: "block", width: "100%",
                             background: "transparent", border: "none", outline: "none",
                             color: "transparent",
-                            caretColor: "#2DD4BF",
+                            caretColor: "#868CFF",
                             fontSize: "13.5px",
                             fontFamily: promptTextMode !== "text" ? "monospace" : "inherit",
                             lineHeight: "22px",
@@ -4357,7 +4357,7 @@ function GalleryInner() {
                         {isNonEmpty && promptMaxLength !== null && (
                           <span style={{
                             fontSize: "10px", fontWeight: 600,
-                            color: block.length > promptMaxLength ? "#f87171" : "rgba(255,255,255,0.25)",
+                            color: block.length > promptMaxLength ? "#ff8a8a" : "rgba(255,255,255,0.25)",
                             fontFamily: "monospace", lineHeight: "22px",
                             fontVariantNumeric: "tabular-nums",
                             ...(isExpanded
@@ -4558,8 +4558,8 @@ function GalleryInner() {
                       height: "36px", padding: "0 12px",
                       borderRadius: "8px",
                       border: "1px solid rgba(255,255,255,0.1)",
-                      background: sound ? "rgba(94,234,212,0.12)" : "rgba(255,255,255,0.05)",
-                      color: sound ? "#5EEAD4" : "rgba(255,255,255,0.55)",
+                      background: sound ? "rgba(169, 173, 255,0.12)" : "rgba(255,255,255,0.05)",
+                      color: sound ? "#A9ADFF" : "rgba(255,255,255,0.55)",
                       fontSize: "13px", fontFamily: "inherit",
                       cursor: submitting ? "not-allowed" : "pointer",
                       transition: "background 150ms, color 150ms, border-color 150ms",
@@ -4568,7 +4568,7 @@ function GalleryInner() {
                     {/* Toggle pill */}
                     <span style={{
                       width: "28px", height: "16px", borderRadius: "8px",
-                      background: sound ? "#5EEAD4" : "rgba(255,255,255,0.18)",
+                      background: sound ? "#A9ADFF" : "rgba(255,255,255,0.18)",
                       position: "relative", flexShrink: 0,
                       transition: "background 150ms",
                     }}>
@@ -4594,8 +4594,8 @@ function GalleryInner() {
                       height: "36px", padding: "0 12px",
                       borderRadius: "8px",
                       border: "1px solid rgba(255,255,255,0.1)",
-                      background: veoMode === "references" ? "rgba(251,146,60,0.12)" : "rgba(255,255,255,0.05)",
-                      color: veoMode === "references" ? "#fb923c" : "rgba(255,255,255,0.55)",
+                      background: veoMode === "references" ? "rgba(255, 181, 71,0.12)" : "rgba(255,255,255,0.05)",
+                      color: veoMode === "references" ? "#ffb547" : "rgba(255,255,255,0.55)",
                       fontSize: "13px", fontFamily: "inherit",
                       cursor: submitting ? "not-allowed" : "pointer",
                       transition: "background 150ms, color 150ms, border-color 150ms",
@@ -4603,7 +4603,7 @@ function GalleryInner() {
                     }}>
                     <span style={{
                       width: "28px", height: "16px", borderRadius: "8px",
-                      background: veoMode === "references" ? "#fb923c" : "rgba(255,255,255,0.18)",
+                      background: veoMode === "references" ? "#ffb547" : "rgba(255,255,255,0.18)",
                       position: "relative", flexShrink: 0,
                       transition: "background 150ms",
                     }}>
@@ -4714,8 +4714,8 @@ function GalleryInner() {
                     height: "36px", padding: "0 12px",
                     borderRadius: "8px",
                     border: "1px solid rgba(255,255,255,0.1)",
-                    background: multiPromptMode ? "rgba(45,212,191,0.12)" : "rgba(255,255,255,0.05)",
-                    color: multiPromptMode ? "#2DD4BF" : "rgba(255,255,255,0.55)",
+                    background: multiPromptMode ? "rgba(134, 140, 255,0.12)" : "rgba(255,255,255,0.05)",
+                    color: multiPromptMode ? "#868CFF" : "rgba(255,255,255,0.55)",
                     fontSize: "13px", fontFamily: "inherit",
                     cursor: submitting ? "not-allowed" : "pointer",
                     transition: "background 150ms, color 150ms",
@@ -4723,7 +4723,7 @@ function GalleryInner() {
                   }}>
                   <span style={{
                     width: "28px", height: "16px", borderRadius: "8px",
-                    background: multiPromptMode ? "#2DD4BF" : "rgba(255,255,255,0.18)",
+                    background: multiPromptMode ? "#868CFF" : "rgba(255,255,255,0.18)",
                     position: "relative", flexShrink: 0,
                     transition: "background 150ms",
                   }}>
@@ -4731,7 +4731,7 @@ function GalleryInner() {
                       position: "absolute", top: "2px",
                       left: multiPromptMode ? "14px" : "2px",
                       width: "12px", height: "12px", borderRadius: "50%",
-                      background: multiPromptMode ? "#0B3B38" : "#ffffff",
+                      background: multiPromptMode ? "#1C1B3F" : "#ffffff",
                       transition: "left 150ms",
                     }} />
                   </span>
@@ -4763,8 +4763,8 @@ function GalleryInner() {
                     height: "36px", padding: "0 12px",
                     borderRadius: "8px",
                     border: "1px solid rgba(255,255,255,0.1)",
-                    background: promptTextMode !== "text" ? "rgba(45,212,191,0.12)" : "rgba(255,255,255,0.05)",
-                    color: promptTextMode !== "text" ? "#2DD4BF" : "rgba(255,255,255,0.55)",
+                    background: promptTextMode !== "text" ? "rgba(134, 140, 255,0.12)" : "rgba(255,255,255,0.05)",
+                    color: promptTextMode !== "text" ? "#868CFF" : "rgba(255,255,255,0.55)",
                     fontSize: "13px", fontFamily: "inherit",
                     cursor: submitting ? "not-allowed" : "pointer",
                     transition: "background 150ms, color 150ms, border-color 150ms",
@@ -4772,7 +4772,7 @@ function GalleryInner() {
                   }}>
                   <span style={{
                     width: "28px", height: "16px", borderRadius: "8px",
-                    background: promptTextMode !== "text" ? "#2DD4BF" : "rgba(255,255,255,0.18)",
+                    background: promptTextMode !== "text" ? "#868CFF" : "rgba(255,255,255,0.18)",
                     position: "relative", flexShrink: 0,
                     transition: "background 150ms",
                   }}>
@@ -4780,7 +4780,7 @@ function GalleryInner() {
                       position: "absolute", top: "2px",
                       left: promptTextMode !== "text" ? "14px" : "2px",
                       width: "12px", height: "12px", borderRadius: "50%",
-                      background: promptTextMode !== "text" ? "#0B3B38" : "#ffffff",
+                      background: promptTextMode !== "text" ? "#1C1B3F" : "#ffffff",
                       transition: "left 150ms",
                     }} />
                   </span>
@@ -4797,7 +4797,7 @@ function GalleryInner() {
                       fontSize: "11px",
                       fontWeight: 600,
                       fontVariantNumeric: "tabular-nums",
-                      color: promptOverLimit ? "#f87171" : "rgba(255,255,255,0.3)",
+                      color: promptOverLimit ? "#ff8a8a" : "rgba(255,255,255,0.3)",
                       pointerEvents: "none",
                       userSelect: "none",
                     }}
@@ -4811,12 +4811,12 @@ function GalleryInner() {
                   disabled={!canGenerate}
                   variant="outline"
                   size="sm"
-                  className="border-none bg-[rgba(45,212,191,0.25)] text-[rgba(45,212,191,0.9)] hover:bg-[rgba(45,212,191,0.38)] hover:text-[rgba(45,212,191,0.9)] disabled:bg-[rgba(45,212,191,0.1)] disabled:text-[rgba(45,212,191,0.3)]"
+                  className="border-none bg-[rgba(134, 140, 255,0.25)] text-[rgba(134, 140, 255,0.9)] hover:bg-[rgba(134, 140, 255,0.38)] hover:text-[rgba(134, 140, 255,0.9)] disabled:bg-[rgba(134, 140, 255,0.1)] disabled:text-[rgba(134, 140, 255,0.3)]"
                 >
                   {submitting ? (
                     <span style={{
                       width: "11px", height: "11px", borderRadius: "50%",
-                      border: "2px solid rgba(45,212,191,0.25)", borderTopColor: "rgba(45,212,191,0.9)",
+                      border: "2px solid rgba(134, 140, 255,0.25)", borderTopColor: "rgba(134, 140, 255,0.9)",
                       display: "inline-block", animation: "spin 0.75s linear infinite",
                     }} />
                   ) : (
@@ -4850,7 +4850,7 @@ function GalleryInner() {
             bottom: Math.max(8, window.innerHeight - promptBarRef.current.getBoundingClientRect().top + 6),
             width: promptBarRef.current.getBoundingClientRect().width,
             maxHeight: `${promptBarRef.current.getBoundingClientRect().top - 16}px`,
-            background: "#0E1012",
+            background: "#0F0F1A",
             border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: "14px",
             boxShadow: "0 8px 48px rgba(0,0,0,0.75), 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
@@ -4881,8 +4881,8 @@ function GalleryInner() {
                   padding: "7px 10px",
                   borderRadius: "9px",
                   border: "none",
-                  background: idx === mentionSelIdx ? "rgba(119,229,68,0.07)" : "transparent",
-                  color: idx === mentionSelIdx ? "#2DD4BF" : "rgba(255,255,255,0.65)",
+                  background: idx === mentionSelIdx ? "rgba(1, 181, 116,0.07)" : "transparent",
+                  color: idx === mentionSelIdx ? "#868CFF" : "rgba(255,255,255,0.65)",
                   fontSize: "13px",
                   fontFamily: "inherit",
                   cursor: "pointer",
@@ -4895,7 +4895,7 @@ function GalleryInner() {
                 <img
                   src={thumbSrc(ref.objectUrl, snapWidth(128))}
                   alt=""
-                  style={{ width: "30px", height: "30px", borderRadius: "6px", objectFit: "cover", flexShrink: 0, background: "#1a1c1f" }}
+                  style={{ width: "30px", height: "30px", borderRadius: "6px", objectFit: "cover", flexShrink: 0, background: "#171728" }}
                 />
                 <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {(ref as any).role} ({(ref as any).label})
@@ -5051,7 +5051,7 @@ function GalleryInner() {
             transformOrigin: "bottom left",
           }}>
           <p style={{ margin: "0 0 10px", fontSize: "12px", fontWeight: 600, color: "#fff" }}>Duration</p>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 12px", borderRadius: "8px", background: "#141C28" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 12px", borderRadius: "8px", background: "#171728" }}>
             <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)", fontVariantNumeric: "tabular-nums", minWidth: "24px" }}>{duration}s</span>
             <div style={{ width: "1px", height: "14px", background: "#2A2A2A", flexShrink: 0 }} />
             <input
@@ -5117,10 +5117,10 @@ function GalleryInner() {
           background: "rgba(16,18,20,0.97)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
-          border: "1px solid rgba(248,113,113,0.25)",
+          border: "1px solid rgba(255, 138, 138,0.25)",
           boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
           fontSize: "13px",
-          color: "#f87171",
+          color: "#ff8a8a",
           fontFamily: "inherit",
           letterSpacing: "-0.01em",
           animation: "dropIn 160ms cubic-bezier(0.16,1,0.3,1)",
@@ -5139,7 +5139,7 @@ function GalleryInner() {
 
 export default function GalleryPage() {
   return (
-    <Suspense fallback={<div style={{ flex: 1, background: "#0B0E14" }} />}>
+    <Suspense fallback={<div style={{ flex: 1, background: "#0F0F1A" }} />}>
       <GalleryInner />
     </Suspense>
   );
@@ -5256,7 +5256,7 @@ function ElementPickerModal({
         position: "relative",
         width: "min(520px, calc(100vw - 32px))",
         maxHeight: "80vh",
-        background: "rgba(14,16,18,0.98)",
+        background: "rgba(15, 15, 26,0.98)",
         border: "1px solid rgba(255,255,255,0.09)",
         borderRadius: "18px",
         display: "flex",
@@ -5314,8 +5314,8 @@ function ElementPickerModal({
                       disabled={isAttached || atMax}
                       style={{
                         width: "100%", height: "100%", borderRadius: "10px", overflow: "hidden",
-                        border: isAttached ? "2px solid #77e544" : "2px solid transparent",
-                        background: "#1a1c1f", cursor: isAttached || atMax ? "default" : "pointer",
+                        border: isAttached ? "2px solid #01b574" : "2px solid transparent",
+                        background: "#171728", cursor: isAttached || atMax ? "default" : "pointer",
                         padding: 0, display: "block", position: "relative",
                         transition: "border-color 110ms, opacity 110ms",
                         opacity: atMax ? 0.4 : 1,
@@ -5333,7 +5333,7 @@ function ElementPickerModal({
                         <span style={{ fontSize: "10px", fontWeight: 600, color: "rgba(255,255,255,0.9)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{el.name}</span>
                       </div>
                       {isAttached && (
-                        <div style={{ position: "absolute", top: "5px", right: "5px", width: "18px", height: "18px", borderRadius: "50%", background: "#77e544", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ position: "absolute", top: "5px", right: "5px", width: "18px", height: "18px", borderRadius: "50%", background: "#01b574", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         </div>
                       )}
@@ -5369,7 +5369,7 @@ function ElementPickerModal({
               <div style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" as const, color: "rgba(255,255,255,0.4)", marginBottom: "8px" }}>Images (2–4 · JPG/PNG · max 10 MB each)</div>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" as const }}>
                 {createImages.map((img, i) => (
-                  <div key={img.id} style={{ position: "relative", width: "72px", height: "72px", borderRadius: "8px", overflow: "hidden", border: img.error ? "1px solid rgba(248,113,113,0.4)" : "1px solid rgba(255,255,255,0.12)", background: "#1a1c1f", flexShrink: 0 }}>
+                  <div key={img.id} style={{ position: "relative", width: "72px", height: "72px", borderRadius: "8px", overflow: "hidden", border: img.error ? "1px solid rgba(255, 138, 138,0.4)" : "1px solid rgba(255,255,255,0.12)", background: "#171728", flexShrink: 0 }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={img.objectUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     {img.uploading && (
@@ -5379,7 +5379,7 @@ function ElementPickerModal({
                     )}
                     {img.error && (
                       <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff8a8a" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
                       </div>
                     )}
                     <button onClick={() => setCreateImages(prev => { URL.revokeObjectURL(img.objectUrl); return prev.filter((_, j) => j !== i); })} style={{
@@ -5451,7 +5451,7 @@ function ElementPickerModal({
               disabled={!canCreate}
               style={{
                 padding: "10px 24px", borderRadius: "10px", border: "none",
-                background: canCreate ? "#77e544" : "rgba(255,255,255,0.08)",
+                background: canCreate ? "#01b574" : "rgba(255,255,255,0.08)",
                 color: canCreate ? "#000" : "rgba(255,255,255,0.3)",
                 fontSize: "13.5px", fontWeight: 600, fontFamily: "inherit",
                 cursor: canCreate ? "pointer" : "not-allowed", transition: "background 150ms, color 150ms",
@@ -5558,7 +5558,7 @@ function CustomDropdown({
         }}
       >
         {triggerIcon && (
-          <span style={{ display: "flex", alignItems: "center", color: selectedOpt?.providerIcon ? "#2DD4BF" : "white", flexShrink: 0 }}>
+          <span style={{ display: "flex", alignItems: "center", color: selectedOpt?.providerIcon ? "#868CFF" : "white", flexShrink: 0 }}>
             {triggerIcon}
           </span>
         )}
@@ -5585,7 +5585,7 @@ function CustomDropdown({
             left: pos.left,
             bottom: pos.bottom,
             minWidth: Math.max(pos.minW, 160),
-            background: "#0E1012",
+            background: "#0F0F1A",
             border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: "14px",
             boxShadow: "0 8px 48px rgba(0,0,0,0.75), 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
@@ -5771,7 +5771,7 @@ function AspectRatioDropdown({
             left: pos.left,
             bottom: pos.bottom,
             minWidth: view === "custom" ? 240 : Math.max(pos.minW, 160),
-            background: "#0E1012",
+            background: "#0F0F1A",
             border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: "14px",
             boxShadow: "0 8px 48px rgba(0,0,0,0.75), 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
@@ -5861,7 +5861,7 @@ function AspectRatioDropdown({
                 ))}
               </div>
               {customError && (
-                <div style={{ fontSize: "10px", color: "#f87171", marginBottom: "8px", lineHeight: 1.4 }}>
+                <div style={{ fontSize: "10px", color: "#ff8a8a", marginBottom: "8px", lineHeight: 1.4 }}>
                   {customError}
                 </div>
               )}
@@ -5929,7 +5929,7 @@ function DropItem({ label, active, onClick, preview, providerIcon }: { label: st
       }}
     >
       {providerIcon && (
-        <span style={{ display: "flex", alignItems: "center", color: "#2DD4BF", flexShrink: 0, opacity: active ? 1 : 0.7 }}>
+        <span style={{ display: "flex", alignItems: "center", color: "#868CFF", flexShrink: 0, opacity: active ? 1 : 0.7 }}>
           {providerIcon}
         </span>
       )}
@@ -5981,7 +5981,7 @@ function ProviderBackendIcon({ id }: { id: (typeof PROVIDERS)[number]["id"] }) {
   if (id === "azure") {
     return (
       <svg width="14" height="14" viewBox="0 0 256 199">
-        <path d="M118.432 187.698c32.89-5.81 60.055-10.618 60.367-10.684l.568-.12l-31.052-36.935c-17.078-20.314-31.051-37.014-31.051-37.11c0-.182 32.063-88.477 32.243-88.792c.06-.105 21.88 37.567 52.893 91.32c29.035 50.323 52.973 91.815 53.195 92.203l.405.707l-98.684-.012l-98.684-.013l59.8-10.564zM0 176.435c0-.052 14.631-25.451 32.514-56.442l32.514-56.347l37.891-31.799C123.76 14.358 140.867.027 140.935.001c.069-.026-.205.664-.609 1.534s-18.919 40.582-41.145 88.25l-40.41 86.67l-29.386.037c-16.162.02-29.385-.005-29.385-.057z" fill="#0089D6" fillRule="nonzero" />
+        <path d="M118.432 187.698c32.89-5.81 60.055-10.618 60.367-10.684l.568-.12l-31.052-36.935c-17.078-20.314-31.051-37.014-31.051-37.11c0-.182 32.063-88.477 32.243-88.792c.06-.105 21.88 37.567 52.893 91.32c29.035 50.323 52.973 91.815 53.195 92.203l.405.707l-98.684-.012l-98.684-.013l59.8-10.564zM0 176.435c0-.052 14.631-25.451 32.514-56.442l32.514-56.347l37.891-31.799C123.76 14.358 140.867.027 140.935.001c.069-.026-.205.664-.609 1.534s-18.919 40.582-41.145 88.25l-40.41 86.67l-29.386.037c-16.162.02-29.385-.005-29.385-.057z" fill="#1B84FF" fillRule="nonzero" />
       </svg>
     );
   }
@@ -6281,7 +6281,7 @@ function GalleryCard({
           padding: "2px 6px", borderRadius: 999,
           background: "linear-gradient(135deg, rgba(30,100,200,0.85) 0%, rgba(20,160,140,0.85) 100%)",
           backdropFilter: "blur(6px)",
-          border: "1px solid rgba(45,212,191,0.35)",
+          border: "1px solid rgba(134, 140, 255,0.35)",
           fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
           color: "#fff", pointerEvents: "none", lineHeight: 1.4,
           textTransform: "uppercase",
@@ -6292,7 +6292,7 @@ function GalleryCard({
       {/* ── Checkbox (top-left) ── */}
       <div className="gallery-checkbox" onClick={e => { e.stopPropagation(); onSelect?.(); }}>
         {selected && (
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0B0E14" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0F0F1A" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 6 9 17l-5-5" />
           </svg>
         )}
@@ -6417,7 +6417,7 @@ function GalleryCard({
           </div>
         )}
         <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)" }}>
-          {[item.model, item.aspect_ratio].filter(Boolean).join(" · ") || (item.source === "upload" ? "Uploaded" : "")}
+          {[item.model, item.aspect_ratio].filter(Boolean).join(" · ") || (item.source === "upload" ? "Enviada" : "")}
         </p>
       </div>
 
@@ -6443,7 +6443,7 @@ function GalleryCard({
         {item.prompt && onCopyPrompt && (
           <button className="gallery-action-btn" title={copied ? "Copied!" : "Copy prompt"} onClick={handleCopy}>
             {copied ? (
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#868CFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6 9 17l-5-5" />
               </svg>
             ) : (
@@ -6536,10 +6536,10 @@ function DownloadToast({ downloads, onClear }: { downloads: DownloadTask[]; onCl
         {/* Animated icon */}
         <div style={{ position: "relative", width: "28px", height: "28px", flexShrink: 0 }}>
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ position: "absolute", inset: 0 }}>
-            <circle cx="14" cy="14" r="12" stroke="rgba(119,229,68,0.2)" strokeWidth="2" />
+            <circle cx="14" cy="14" r="12" stroke="rgba(1, 181, 116,0.2)" strokeWidth="2" />
             <circle
               cx="14" cy="14" r="12"
-              stroke="#2DD4BF" strokeWidth="2"
+              stroke="#868CFF" strokeWidth="2"
               strokeLinecap="round"
               strokeDasharray={`${2 * Math.PI * 12}`}
               strokeDashoffset={allDone ? 0 : `${2 * Math.PI * 12 * 0.25}`}
@@ -6548,7 +6548,7 @@ function DownloadToast({ downloads, onClear }: { downloads: DownloadTask[]; onCl
             />
           </svg>
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#868CFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
             </svg>
           </div>
@@ -6588,11 +6588,11 @@ function DownloadToast({ downloads, onClear }: { downloads: DownloadTask[]; onCl
               {task.status === "preparing" ? (
                 <div style={{ width: "16px", height: "16px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.12)", borderTopColor: "rgba(255,255,255,0.45)", animation: "spin 0.9s linear infinite", flexShrink: 0 }} />
               ) : task.status === "error" ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff8a8a" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
                   <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
                 </svg>
               ) : (
-                <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#2DD4BF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#868CFF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#060A06" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 6 9 17l-5-5" />
                   </svg>
@@ -6635,17 +6635,17 @@ function syntaxHighlightJson(
     push(last, m.index);
     if (m[1] !== undefined) {
       if (m[2] !== undefined) {
-        push(m.index, m.index + m[1].length, "#06b6d4");
-        push(m.index + m[1].length, m.index + m[0].length, "#6b7280");
+        push(m.index, m.index + m[1].length, "#0bc5ea");
+        push(m.index + m[1].length, m.index + m[0].length, "#5a6795");
       } else {
-        push(m.index, m.index + m[1].length, "#86efac");
+        push(m.index, m.index + m[1].length, "#4ade9b");
       }
     } else if (m[3] !== undefined) {
-      push(m.index, m.index + m[3].length, "#fb923c");
+      push(m.index, m.index + m[3].length, "#ffb547");
     } else if (m[4] !== undefined) {
-      push(m.index, m.index + m[4].length, "#a78bfa");
+      push(m.index, m.index + m[4].length, "#868cff");
     } else if (m[5] !== undefined) {
-      push(m.index, m.index + m[5].length, "#6b7280");
+      push(m.index, m.index + m[5].length, "#5a6795");
     }
     last = re.lastIndex;
   }
@@ -6666,22 +6666,22 @@ function syntaxHighlightYaml(
   lines.forEach((line, i) => {
     // Directive / document markers
     if (/^---/.test(line) || /^\.\.\.$/.test(line)) {
-      parts.push(<span key={k++} style={{ color: "#6b7280" }}>{line}</span>);
+      parts.push(<span key={k++} style={{ color: "#5a6795" }}>{line}</span>);
     } else {
       // Key: value  (handles indent + optional list marker)
       const keyMatch = line.match(/^(\s*(?:-\s+)?)([\w\-./]+)(\s*:)(.*)/);
       if (keyMatch) {
         const [, indent, key, colon, rest] = keyMatch;
         parts.push(<span key={k++}>{indent}</span>);
-        parts.push(<span key={k++} style={{ color: "#06b6d4" }}>{key}</span>);
-        parts.push(<span key={k++} style={{ color: "#6b7280" }}>{colon}</span>);
+        parts.push(<span key={k++} style={{ color: "#0bc5ea" }}>{key}</span>);
+        parts.push(<span key={k++} style={{ color: "#5a6795" }}>{colon}</span>);
         parts.push(<span key={k++}>{colorYamlValue(rest, k, tagged, onEnter, onLeave, onMD)}</span>);
         k++;
       } else {
         // List item or plain value
         const listMatch = line.match(/^(\s*-\s+)(.*)/);
         if (listMatch) {
-          parts.push(<span key={k++} style={{ color: "#6b7280" }}>{listMatch[1]}</span>);
+          parts.push(<span key={k++} style={{ color: "#5a6795" }}>{listMatch[1]}</span>);
           parts.push(<span key={k++}>{colorYamlValue(listMatch[2], k, tagged, onEnter, onLeave, onMD)}</span>);
           k++;
         } else {
@@ -6727,19 +6727,19 @@ function colorYamlValue(
   };
 
   if (/^(true|false|yes|no|on|off)$/i.test(trimmed)) {
-    pushValue(main, "#a78bfa");
+    pushValue(main, "#868cff");
   } else if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(trimmed) || /^0x[\da-fA-F]+$/.test(trimmed)) {
-    pushValue(main, "#fb923c");
+    pushValue(main, "#ffb547");
   } else if (/^(null|~)$/.test(trimmed)) {
-    pushValue(main, "#a78bfa");
+    pushValue(main, "#868cff");
   } else if (/^['"]/.test(trimmed)) {
-    pushValue(main, "#86efac");
+    pushValue(main, "#4ade9b");
   } else if (trimmed !== "") {
     pushValue(main, "rgba(255,255,255,0.82)");
   } else {
     pushValue(main);
   }
-  if (comment) out.push(<span key={k++} style={{ color: "#4b5563" }}>{comment}</span>);
+  if (comment) out.push(<span key={k++} style={{ color: "#5a6795" }}>{comment}</span>);
   return <>{out}</>;
 }
 
@@ -6862,12 +6862,12 @@ function Lightbox({ item, thumbUrl, onClose, onCopyPrompt, onPrev, onNext }: { i
     item.quality && { label: "Quality", value: item.quality.charAt(0).toUpperCase() + item.quality.slice(1) },
     item.aspect_ratio && { label: "Aspect ratio", value: item.aspect_ratio },
     resolution && { label: "Resolution", value: resolution },
-    item.source && { label: "Source", value: item.source === "generation" ? "Generated" : "Uploaded" },
+    item.source && { label: "Origem", value: item.source === "generation" ? "Gerada" : "Enviada" },
     { label: "Created", value: formatDate(item.created_at) },
   ].filter(Boolean) as { label: string; value: string }[];
 
   const panelStyle: React.CSSProperties = {
-    background: "#0B0E14",
+    background: "#0F0F1A",
     border: "1px solid rgba(255,255,255,0.07)",
     borderRadius: "16px",
     overflow: "hidden",
@@ -7073,10 +7073,10 @@ function Lightbox({ item, thumbUrl, onClose, onCopyPrompt, onPrev, onNext }: { i
                   padding: "4px 12px", borderRadius: "8px",
                   border: "1px solid rgba(255,255,255,0.1)",
                   background: "rgba(255,255,255,0.05)",
-                  color: copied ? "#2DD4BF" : "rgba(255,255,255,0.65)",
+                  color: copied ? "#868CFF" : "rgba(255,255,255,0.65)",
                   fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                   transition: "background 140ms, color 140ms",
-                  borderColor: copied ? "rgba(119,229,68,0.3)" : "rgba(255,255,255,0.1)",
+                  borderColor: copied ? "rgba(1, 181, 116,0.3)" : "rgba(255,255,255,0.1)",
                 }}
                 onMouseEnter={e => { if (!copied) { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "#fff"; } }}
                 onMouseLeave={e => { if (!copied) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "rgba(255,255,255,0.65)"; } }}
@@ -7118,13 +7118,13 @@ function Lightbox({ item, thumbUrl, onClose, onCopyPrompt, onPrev, onNext }: { i
             display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
             width: "100%", padding: "13px 16px",
             borderRadius: "14px", border: "1px solid rgba(255,255,255,0.07)",
-            background: "#0B0E14",
+            background: "#0F0F1A",
             color: downloading ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.75)",
             fontSize: "13px", fontWeight: 600, cursor: downloading ? "default" : "pointer",
             fontFamily: "inherit", transition: "background 140ms, color 140ms",
           }}
           onMouseEnter={e => { if (!downloading) { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#fff"; } }}
-          onMouseLeave={e => { if (!downloading) { e.currentTarget.style.background = "#0B0E14"; e.currentTarget.style.color = "rgba(255,255,255,0.75)"; } }}
+          onMouseLeave={e => { if (!downloading) { e.currentTarget.style.background = "#0F0F1A"; e.currentTarget.style.color = "rgba(255,255,255,0.75)"; } }}
         >
           {downloading ? (
             <span style={{ width: 13, height: 13, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.5)", display: "inline-block", animation: "spin 0.75s linear infinite" }} />
@@ -7214,7 +7214,7 @@ function VideoFan({ blur }: { blur?: boolean }) {
       {VIDEO_FAN_CONFIGS.map((c, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: c.mr, zIndex: c.z }}>
           <div style={{ transform: `rotate(${c.rot})${c.rounded ? " scaleY(-1)" : ""}` }}>
-            <div style={{ position: "relative", overflow: "hidden", width: "clamp(64px,min(12vw,16vh),172px)", height: "clamp(64px,min(12vw,16vh),172px)", borderRadius: c.rounded ? "50%" : "12px", border: "3px solid rgba(45,212,191,0.75)", boxShadow: "0 0 14px rgba(45,212,191,0.35), 0 0 4px rgba(45,212,191,0.2)" }}>
+            <div style={{ position: "relative", overflow: "hidden", width: "clamp(64px,min(12vw,16vh),172px)", height: "clamp(64px,min(12vw,16vh),172px)", borderRadius: c.rounded ? "50%" : "12px", border: "3px solid rgba(134, 140, 255,0.75)", boxShadow: "0 0 14px rgba(134, 140, 255,0.35), 0 0 4px rgba(134, 140, 255,0.2)" }}>
               <LoopingVideo src={EMPTY_VIDEOS[i]} />
             </div>
           </div>
@@ -7237,11 +7237,11 @@ function EmptyState({ tab }: { tab: Tab }) {
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "320px", gap: "10px" }}>
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#252523" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#262640" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
         <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></>
       </svg>
       <p style={{ color: "#3A3A38", fontSize: "13px" }}>No images yet</p>
-      <p style={{ color: "#252523", fontSize: "11px" }}>Use the prompt below to generate your first image</p>
+      <p style={{ color: "#262640", fontSize: "11px" }}>Use the prompt below to generate your first image</p>
     </div>
   );
 }
@@ -7279,11 +7279,11 @@ const GALLERY_CSS = `
     width: 100%;
     background: linear-gradient(
       90deg,
-      #222226 0px,
-      #2e2e33 200px,
+      #262640 0px,
+      #262640 200px,
       #3a3a40 350px,
-      #2e2e33 500px,
-      #222226 700px
+      #262640 500px,
+      #262640 700px
     );
     background-size: 800px 100%;
     animation: shimmer 1.6s ease-in-out infinite;
@@ -7368,7 +7368,7 @@ const GALLERY_CSS = `
     position: relative;
     overflow: hidden;
     cursor: pointer;
-    background: #222226;
+    background: #262640;
     width: 100%;
     height: 100%;
     animation: galleryItemIn 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -7421,7 +7421,7 @@ const GALLERY_CSS = `
   }
   .gallery-delete-btn:hover {
     background: rgba(255,255,255,0.16);
-    color: #ef4444 !important;
+    color: #e31a1a !important;
   }
   .gallery-actions-bottom {
     position: absolute;
@@ -7461,7 +7461,7 @@ const GALLERY_CSS = `
   }
   .gallery-shimmer {
     position: absolute; inset: 0;
-    background: linear-gradient(90deg, #222226 25%, #2a2a2e 50%, #222226 75%);
+    background: linear-gradient(90deg, #262640 25%, #2a2a2e 50%, #262640 75%);
     background-size: 800px 100%;
     animation: shimmer 1.6s infinite linear;
   }
@@ -7514,5 +7514,5 @@ const GALLERY_CSS = `
   .gallery-item--anyselected .gallery-mute-btn { opacity: 0 !important; pointer-events: none !important; }
   .gallery-item--anyselected .gallery-overlay { opacity: 0 !important; }
   .gallery-item--anyselected { cursor: pointer; }
-  .gallery-item--tagged { box-shadow: inset 0 0 0 2.5px #10b981; }
+  .gallery-item--tagged { box-shadow: inset 0 0 0 2.5px #01b574; }
 `;

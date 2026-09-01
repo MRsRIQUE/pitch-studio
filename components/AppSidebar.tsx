@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PitchLogo, PitchMark } from "@/components/PitchLogo";
 import { useWorkflowStore } from "@/lib/store";
 import { useChatSessionStore } from "@/lib/chatSessionStore";
 import { useFolderStore } from "@/lib/folderStore";
@@ -22,7 +22,6 @@ import {
   Bot,
   Pencil,
   Trash2,
-  Star,
   Folder,
   FolderOpen,
   FolderPlus,
@@ -109,67 +108,19 @@ function PixelAvatar({ seed, size = 36 }: { seed: string; size?: number }) {
   );
 }
 
-// ── GitHub buttons ────────────────────────────────────────────────────────────
-function GitHubIcon() {
-  return (
-    <svg viewBox="0 0 438.549 438.549" className="size-4 shrink-0">
-      <path fill="currentColor" d="M409.132 114.573c-19.608-33.596-46.205-60.194-79.798-79.8-33.598-19.607-70.277-29.408-110.063-29.408-39.781 0-76.472 9.804-110.063 29.408-33.596 19.605-60.192 46.204-79.8 79.8C9.803 148.168 0 184.854 0 224.63c0 47.78 13.94 90.745 41.827 128.906 27.884 38.164 63.906 64.572 108.063 79.227 5.14.954 8.945.283 11.419-1.996 2.475-2.282 3.711-5.14 3.711-8.562 0-.571-.049-5.708-.144-15.417a2549.81 2549.81 0 01-.144-25.406l-6.567 1.136c-4.187.767-9.469 1.092-15.846 1-6.374-.089-12.991-.757-19.842-1.999-6.854-1.231-13.229-4.086-19.13-8.559-5.898-4.473-10.085-10.328-12.56-17.556l-2.855-6.57c-1.903-4.374-4.899-9.233-8.992-14.559-4.093-5.331-8.232-8.945-12.419-10.848l-1.999-1.431c-1.332-.951-2.568-2.098-3.711-3.429-1.142-1.331-1.997-2.663-2.568-3.997-.572-1.335-.098-2.43 1.427-3.289 1.525-.859 4.281-1.276 8.28-1.276l5.708.853c3.807.763 8.516 3.042 14.133 6.851 5.614 3.806 10.229 8.754 13.846 14.842 4.38 7.806 9.657 13.754 15.846 17.847 6.184 4.093 12.419 6.136 18.699 6.136 6.28 0 11.704-.476 16.274-1.423 4.565-.952 8.848-2.383 12.847-4.285 1.713-12.758 6.377-22.559 13.988-29.41-10.848-1.14-20.601-2.857-29.264-5.14-8.658-2.286-17.605-5.996-26.835-11.14-9.235-5.137-16.896-11.516-22.985-19.126-6.09-7.614-11.088-17.61-14.987-29.979-3.901-12.374-5.852-26.648-5.852-42.826 0-23.035 7.52-42.637 22.557-58.817-7.044-17.318-6.379-36.732 1.997-58.24 5.52-1.715 13.706-.428 24.554 3.853 10.85 4.283 18.794 7.952 23.84 10.994 5.046 3.041 9.089 5.618 12.135 7.708 17.705-4.947 35.976-7.421 54.818-7.421s37.117 2.474 54.823 7.421l10.849-6.849c7.419-4.57 16.18-8.758 26.262-12.565 10.088-3.805 17.802-4.853 23.134-3.138 8.562 21.509 9.325 40.922 2.279 58.24 15.036 16.18 22.559 35.787 22.559 58.817 0 16.178-1.958 30.497-5.853 42.966-3.9 12.471-8.941 22.457-15.125 29.979-6.191 7.521-13.901 13.85-23.131 18.986-9.232 5.14-18.182 8.85-26.84 11.136-8.662 2.286-18.415 4.004-29.263 5.146 9.894 8.562 14.842 22.077 14.842 40.539v60.237c0 3.422 1.19 6.279 3.572 8.562 2.379 2.279 6.136 2.95 11.276 1.995 44.163-14.653 80.185-41.062 108.068-79.226 27.88-38.161 41.825-81.126 41.825-128.906-.01-39.771-9.818-76.454-29.414-110.049z" />
-    </svg>
-  );
-}
-
-function ForkIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><circle cx="18" cy="6" r="3" />
-      <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9" /><line x1="12" y1="12" x2="12" y2="15" />
-    </svg>
-  );
-}
-
-function fmtCount(n: number): string {
-  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
-}
-
-function GitHubButtons() {
-  const [stats, setStats] = React.useState<{ stars: number; forks: number } | null>(null);
-
-  React.useEffect(() => {
-    fetch("https://api.github.com/repos/segfault42/HeliosGen")
-      .then(r => r.json())
-      .then(d => setStats({ stars: d.stargazers_count, forks: d.forks_count }))
-      .catch(() => {});
-  }, []);
-
-  const btnCls = "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 h-8 text-sm font-medium whitespace-nowrap transition-colors hover:bg-accent hover:text-accent-foreground text-white/60";
-
-  return (
-    <div className="group-data-[collapsible=icon]:hidden flex gap-1 justify-center px-2 pb-3">
-      <a href="https://github.com/segfault42/HeliosGen" target="_blank" rel="noreferrer" className={btnCls}>
-        <Star size={14} strokeWidth={1.8} />
-        {stats && <span className="text-xs text-muted-foreground tabular-nums">{fmtCount(stats.stars)}</span>}
-      </a>
-      <a href="https://github.com/segfault42/HeliosGen/fork" target="_blank" rel="noreferrer" className={btnCls}>
-        <ForkIcon />
-        {stats && <span className="text-xs text-muted-foreground tabular-nums">{fmtCount(stats.forks)}</span>}
-      </a>
-    </div>
-  );
-}
-
 // ── Module-level drag tracker (avoids stale closures across re-renders) ──────
 let _dragFolderId: string | null = null;
 
 const FOLDER_COLORS: { color: string | null; label: string }[] = [
   { color: null, label: "Default" },
-  { color: "#3B82F6", label: "Blue" },
-  { color: "#2DD4BF", label: "Cyan" },
+  { color: "#1B84FF", label: "Blue" },
+  { color: "#868CFF", label: "Cyan" },
   { color: "#A855F7", label: "Purple" },
-  { color: "#EC4899", label: "Pink" },
-  { color: "#EF4444", label: "Red" },
-  { color: "#F97316", label: "Orange" },
-  { color: "#EAB308", label: "Yellow" },
-  { color: "#22C55E", label: "Green" },
+  { color: "#01B574", label: "Pink" },
+  { color: "#E31A1A", label: "Red" },
+  { color: "#FFB547", label: "Orange" },
+  { color: "#FFB547", label: "Yellow" },
+  { color: "#01B574", label: "Green" },
 ];
 
 // ── Clean failed pending generations from localStorage + notify gallery page ──
@@ -291,7 +242,7 @@ const FolderRow = React.memo(function FolderRow({
   return (
     <React.Fragment>
       {drop === "before" && (
-        <div style={{ height: 1, background: "#2DD4BF", margin: "1px 8px", borderRadius: 1, pointerEvents: "none" }} />
+        <div style={{ height: 1, background: "#868CFF", margin: "1px 8px", borderRadius: 1, pointerEvents: "none" }} />
       )}
       <div
         draggable
@@ -335,7 +286,7 @@ const FolderRow = React.memo(function FolderRow({
         style={{
           paddingLeft: `${8 + depth * 14}px`,
           paddingRight: "8px",
-          outline: drop === "inside" ? "1px solid rgba(45,212,191,0.7)" : "none",
+          outline: drop === "inside" ? "1px solid rgba(134, 140, 255,0.7)" : "none",
           outlineOffset: -1,
         }}
       >
@@ -385,12 +336,12 @@ const FolderRow = React.memo(function FolderRow({
         ) : null; })()}
         {!isRenaming && isGenerating && (
           <svg width="10" height="10" viewBox="0 0 10 10" style={{ flexShrink: 0, animation: "spin 0.9s linear infinite" }}>
-            <circle cx="5" cy="5" r="3.5" fill="none" stroke="rgba(45,212,191,0.2)" strokeWidth="1.5" />
+            <circle cx="5" cy="5" r="3.5" fill="none" stroke="rgba(134, 140, 255,0.2)" strokeWidth="1.5" />
             <path d="M5 1.5A3.5 3.5 0 0 1 8.5 5" fill="none" stroke="url(#fg-spin)" strokeWidth="1.5" strokeLinecap="round" />
             <defs>
               <linearGradient id="fg-spin" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#3B82F6" />
-                <stop offset="100%" stopColor="#2DD4BF" />
+                <stop offset="0%" stopColor="#1B84FF" />
+                <stop offset="100%" stopColor="#868CFF" />
               </linearGradient>
             </defs>
           </svg>
@@ -398,8 +349,8 @@ const FolderRow = React.memo(function FolderRow({
         {!isRenaming && !isGenerating && hasUnseen && (
           <span style={{
             width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-            background: "linear-gradient(135deg, #3B82F6 0%, #2DD4BF 100%)",
-            boxShadow: "0 0 5px rgba(45,212,191,0.6)",
+            background: "linear-gradient(135deg, #1B84FF 0%, #868CFF 100%)",
+            boxShadow: "0 0 5px rgba(134, 140, 255,0.6)",
           }} />
         )}
 
@@ -424,7 +375,7 @@ const FolderRow = React.memo(function FolderRow({
             top: menuPos.y,
             transform: "translateX(-100%)",
             zIndex: 9999,
-            background: "#16181f",
+            background: "#171728",
             border: "1px solid rgba(255,255,255,0.09)",
             borderRadius: 8,
             padding: 4,
@@ -492,9 +443,9 @@ const FolderRow = React.memo(function FolderRow({
             style={{
               display: "block", width: "100%", textAlign: "left",
               padding: "6px 10px", borderRadius: 5, fontSize: 12,
-              color: "rgba(248,113,113,0.85)", background: "none", border: "none", cursor: "pointer",
+              color: "rgba(255, 138, 138,0.85)", background: "none", border: "none", cursor: "pointer",
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(248,113,113,0.08)")}
+            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255, 138, 138,0.08)")}
             onMouseLeave={e => (e.currentTarget.style.background = "none")}
           >
             Delete
@@ -503,7 +454,7 @@ const FolderRow = React.memo(function FolderRow({
       )}
 
       {drop === "after" && (
-        <div style={{ height: 1, background: "#2DD4BF", margin: "1px 8px", borderRadius: 1, pointerEvents: "none" }} />
+        <div style={{ height: 1, background: "#868CFF", margin: "1px 8px", borderRadius: 1, pointerEvents: "none" }} />
       )}
       {isExpanded && (hasChildren || isCreatingHere) && (
         <>
@@ -580,7 +531,7 @@ const AllAssetsRow = React.memo(function AllAssetsRow({ isActive, count, onSelec
           "flex-1 text-[12px] truncate leading-tight",
           isActive ? "text-white/90" : "text-white/55"
         )}>
-          All assets
+          Todo o acervo
         </span>
         {count > 0 && (
           <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
@@ -589,12 +540,12 @@ const AllAssetsRow = React.memo(function AllAssetsRow({ isActive, count, onSelec
         )}
         {isGenerating && (
           <svg width="10" height="10" viewBox="0 0 10 10" style={{ flexShrink: 0, animation: "spin 0.9s linear infinite" }}>
-            <circle cx="5" cy="5" r="3.5" fill="none" stroke="rgba(45,212,191,0.2)" strokeWidth="1.5" />
+            <circle cx="5" cy="5" r="3.5" fill="none" stroke="rgba(134, 140, 255,0.2)" strokeWidth="1.5" />
             <path d="M5 1.5A3.5 3.5 0 0 1 8.5 5" fill="none" stroke="url(#fg-spin-all)" strokeWidth="1.5" strokeLinecap="round" />
             <defs>
               <linearGradient id="fg-spin-all" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#3B82F6" />
-                <stop offset="100%" stopColor="#2DD4BF" />
+                <stop offset="0%" stopColor="#1B84FF" />
+                <stop offset="100%" stopColor="#868CFF" />
               </linearGradient>
             </defs>
           </svg>
@@ -602,8 +553,8 @@ const AllAssetsRow = React.memo(function AllAssetsRow({ isActive, count, onSelec
         {!isGenerating && hasUnseen && (
           <span style={{
             width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-            background: "linear-gradient(135deg, #3B82F6 0%, #2DD4BF 100%)",
-            boxShadow: "0 0 5px rgba(45,212,191,0.6)",
+            background: "linear-gradient(135deg, #1B84FF 0%, #868CFF 100%)",
+            boxShadow: "0 0 5px rgba(134, 140, 255,0.6)",
           }} />
         )}
         <button
@@ -625,7 +576,7 @@ const AllAssetsRow = React.memo(function AllAssetsRow({ isActive, count, onSelec
             top: menuPos.y,
             transform: "translateX(-100%)",
             zIndex: 9999,
-            background: "#16181f",
+            background: "#171728",
             border: "1px solid rgba(255,255,255,0.09)",
             borderRadius: 8,
             padding: 4,
@@ -653,7 +604,7 @@ const AllAssetsRow = React.memo(function AllAssetsRow({ isActive, count, onSelec
 
 // ── Static icons ──────────────────────────────────────────────────────────────
 function LogoIcon() {
-  return <Image src="/HG.svg" alt="Logo" width={26} height={26} />;
+  return <PitchMark size={26} />;
 }
 
 function CreditIcon({ size = 12 }: { size?: number }) {
@@ -838,12 +789,12 @@ export function AppSidebar() {
 
   const folderParam = selectedFolderId ? `&folder=${selectedFolderId}` : "";
   const navItems = [
-    { label: "Image", href: `/gallery?tab=images${folderParam}`, icon: ImageIcon, active: pathname === "/gallery" && tab === "images" },
-    { label: "Video", href: `/gallery?tab=videos${folderParam}`, icon: VideoIcon, active: pathname === "/gallery" && tab === "videos" },
+    { label: "Imagem", href: `/gallery?tab=images${folderParam}`, icon: ImageIcon, active: pathname === "/gallery" && tab === "images" },
+    { label: "Vídeo", href: `/gallery?tab=videos${folderParam}`, icon: VideoIcon, active: pathname === "/gallery" && tab === "videos" },
     { label: "Workflow", href: "/workflow", icon: Workflow, active: pathname === "/workflow" || (pathname.startsWith("/workflow/") && pathname !== "/workflow") },
-    { label: "Assets", href: "#", icon: Package, active: false, disabled: true },
+    { label: "Acervo", href: "#", icon: Package, active: false, disabled: true },
     { label: "Chat", href: "/chat", icon: MessageSquare, active: pathname === "/chat" },
-    { label: "Settings", href: "#", icon: Settings, active: false, onClick: (e: React.MouseEvent) => { e.preventDefault(); if (user || process.env.NEXT_PUBLIC_GUEST_MODE === "true") setSettingsOpen(true); else setAuthModalOpen(true); } },
+    { label: "Configurações", href: "#", icon: Settings, active: false, onClick: (e: React.MouseEvent) => { e.preventDefault(); if (user || process.env.NEXT_PUBLIC_GUEST_MODE === "true") setSettingsOpen(true); else setAuthModalOpen(true); } },
   ];
 
   const itemCls = (active: boolean, disabled?: boolean) => cn(
@@ -854,16 +805,12 @@ export function AppSidebar() {
   );
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0 bg-[#0B0E14]" style={{ borderRight: "none" }}>
+    <Sidebar collapsible="icon" className="border-r-0 bg-[#0F0F1A]" style={{ borderRight: "none" }}>
 
       {/* ── Header ── */}
       <SidebarHeader className="flex-row items-center justify-between px-4 pt-5 pb-2 gap-0">
         <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:hidden">
-          <LogoIcon />
-          <span className="text-white text-[22px] leading-none select-none"
-            style={{ fontFamily: "'Georgia','Times New Roman',serif", fontStyle: "italic" }}>
-            HeliosGen
-          </span>
+          <PitchLogo size={26} />
         </div>
         {/* Collapsed: logo fades to trigger on hover */}
         <div className="hidden group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-1">
@@ -908,7 +855,7 @@ export function AppSidebar() {
 
           {/* Section header */}
           <div className="flex items-center justify-between px-1 py-2 shrink-0">
-            <span className="text-[10px] font-bold tracking-[0.08em] uppercase text-white/25">Folders</span>
+            <span className="text-[10px] font-bold tracking-[0.08em] uppercase text-white/25">Pastas</span>
             <button
               onClick={handleCreateFolder}
               title="New folder"
@@ -980,7 +927,7 @@ export function AppSidebar() {
 
           {/* Section header */}
           <div className="flex items-center justify-between px-1 py-2 shrink-0">
-            <span className="text-[10px] font-bold tracking-[0.08em] uppercase text-white/25">Chats</span>
+            <span className="text-[10px] font-bold tracking-[0.08em] uppercase text-white/25">Conversas</span>
             <button
               onClick={startNewChat}
               title="New chat"
@@ -993,7 +940,7 @@ export function AppSidebar() {
           {/* Session list */}
           <div className="flex-1 overflow-y-auto flex flex-col gap-0.5 min-h-0">
             {sessions.length === 0 ? (
-              <p className="text-center text-[11px] text-white/20 px-2 py-4">No chats yet</p>
+              <p className="text-center text-[11px] text-white/20 px-2 py-4">Nenhuma conversa ainda</p>
             ) : sessions.map(sess => {
               const isActive = pathname === "/chat" && sess.id === activeChatId;
               return (
@@ -1006,8 +953,8 @@ export function AppSidebar() {
                   )}
                 >
                   <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(45,212,191,0.08)", border: "1px solid rgba(45,212,191,0.12)" }}>
-                    <Bot size={11} style={{ color: "rgba(45,212,191,0.7)" }} />
+                    style={{ background: "rgba(134, 140, 255,0.08)", border: "1px solid rgba(134, 140, 255,0.12)" }}>
+                    <Bot size={11} style={{ color: "rgba(134, 140, 255,0.7)" }} />
                   </div>
                   <span className={cn(
                     "flex-1 text-[12px] truncate leading-tight",
@@ -1030,7 +977,6 @@ export function AppSidebar() {
 
       {/* ── Footer ── */}
       <SidebarFooter className="px-2 pb-4">
-        <GitHubButtons />
         <DropdownMenu>
 
           {/* Trigger: pixel avatar + name + credits */}

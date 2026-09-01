@@ -2,6 +2,22 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { createClient } from "@/lib/supabase/client";
 
+// Migração das chaves da marca antiga, no mesmo padrão de lib/store.ts:
+// renomear sem migrar orfanaria as conversas salvas antes do rebrand.
+if (typeof window !== "undefined") {
+  const pairs: [string, string][] = [
+    ["heliosgen-chats", "pitch-studio-chats"],
+    ["heliosgen-chats-guest", "pitch-studio-chats-guest"],
+  ];
+  for (const [legacyKey, currentKey] of pairs) {
+    const old = localStorage.getItem(legacyKey);
+    if (old) {
+      localStorage.setItem(currentKey, old);
+      localStorage.removeItem(legacyKey);
+    }
+  }
+}
+
 export interface StoredMessage {
   role: "user" | "assistant";
   content: string;
@@ -152,7 +168,7 @@ export const useChatSessionStore = create<ChatSessionState>()(
       },
     }),
     {
-      name: process.env.NEXT_PUBLIC_GUEST_MODE === "true" ? "heliosgen-chats-guest" : "heliosgen-chats",
+      name: process.env.NEXT_PUBLIC_GUEST_MODE === "true" ? "pitch-studio-chats-guest" : "pitch-studio-chats",
       storage: createJSONStorage(() => localStorage),
     }
   )

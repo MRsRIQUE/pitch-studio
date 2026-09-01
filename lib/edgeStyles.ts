@@ -2,16 +2,16 @@ import type { CSSProperties } from "react";
 
 // Colours match the handle border colours exactly
 export const EDGE_COLORS: Record<string, string> = {
-  prompt: "#2DD4BF", // teal   — matches node-handle-icon-prompt
-  image: "#fb923c", // orange — matches node-handle-icon-resource
-  startFrame: "#818cf8", // indigo — matches node-handle-icon-image
-  endFrame: "#818cf8", // indigo — matches node-handle-icon-image
-  resource: "#fb923c", // orange — matches node-handle-icon-resource
-  videoRef: "#22d3ee", // cyan   — matches node-handle-icon-videoref
-  referenceVideo: "#38bdf8", // sky    — matches node-handle-icon-refvideo
-  audioRef: "#a78bfa", // violet — matches node-handle-icon-audioref
-  character: "#f472b6", // pink   — matches node-handle-icon-character (motion control startFrame)
-  default: "#3a3a3a", // neutral
+  prompt: "#868CFF", // teal   — matches node-handle-icon-prompt
+  image: "#ffb547", // orange — matches node-handle-icon-resource
+  startFrame: "#868cff", // indigo — matches node-handle-icon-image
+  endFrame: "#868cff", // indigo — matches node-handle-icon-image
+  resource: "#ffb547", // orange — matches node-handle-icon-resource
+  videoRef: "#0bc5ea", // cyan   — matches node-handle-icon-videoref
+  referenceVideo: "#1b84ff", // sky    — matches node-handle-icon-refvideo
+  audioRef: "#868cff", // violet — matches node-handle-icon-audioref
+  character: "#01b574", // pink   — matches node-handle-icon-character (motion control startFrame)
+  default: "#33334f", // neutral
 };
 
 // Handles that carry image data get a heavier stroke
@@ -29,18 +29,18 @@ export function getSourceHandleColor(nodeType: string | undefined, sourceHandleI
   switch (sourceHandleId) {
     case "startFrameOut":
     case "endFrameOut":
-    case "imagePickOut": return "#818cf8";
-    case "videoRefOut": return "#22d3ee";
-    case "audioRefOut": return "#a78bfa";
+    case "imagePickOut": return "#868cff";
+    case "videoRefOut": return "#0bc5ea";
+    case "audioRefOut": return "#868cff";
   }
   // Legacy / single-output nodes — derive from node type
   switch (nodeType) {
-    case "promptNode": return "#2DD4BF";
-    case "assistantNode": return "#FBBF24";
-    case "imageInputNode": return "#818cf8";
-    case "generateNode": return "#818cf8";
-    case "videoInputNode": return "#22d3ee";
-    case "videoGeneratorNode": return "#22d3ee";
+    case "promptNode": return "#868CFF";
+    case "assistantNode": return "#FFB547";
+    case "imageInputNode": return "#868cff";
+    case "generateNode": return "#868cff";
+    case "videoInputNode": return "#0bc5ea";
+    case "videoGeneratorNode": return "#0bc5ea";
     default: return EDGE_COLORS.default;
   }
 }

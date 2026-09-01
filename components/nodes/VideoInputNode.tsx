@@ -15,9 +15,9 @@ const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 const IMAGE_HANDLES = new Set(["startFrame", "endFrame", "resource", "image"]);
 
 const VIDEO_SRC_COLORS: Record<string, string> = {
-  image: "#2DD4BF",
-  video: "#22d3ee",
-  audio: "#5EEAD4",
+  image: "#868CFF",
+  video: "#0bc5ea",
+  audio: "#A9ADFF",
 };
 
 const VIDEO_SOURCE_HANDLES = [
@@ -717,7 +717,7 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
           return (
             <div
               className="absolute pointer-events-none z-[1001] text-[10px] px-2.5 py-1 rounded-lg whitespace-nowrap shadow-xl"
-              style={{ top: `calc(50% + ${videoSourceHandleCenterOffset(idx)}px)`, right: 0, transform: "translate(calc(100% + 34px), -50%)", background: "#1A1A1A", border: `1px solid ${color}33`, color: "#CCCCCC" }}
+              style={{ top: `calc(50% + ${videoSourceHandleCenterOffset(idx)}px)`, right: 0, transform: "translate(calc(100% + 34px), -50%)", background: "#171728", border: `1px solid ${color}33`, color: "#C9D2EA" }}
             >
               <span style={{ color }} className="mr-1.5">●</span>{def.label}
             </div>
@@ -981,7 +981,7 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
                   <button
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={() => { if (DEMO_MODE) { useWorkflowStore.getState().setAuthModalOpen(true); return; } fileRef.current?.click(); }}
-                    className="h-6 px-3 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-[10px] text-[#CCCCCC] hover:text-white hover:bg-black/70 transition-colors pointer-events-auto"
+                    className="h-6 px-3 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-[10px] text-[#C9D2EA] hover:text-white hover:bg-black/70 transition-colors pointer-events-auto"
                   >replace</button>
                 </div>
               )}
@@ -1030,7 +1030,7 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
                     if (v) { v.pause(); setScrubPos(v.currentTime / (v.duration || 1)); }
                     setPickerOpen(true);
                   }}
-                  className="absolute bottom-2 left-1/2 -translate-x-1/2 h-6 px-3 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-[10px] text-[#CCCCCC] hover:text-white hover:bg-black/70 transition-colors opacity-0 group-hover/player:opacity-100 pointer-events-auto z-10 node-slide-reveal"
+                  className="absolute bottom-2 left-1/2 -translate-x-1/2 h-6 px-3 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-[10px] text-[#C9D2EA] hover:text-white hover:bg-black/70 transition-colors opacity-0 group-hover/player:opacity-100 pointer-events-auto z-10 node-slide-reveal"
                   title="Retake frame"
                 >
                   <span className="flex items-center gap-1">
@@ -1090,7 +1090,7 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
                         style={{
                           left:   `${(localTrimStart / videoDuration) * 100}%`,
                           right:  `${100 - (localTrimEnd / videoDuration) * 100}%`,
-                          border: "1.5px solid #FBBF24",
+                          border: "1.5px solid #FFB547",
                         }}
                         onPointerDown={startSelectionDrag}
                       />
@@ -1142,7 +1142,7 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); applyTrim(); }}
                     className="nodrag h-5 px-2 rounded-full text-black text-[10px] font-semibold flex items-center cursor-pointer"
-                    style={{ background: "#FBBF24" }}
+                    style={{ background: "#FFB547" }}
                   >Apply</button>
                 </div>
               </div>
@@ -1302,9 +1302,9 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 pointer-events-none">
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none" style={{ animation: "spin 0.9s linear infinite" }}>
                 <circle cx="11" cy="11" r="8" stroke="#333" strokeWidth="2.5" />
-                <path d="M11 3A8 8 0 0 1 19 11" stroke="#22d3ee" strokeWidth="2.5" strokeLinecap="round" />
+                <path d="M11 3A8 8 0 0 1 19 11" stroke="#0bc5ea" strokeWidth="2.5" strokeLinecap="round" />
               </svg>
-              <span className="text-[10px] text-[#22d3ee]">Uploading…</span>
+              <span className="text-[10px] text-[#0bc5ea]">Uploading…</span>
             </div>
           )}
 
@@ -1314,9 +1314,9 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
               <div className="flex items-center gap-1.5 h-7 px-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/10">
                 <svg width="11" height="11" viewBox="0 0 22 22" fill="none" style={{ animation: "spin 0.9s linear infinite" }}>
                   <circle cx="11" cy="11" r="8" stroke="#333" strokeWidth="2.5" />
-                  <path d="M11 3A8 8 0 0 1 19 11" stroke="#2DD4BF" strokeWidth="2.5" strokeLinecap="round" />
+                  <path d="M11 3A8 8 0 0 1 19 11" stroke="#868CFF" strokeWidth="2.5" strokeLinecap="round" />
                 </svg>
-                <span className="text-[10px] text-[#2DD4BF]">Extracting…</span>
+                <span className="text-[10px] text-[#868CFF]">Extracting…</span>
               </div>
             </div>
           )}
@@ -1393,7 +1393,7 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
         return (
           <div
             className="absolute pointer-events-none z-[1001] text-[10px] px-2.5 py-1 rounded-lg whitespace-nowrap shadow-xl"
-            style={{ top: `calc(50% + ${videoSourceHandleCenterOffset(idx)}px)`, right: 0, transform: "translate(calc(100% + 34px), -50%)", background: "#1A1A1A", border: `1px solid ${color}33`, color: "#CCCCCC" }}
+            style={{ top: `calc(50% + ${videoSourceHandleCenterOffset(idx)}px)`, right: 0, transform: "translate(calc(100% + 34px), -50%)", background: "#171728", border: `1px solid ${color}33`, color: "#C9D2EA" }}
           >
             <span style={{ color }} className="mr-1.5">●</span>{def.label}
           </div>
@@ -1405,14 +1405,14 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
           onDrop={onDrop}
           onDragOver={(e) => e.preventDefault()}
           onClick={() => { if (DEMO_MODE) { useWorkflowStore.getState().setAuthModalOpen(true); return; } fileRef.current?.click(); }}
-          className="border border-dashed border-[#22d3ee]/20 hover:border-[#22d3ee]/40 rounded-md cursor-pointer transition-colors py-8 text-center"
+          className="border border-dashed border-[#0bc5ea]/20 hover:border-[#0bc5ea]/40 rounded-md cursor-pointer transition-colors py-8 text-center"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.5" strokeLinecap="round" className="mx-auto mb-2 opacity-40">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0bc5ea" strokeWidth="1.5" strokeLinecap="round" className="mx-auto mb-2 opacity-40">
             <rect width="18" height="14" x="3" y="5" rx="2" />
-            <path d="m16 10-4-2.5v5L16 10z" fill="#22d3ee" stroke="none" />
+            <path d="m16 10-4-2.5v5L16 10z" fill="#0bc5ea" stroke="none" />
           </svg>
-          <p className="text-[11px] text-[#A0A0A0]">Drop video or{" "}<span className="underline underline-offset-2 text-white">browse</span></p>
-          <p className="text-[10px] text-[#4A4A45] mt-1">Max 100 MB</p>
+          <p className="text-[11px] text-[#8B9CC7]">Drop video or{" "}<span className="underline underline-offset-2 text-white">browse</span></p>
+          <p className="text-[10px] text-[#33334F] mt-1">Max 100 MB</p>
         </div>
         {uploadErr && <p className="text-[10px] text-red-400 mt-1.5 text-center">{uploadErr}</p>}
       </div>

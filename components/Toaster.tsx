@@ -1,13 +1,13 @@
 "use client";
 import { useEffect } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { PitchMark } from "@/components/PitchLogo";
 import { useWorkflowStore, Toast } from "@/lib/store";
 
 const COLORS: Record<Toast["type"], { bg: string; border: string; icon: string }> = {
-  error:   { bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.3)",  icon: "rgba(239,68,68,0.9)"  },
-  success: { bg: "rgba(74,222,128,0.10)", border: "rgba(74,222,128,0.3)", icon: "rgba(74,222,128,0.9)" },
-  info:    { bg: "rgba(96,165,250,0.10)", border: "rgba(96,165,250,0.3)", icon: "rgba(96,165,250,0.9)" },
+  error:   { bg: "rgba(227, 26, 26,0.12)",  border: "rgba(227, 26, 26,0.3)",  icon: "rgba(227, 26, 26,0.9)"  },
+  success: { bg: "rgba(1, 181, 116,0.10)", border: "rgba(1, 181, 116,0.3)", icon: "rgba(1, 181, 116,0.9)" },
+  info:    { bg: "rgba(27, 132, 255,0.10)", border: "rgba(27, 132, 255,0.3)", icon: "rgba(27, 132, 255,0.9)" },
 };
 
 const ICONS: Record<Toast["type"], string> = {
@@ -81,7 +81,7 @@ function RichToastItem({ toast, onDismiss, onClick }: { toast: Toast; onDismiss:
         display: "flex", alignItems: "center", justifyContent: "center",
         flexShrink: 0, overflow: "hidden",
       }}>
-        <Image src="/HG.svg" alt="HeliosGen" width={32} height={32} />
+        <PitchMark size={32} />
       </div>
 
       {/* Text */}

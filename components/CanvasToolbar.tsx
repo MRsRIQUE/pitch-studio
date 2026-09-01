@@ -114,9 +114,9 @@ export default function CanvasToolbar({
           width: "34px", height: "34px", borderRadius: "10px",
           border: "none", cursor: "pointer", flexShrink: 0,
           transition: "background 150ms, box-shadow 150ms, color 150ms",
-          background: addHovered ? "rgba(45,212,191,0.18)" : "rgba(45,212,191,0.10)",
-          color: addHovered ? "#2DD4BF" : "rgba(45,212,191,0.7)",
-          boxShadow: addHovered ? "0 0 14px rgba(45,212,191,0.25)" : "none",
+          background: addHovered ? "rgba(134, 140, 255,0.18)" : "rgba(134, 140, 255,0.10)",
+          color: addHovered ? "#868CFF" : "rgba(134, 140, 255,0.7)",
+          boxShadow: addHovered ? "0 0 14px rgba(134, 140, 255,0.25)" : "none",
         }}
       >
         <Plus size={16} strokeWidth={2.5} />
@@ -160,10 +160,10 @@ export default function CanvasToolbar({
           border: "none", cursor: "pointer", flexShrink: 0,
           transition: "background 150ms, color 150ms",
           background: isPublic
-            ? shareHovered ? "rgba(45,212,191,0.22)" : "rgba(45,212,191,0.12)"
+            ? shareHovered ? "rgba(134, 140, 255,0.22)" : "rgba(134, 140, 255,0.12)"
             : shareHovered ? "rgba(255,255,255,0.08)" : "transparent",
           color: isPublic
-            ? "#2DD4BF"
+            ? "#868CFF"
             : shareHovered ? "#fff" : "rgba(255,255,255,0.6)",
         }}
       >

@@ -8,12 +8,12 @@ export const NODE_META: Record<
   string,
   { accent: string; bg: string; bigIcon: React.ReactNode }
 > = {
-  promptNode:         { accent: "#4ade80", bg: "#052e16",  bigIcon: <MessageSquare size={18} strokeWidth={1.7} /> },
-  imageInputNode:     { accent: "#fb923c", bg: "#431407",  bigIcon: <Image         size={18} strokeWidth={1.7} /> },
-  videoInputNode:     { accent: "#60a5fa", bg: "#0c1a3b",  bigIcon: <Film          size={18} strokeWidth={1.7} /> },
-  generateNode:       { accent: "#2DD4BF", bg: "#001f1f",  bigIcon: <Sparkles      size={18} strokeWidth={1.7} /> },
-  assistantNode:      { accent: "#FBBF24", bg: "#1c1000",  bigIcon: <Bot           size={18} strokeWidth={1.7} /> },
-  videoGeneratorNode: { accent: "#5EEAD4", bg: "#042f2e",  bigIcon: <Clapperboard  size={18} strokeWidth={1.7} /> },
+  promptNode:         { accent: "#01b574", bg: "#05261c",  bigIcon: <MessageSquare size={18} strokeWidth={1.7} /> },
+  imageInputNode:     { accent: "#ffb547", bg: "#431407",  bigIcon: <Image         size={18} strokeWidth={1.7} /> },
+  videoInputNode:     { accent: "#1b84ff", bg: "#16162b",  bigIcon: <Film          size={18} strokeWidth={1.7} /> },
+  generateNode:       { accent: "#868CFF", bg: "#001f1f",  bigIcon: <Sparkles      size={18} strokeWidth={1.7} /> },
+  assistantNode:      { accent: "#FFB547", bg: "#1c1000",  bigIcon: <Bot           size={18} strokeWidth={1.7} /> },
+  videoGeneratorNode: { accent: "#A9ADFF", bg: "#042f2e",  bigIcon: <Clapperboard  size={18} strokeWidth={1.7} /> },
 };
 
 export const NODES: Array<{

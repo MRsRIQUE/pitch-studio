@@ -5,11 +5,11 @@ import { flushSync } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useChatSessionStore, type StoredMessage, type ChatSession } from "@/lib/chatSessionStore";
 import { getToken } from "@/lib/galleryUtils";
+import { PitchMark } from "@/components/PitchLogo";
 import { MODEL_GROUPS, MODELS, type ModelId } from "@/lib/models";
 import { SYSTEM_PROMPT } from "@/lib/systemPrompt";
 import { Send, ChevronUp, Copy, Check } from "lucide-react";
 import { motion } from "motion/react";
-import Image from "next/image";
 import DotCanvasBackground from "@/components/ui/DotCanvasBackground";
 import TypewriterHeading from "@/components/ui/TypewriterHeading";
 import { createClient } from "@/lib/supabase/client";
@@ -20,7 +20,7 @@ import type { User } from "@supabase/supabase-js";
 // ── Logo ──────────────────────────────────────────────────────────────────────
 
 function LogoIcon({ size = 40 }: { size?: number }) {
-  return <Image src="/HG.svg" alt="Logo" width={size} height={size} />;
+  return <PitchMark size={size} />;
 }
 
 // ── Model picker ──────────────────────────────────────────────────────────────
@@ -78,7 +78,7 @@ function ModelPicker({
       {open && (
         <div style={{
           position: "absolute", right: 0, ...dropPos,
-          minWidth: "180px", background: "rgba(14,16,18,0.98)",
+          minWidth: "180px", background: "rgba(15, 15, 26,0.98)",
           border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px",
           boxShadow: "0 8px 32px rgba(0,0,0,0.6)", overflow: "hidden", zIndex: 100,
         }}>
@@ -99,8 +99,8 @@ function ModelPicker({
                       style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
                         width: "100%", padding: "7px 8px", borderRadius: "7px", border: "none",
-                        background: model === m.id ? "rgba(45,212,191,0.12)" : "transparent",
-                        color: disabled ? "rgba(255,255,255,0.25)" : model === m.id ? "rgba(94,234,212,0.95)" : "rgba(255,255,255,0.7)",
+                        background: model === m.id ? "rgba(134, 140, 255,0.12)" : "transparent",
+                        color: disabled ? "rgba(255,255,255,0.25)" : model === m.id ? "rgba(169, 173, 255,0.95)" : "rgba(255,255,255,0.7)",
                         fontSize: "13px", fontFamily: "inherit",
                         cursor: disabled ? "not-allowed" : "pointer",
                         textAlign: "left", transition: "background 100ms",
@@ -270,8 +270,8 @@ function LandingView({
               disabled={!input.trim() || kieKeySet === false || disabledIds.includes(model)}
               style={{
                 width: "36px", height: "36px", borderRadius: "50%", border: "none",
-                background: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(45,212,191,0.25)" : "rgba(255,255,255,0.07)",
-                color: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(45,212,191,0.9)" : "rgba(255,255,255,0.25)",
+                background: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.25)" : "rgba(255,255,255,0.07)",
+                color: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.9)" : "rgba(255,255,255,0.25)",
                 cursor: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "pointer" : "not-allowed",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 flexShrink: 0, transition: "background 150ms, color 150ms",
@@ -461,7 +461,7 @@ function ChatWindow({
             />
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "12px", flexShrink: 0 }}>
               <ModelPicker model={model} onChange={handleModelChange} direction="down" disabledIds={disabledIds} />
-              <button onClick={() => send(input)} disabled={!input.trim() || kieKeySet === false || disabledIds.includes(model)} style={{ width: "36px", height: "36px", borderRadius: "50%", border: "none", background: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(45,212,191,0.25)" : "rgba(255,255,255,0.07)", color: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(45,212,191,0.9)" : "rgba(255,255,255,0.25)", cursor: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 150ms, color 150ms" }}>
+              <button onClick={() => send(input)} disabled={!input.trim() || kieKeySet === false || disabledIds.includes(model)} style={{ width: "36px", height: "36px", borderRadius: "50%", border: "none", background: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.25)" : "rgba(255,255,255,0.07)", color: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.9)" : "rgba(255,255,255,0.25)", cursor: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 150ms, color 150ms" }}>
                 <Send size={15} />
               </button>
             </div>
@@ -490,8 +490,8 @@ function ChatWindow({
               <div style={{
                 padding: "10px 14px",
                 borderRadius: m.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                background: m.role === "user" ? "rgba(45,212,191,0.15)" : "rgba(255,255,255,0.06)",
-                border: m.role === "user" ? "1px solid rgba(45,212,191,0.25)" : "1px solid rgba(255,255,255,0.07)",
+                background: m.role === "user" ? "rgba(134, 140, 255,0.15)" : "rgba(255,255,255,0.06)",
+                border: m.role === "user" ? "1px solid rgba(134, 140, 255,0.25)" : "1px solid rgba(255,255,255,0.07)",
                 fontSize: "14px", lineHeight: 1.6,
                 color: m.role === "user" ? "#FFFFFF" : "rgba(255,255,255,0.88)",
                 whiteSpace: "pre-wrap", wordBreak: "break-word",
@@ -519,12 +519,12 @@ function ChatWindow({
                     marginTop: "4px",
                     display: "flex", alignItems: "center", gap: "4px",
                     padding: "3px 8px", borderRadius: "6px", border: "none",
-                    background: "transparent", color: copiedIdx === i ? "rgba(45,212,191,0.8)" : "rgba(255,255,255,0.25)",
+                    background: "transparent", color: copiedIdx === i ? "rgba(134, 140, 255,0.8)" : "rgba(255,255,255,0.25)",
                     fontSize: "11px", fontFamily: "inherit", cursor: "pointer",
                     transition: "color 150ms, background 150ms",
                   }}
                   onMouseEnter={e => { if (copiedIdx !== i) (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.55)"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = copiedIdx === i ? "rgba(45,212,191,0.8)" : "rgba(255,255,255,0.25)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = copiedIdx === i ? "rgba(134, 140, 255,0.8)" : "rgba(255,255,255,0.25)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
                 >
                   {copiedIdx === i ? <Check size={11} /> : <Copy size={11} />}
                   {copiedIdx === i ? "Copied" : "Copy"}
@@ -572,8 +572,8 @@ function ChatWindow({
               disabled={!input.trim() || isStreaming || kieKeySet === false || disabledIds.includes(model)}
               style={{
                 width: "32px", height: "32px", borderRadius: "8px", border: "none",
-                background: input.trim() && !isStreaming && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(45,212,191,0.25)" : "rgba(255,255,255,0.07)",
-                color: input.trim() && !isStreaming && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(45,212,191,0.9)" : "rgba(255,255,255,0.25)",
+                background: input.trim() && !isStreaming && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.25)" : "rgba(255,255,255,0.07)",
+                color: input.trim() && !isStreaming && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.9)" : "rgba(255,255,255,0.25)",
                 cursor: input.trim() && !isStreaming && kieKeySet !== false && !disabledIds.includes(model) ? "pointer" : "not-allowed",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 flexShrink: 0, transition: "background 150ms, color 150ms",

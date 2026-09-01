@@ -391,7 +391,7 @@ export default function AddNodeMenu({ anchorRect, onClose }: AddNodeMenuProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search nodes…"
-            style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "rgba(255,255,255,0.82)", fontSize: "13px", caretColor: "#2DD4BF" }}
+            style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "rgba(255,255,255,0.82)", fontSize: "13px", caretColor: "#868CFF" }}
           />
           {query && (
             <button onClick={() => setQuery("")} style={{ background: "transparent", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 0, lineHeight: 1 }}>
@@ -423,8 +423,8 @@ export default function AddNodeMenu({ anchorRect, onClose }: AddNodeMenuProps) {
                       id="upload"
                       label="Upload"
                       description="Image or video — auto-detects type"
-                      accent="#34d399"
-                      bg="#052e16"
+                      accent="#01b574"
+                      bg="#05261c"
                       icon={<Upload size={18} strokeWidth={1.8} />}
                       onClick={() => {
                         if (DEMO_MODE) { useWorkflowStore.getState().setAuthModalOpen(true); return; }
@@ -435,8 +435,8 @@ export default function AddNodeMenu({ anchorRect, onClose }: AddNodeMenuProps) {
                       id="assets"
                       label="Assets"
                       description="Browse your generations & uploads"
-                      accent="#60a5fa"
-                      bg="#0c1a3b"
+                      accent="#1b84ff"
+                      bg="#16162b"
                       icon={<LayoutGrid size={18} strokeWidth={1.8} />}
                       onClick={(e) => {
                         setPickerPos({ x: e.clientX, y: e.clientY });

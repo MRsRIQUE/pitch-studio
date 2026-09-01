@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
  */
 
 const GUEST = process.env.NEXT_PUBLIC_GUEST_MODE === "true";
-const DISMISS_KEY = "helios-update-dismissed"; // holds the version the user dismissed
+const DISMISS_KEY = "pitch-studio-update-dismissed"; // holds the version the user dismissed
 
 const AMBER = "245,158,11";
 

@@ -333,7 +333,7 @@ export default function AssistantNode({ id, data, selected }: NodeProps<Assistan
               {!localPrompt && (
                 <div
                   aria-hidden
-                  className="absolute inset-0 px-3 pt-10 pb-10 text-[13px] text-[#3A4055] leading-[1.6] pointer-events-none select-none"
+                  className="absolute inset-0 px-3 pt-10 pb-10 text-[13px] text-[#33334F] leading-[1.6] pointer-events-none select-none"
                 >
                   Describe what you want to generate…
                 </div>
@@ -372,20 +372,20 @@ export default function AssistantNode({ id, data, selected }: NodeProps<Assistan
                 onClick={(e) => { e.stopPropagation(); if (!busy) setModelOpen((o) => !o); }}
                 className="flex items-center gap-1"
               >
-                <span className="text-[11px] text-[#A0A0A0] hover:text-white transition-colors">
+                <span className="text-[11px] text-[#8B9CC7] hover:text-white transition-colors">
                   {MODELS.find((m) => m.id === model)?.label ?? model}
                 </span>
                 <ChevronIcon open={modelOpen} />
               </button>
 
               {modelPopup.visible && (
-                <div className={`absolute bottom-full left-0 mb-2 w-44 bg-[#111622] border border-[#1E2840] rounded-md overflow-hidden z-[1002] shadow-2xl ${modelPopup.className}`}>
+                <div className={`absolute bottom-full left-0 mb-2 w-44 bg-[#12121F] border border-[#262640] rounded-md overflow-hidden z-[1002] shadow-2xl ${modelPopup.className}`}>
                   {MODELS.map((m) => (
                     <button
                       key={m.id}
                       onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => { e.stopPropagation(); updateNodeData(id, { model: m.id }); setModelOpen(false); }}
-                      className={`w-full text-left px-3 py-[7px] text-[11px] hover:bg-[#141C28] transition-colors ${model === m.id ? "text-white" : "text-[#A0A0A0]"}`}
+                      className={`w-full text-left px-3 py-[7px] text-[11px] hover:bg-[#171728] transition-colors ${model === m.id ? "text-white" : "text-[#8B9CC7]"}`}
                     >
                       {m.label}
                     </button>
@@ -429,7 +429,7 @@ export default function AssistantNode({ id, data, selected }: NodeProps<Assistan
 function ChevronIcon({ open }: { open: boolean }) {
   return (
     <svg width="8" height="8" viewBox="0 0 8 8" fill="none"
-      stroke="#5A5A55" strokeWidth="1.5" strokeLinecap="round"
+      stroke="#3D3D63" strokeWidth="1.5" strokeLinecap="round"
       className={`shrink-0 transition-transform duration-100 ${open ? "rotate-180" : ""}`}
     >
       <path d="M1 2.5 4 5.5 7 2.5" />

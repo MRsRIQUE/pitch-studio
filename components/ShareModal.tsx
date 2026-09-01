@@ -106,7 +106,7 @@ export default function ShareModal({ spaceId, open, onClose }: ShareModalProps) 
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {isPublic
-              ? <Globe size={16} style={{ color: "#2DD4BF" }} />
+              ? <Globe size={16} style={{ color: "#868CFF" }} />
               : <Lock size={16} style={{ color: "rgba(255,255,255,0.4)" }} />
             }
             <div>
@@ -129,8 +129,8 @@ export default function ShareModal({ spaceId, open, onClose }: ShareModalProps) 
               fontSize: 12, fontWeight: 500,
               transition: "background 150ms, color 150ms, opacity 150ms",
               opacity: loading ? 0.6 : 1,
-              background: isPublic ? "rgba(255,255,255,0.08)" : "rgba(45,212,191,0.15)",
-              color: isPublic ? "rgba(255,255,255,0.7)" : "#2DD4BF",
+              background: isPublic ? "rgba(255,255,255,0.08)" : "rgba(134, 140, 255,0.15)",
+              color: isPublic ? "rgba(255,255,255,0.7)" : "#868CFF",
             }}
           >
             {loading ? "…" : isPublic ? "Make Private" : "Make Public"}
@@ -138,7 +138,7 @@ export default function ShareModal({ spaceId, open, onClose }: ShareModalProps) 
         </div>
 
         {error && (
-          <div style={{ color: "#f87171", fontSize: 12, padding: "0 4px" }}>{error}</div>
+          <div style={{ color: "#ff8a8a", fontSize: 12, padding: "0 4px" }}>{error}</div>
         )}
 
         {/* Link copy — only visible when public */}
@@ -162,8 +162,8 @@ export default function ShareModal({ spaceId, open, onClose }: ShareModalProps) 
               style={{
                 width: 40, borderRadius: 10,
                 border: "1px solid rgba(255,255,255,0.07)",
-                background: copied ? "rgba(45,212,191,0.15)" : "rgba(255,255,255,0.06)",
-                color: copied ? "#2DD4BF" : "rgba(255,255,255,0.7)",
+                background: copied ? "rgba(134, 140, 255,0.15)" : "rgba(255,255,255,0.06)",
+                color: copied ? "#868CFF" : "rgba(255,255,255,0.7)",
                 cursor: "pointer", display: "flex", alignItems: "center",
                 justifyContent: "center", transition: "background 150ms, color 150ms",
                 flexShrink: 0,

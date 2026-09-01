@@ -25,7 +25,7 @@ export default function TypewriterHeading({
 
   return (
     <h2 style={{
-      fontFamily: "var(--font-doto), monospace",
+      fontFamily: "var(--font-metric)",
       fontSize: "clamp(22px, 3vw, 40px)",
       fontWeight: 900,
       lineHeight: 1.05,
@@ -36,7 +36,7 @@ export default function TypewriterHeading({
       maxWidth: "600px",
     }}>
       <span style={{
-        background: "linear-gradient(to bottom, #ffffff, #2DD4BF)",
+        background: "linear-gradient(to bottom, #ffffff, #868CFF)",
         WebkitBackgroundClip: "text",
         WebkitTextFillColor: "transparent",
         backgroundClip: "text",

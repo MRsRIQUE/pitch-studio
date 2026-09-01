@@ -336,8 +336,8 @@ export default function NodePickerMenu({ dropState, onClose }: Props) {
         className="w-56 bg-[#0F1214] border border-[#2A2A2A] rounded-lg shadow-2xl overflow-hidden"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="px-3 py-2 border-b border-[#1E1E1E]">
-          <p className="text-[10px] text-[#4A4A45] uppercase tracking-widest font-medium">
+        <div className="px-3 py-2 border-b border-[#171728]">
+          <p className="text-[10px] text-[#33334F] uppercase tracking-widest font-medium">
             Connect to
           </p>
         </div>
@@ -372,7 +372,7 @@ export default function NodePickerMenu({ dropState, onClose }: Props) {
                   <span className="text-[13px] text-white font-medium leading-none">
                     {n.label}
                   </span>
-                  <span className="text-[10px] text-[#4A4A45] leading-none">
+                  <span className="text-[10px] text-[#33334F] leading-none">
                     {n.description}
                   </span>
                 </span>

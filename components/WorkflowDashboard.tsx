@@ -15,7 +15,7 @@ import DotCanvasBackground from "@/components/ui/DotCanvasBackground";
 const CSS = `
   .wsd-card {
     position: relative;
-    background: #0C0F16;
+    background: #0F0F1A;
     border: 1px solid rgba(255,255,255,0.06);
     border-radius: 18px;
     overflow: hidden;
@@ -28,7 +28,7 @@ const CSS = `
     transform: translateY(-4px);
     border-color: rgba(255,255,255,0.13);
     box-shadow:
-      0 0 0 1px rgba(45,212,191,0.12),
+      0 0 0 1px rgba(134, 140, 255,0.12),
       0 16px 48px rgba(0,0,0,0.7),
       0 4px 12px rgba(0,0,0,0.4);
   }
@@ -92,7 +92,7 @@ const CSS = `
 
   .wsd-new {
     position: relative;
-    background: #0C0F16;
+    background: #0F0F1A;
     border: 1px dashed rgba(255,255,255,0.12);
     border-radius: 18px;
     overflow: hidden;
@@ -104,15 +104,15 @@ const CSS = `
                 background 240ms ease;
   }
   .wsd-new:hover {
-    border-color: rgba(45,212,191,0.35);
+    border-color: rgba(134, 140, 255,0.35);
     background: #0e1219;
     box-shadow:
-      0 0 0 1px rgba(45,212,191,0.12),
+      0 0 0 1px rgba(134, 140, 255,0.12),
       0 16px 48px rgba(0,0,0,0.6);
     transform: translateY(-4px);
   }
   .wsd-new:hover .wsd-plus-orb {
-    box-shadow: 0 0 32px rgba(45,212,191,0.4), 0 0 0 1px rgba(255,255,255,0.15) inset;
+    box-shadow: 0 0 32px rgba(134, 140, 255,0.4), 0 0 0 1px rgba(255,255,255,0.15) inset;
   }
   .wsd-new-art {
     flex: 1; aspect-ratio: 3/2;
@@ -131,7 +131,7 @@ const CSS = `
   .wsd-plus-orb {
     position: relative; z-index: 1;
     width: 64px; height: 64px; border-radius: 50%;
-    background: linear-gradient(135deg, #0D9488 0%, #2DD4BF 100%);
+    background: linear-gradient(135deg, #6B5FE0 0%, #868CFF 100%);
     display: grid; place-items: center;
     color: white;
     box-shadow: 0 0 0 1px rgba(255,255,255,0.15) inset;
@@ -142,7 +142,7 @@ const CSS = `
     appearance: none; border: 0; cursor: pointer;
     display: inline-flex; align-items: center; gap: 8px;
     padding: 9px 16px;
-    background: linear-gradient(135deg, #0D9488 0%, #2DD4BF 100%);
+    background: linear-gradient(135deg, #6B5FE0 0%, #868CFF 100%);
     color: white; font-size: 12px; font-weight: 600; border-radius: 10px;
     transition: filter 140ms ease, transform 140ms ease;
     white-space: nowrap; font-family: inherit;
@@ -152,8 +152,8 @@ const CSS = `
 
   .wsd-tmpl {
     position: relative;
-    background: #0C0F16;
-    border: 1px dashed rgba(99,102,241,0.3);
+    background: #0F0F1A;
+    border: 1px dashed rgba(134, 140, 255,0.3);
     border-radius: 18px;
     overflow: hidden;
     cursor: pointer;
@@ -164,15 +164,15 @@ const CSS = `
                 background 240ms ease;
   }
   .wsd-tmpl:hover {
-    border-color: rgba(99,102,241,0.55);
+    border-color: rgba(134, 140, 255,0.55);
     background: #0e1019;
     box-shadow:
-      0 0 0 1px rgba(99,102,241,0.15),
+      0 0 0 1px rgba(134, 140, 255,0.15),
       0 16px 48px rgba(0,0,0,0.6);
     transform: translateY(-4px);
   }
   .wsd-tmpl:hover .wsd-tmpl-orb {
-    box-shadow: 0 0 32px rgba(99,102,241,0.45), 0 0 0 1px rgba(255,255,255,0.15) inset;
+    box-shadow: 0 0 32px rgba(134, 140, 255,0.45), 0 0 0 1px rgba(255,255,255,0.15) inset;
   }
 `;
 
@@ -204,7 +204,7 @@ function TemplateCard({ onLoad, onReset }: { onLoad: () => void; onReset: (e: Re
       </div>
       <div style={{
         padding: "14px 16px 16px",
-        borderTop: "1px solid rgba(99,102,241,0.1)",
+        borderTop: "1px solid rgba(134, 140, 255,0.1)",
         display: "flex", flexDirection: "column", gap: "10px",
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -215,12 +215,12 @@ function TemplateCard({ onLoad, onReset }: { onLoad: () => void; onReset: (e: Re
             onClick={onReset}
             title="Reset template"
             style={{
-              appearance: "none", border: "1px solid rgba(99,102,241,0.25)", background: "rgba(99,102,241,0.08)",
+              appearance: "none", border: "1px solid rgba(134, 140, 255,0.25)", background: "rgba(134, 140, 255,0.08)",
               borderRadius: "7px", width: "28px", height: "28px", display: "grid", placeItems: "center",
-              cursor: "pointer", color: "rgba(99,102,241,0.7)", transition: "all 140ms ease", flexShrink: 0,
+              cursor: "pointer", color: "rgba(134, 140, 255,0.7)", transition: "all 140ms ease", flexShrink: 0,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(99,102,241,0.2)"; e.currentTarget.style.color = "#818cf8"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(99,102,241,0.08)"; e.currentTarget.style.color = "rgba(99,102,241,0.7)"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(134, 140, 255,0.2)"; e.currentTarget.style.color = "#868cff"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(134, 140, 255,0.08)"; e.currentTarget.style.color = "rgba(134, 140, 255,0.7)"; }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -231,7 +231,7 @@ function TemplateCard({ onLoad, onReset }: { onLoad: () => void; onReset: (e: Re
         <div style={{
           display: "flex", alignItems: "center", gap: "6px",
           fontSize: "10px", fontWeight: 500, letterSpacing: "0.04em",
-          color: "rgba(99,102,241,0.6)", textTransform: "uppercase",
+          color: "rgba(134, 140, 255,0.6)", textTransform: "uppercase",
         }}>
           <span>4× Image → 4× Video</span>
         </div>
@@ -332,7 +332,7 @@ function CardMenu({ spaceId, onOpen, onStartRename, onDelete, onClose }: CardMen
       style={{
         display: "flex", alignItems: "center", gap: "10px", width: "100%",
         padding: "8px 12px", background: "transparent", border: "none",
-        color: disabled ? "rgba(255,255,255,0.2)" : danger ? "#f87171" : "rgba(255,255,255,0.85)",
+        color: disabled ? "rgba(255,255,255,0.2)" : danger ? "#ff8a8a" : "rgba(255,255,255,0.85)",
         fontSize: "13px", fontWeight: 450, cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.5 : 1, fontFamily: "inherit", textAlign: "left",
         transition: "background 120ms",
@@ -340,7 +340,7 @@ function CardMenu({ spaceId, onOpen, onStartRename, onDelete, onClose }: CardMen
       onMouseEnter={(e) => { if (!disabled) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
     >
-      <span style={{ color: disabled ? "rgba(255,255,255,0.2)" : danger ? "#f87171" : "rgba(255,255,255,0.4)", flexShrink: 0 }}>
+      <span style={{ color: disabled ? "rgba(255,255,255,0.2)" : danger ? "#ff8a8a" : "rgba(255,255,255,0.4)", flexShrink: 0 }}>
         {icon}
       </span>
       {label}
@@ -356,7 +356,7 @@ function CardMenu({ spaceId, onOpen, onStartRename, onDelete, onClose }: CardMen
         top: "calc(100% + 6px)",
         right: 0,
         width: "186px",
-        background: "#131720",
+        background: "#171728",
         border: "1px solid rgba(255,255,255,0.1)",
         borderRadius: "12px",
         boxShadow: "0 16px 48px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.4)",
@@ -406,7 +406,7 @@ function DeleteConfirmModal({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#131720",
+          background: "#171728",
           border: "1px solid rgba(255,255,255,0.1)",
           borderRadius: "16px", padding: "24px", width: "320px",
           boxShadow: "0 24px 64px rgba(0,0,0,0.8)",
@@ -434,7 +434,7 @@ function DeleteConfirmModal({
             onClick={onConfirm}
             style={{
               padding: "8px 16px", borderRadius: "8px", border: "none",
-              background: "#ef4444", color: "#fff", fontSize: "13px", fontWeight: 600,
+              background: "#e31a1a", color: "#fff", fontSize: "13px", fontWeight: 600,
               cursor: "pointer", fontFamily: "inherit",
             }}
           >
@@ -543,7 +543,7 @@ function SpaceCard({ space, onOpen }: { space: Space; onOpen: () => void }) {
         {/* Meta row: timestamp */}
         <div className="wsd-foot-row">
           <span style={{
-            fontFamily: "var(--font-geist-mono), monospace",
+            fontFamily: "var(--font-metric)",
             fontSize: "10px", fontWeight: 500,
             color: "rgba(255,255,255,0.28)",
             letterSpacing: "0.05em", textTransform: "uppercase",
@@ -589,14 +589,14 @@ function CreateCard({ onCreate }: { onCreate: () => void }) {
         display: "flex", flexDirection: "column", gap: "10px",
       }}>
         <div style={{ fontSize: "15px", fontWeight: 600, color: "#fff", letterSpacing: "-0.015em" }}>
-          New workflow
+          Novo workflow
         </div>
         <div style={{
           display: "flex", alignItems: "center", gap: "6px",
           fontSize: "10px", fontWeight: 500, letterSpacing: "0.04em",
           color: "rgba(255,255,255,0.25)", textTransform: "uppercase",
         }}>
-          <span>Start from scratch</span>
+          <span>Comece do zero</span>
         </div>
       </div>
     </div>
@@ -673,7 +673,7 @@ export default function WorkflowDashboard() {
         minHeight: 0,
         overflowY: "auto",
         position: "relative",
-        background: "#0B0E14",
+        background: "#0F0F1A",
       }}
     >
       <DotCanvasBackground />
@@ -695,12 +695,12 @@ export default function WorkflowDashboard() {
               fontSize: "28px", fontWeight: 600, lineHeight: 1.1, letterSpacing: "-0.02em",
               color: "#ffffff",
             }}>
-              My Workflows
+              Meus workflows
             </h1>
             <div style={{
               marginTop: "10px",
               display: "inline-flex", alignItems: "center", gap: "8px",
-              fontFamily: "var(--font-geist-mono), monospace",
+              fontFamily: "var(--font-metric)",
               fontSize: "11px", fontWeight: 500, color: "rgba(255,255,255,0.4)",
               letterSpacing: "0.06em", textTransform: "uppercase",
             }}>
@@ -710,7 +710,7 @@ export default function WorkflowDashboard() {
                   <span>workspace{sorted.length !== 1 ? "s" : ""}</span>
                 </>
               ) : (
-                <span style={{ color: "rgba(255,255,255,0.35)" }}>Sign in to save and sync your workflows</span>
+                <span style={{ color: "rgba(255,255,255,0.35)" }}>Entre para salvar e sincronizar seus workflows</span>
               )}
             </div>
           </div>
@@ -719,7 +719,7 @@ export default function WorkflowDashboard() {
             {user ? (
               <button className="wsd-new-btn" onClick={handleCreate}>
                 <PlusIcon />
-                New workflow
+                Novo workflow
               </button>
             ) : (
               <button className="wsd-new-btn" onClick={() => setAuthModalOpen(true)}>

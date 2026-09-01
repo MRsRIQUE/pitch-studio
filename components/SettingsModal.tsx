@@ -168,14 +168,14 @@ interface SettingsModalProps {
 function ProviderBrandIcon({ id, size = 12 }: { id: ProviderId; size?: number }) {
   if (id === "kie") {
     return (
-      <span className="text-[#2DD4BF] shrink-0" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: `${size}px`, height: `${size}px`, fontSize: `${Math.round(size * 0.83)}px`, fontWeight: 700 }}>
+      <span className="text-[#868CFF] shrink-0" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: `${size}px`, height: `${size}px`, fontSize: `${Math.round(size * 0.83)}px`, fontWeight: 700 }}>
         K
       </span>
     );
   }
   if (id === "codex") {
     return (
-      <svg className="text-[#2DD4BF] shrink-0" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd">
+      <svg className="text-[#868CFF] shrink-0" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd">
         <path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z" />
       </svg>
     );
@@ -183,7 +183,7 @@ function ProviderBrandIcon({ id, size = 12 }: { id: ProviderId; size?: number })
   if (id === "azure") {
     return (
       <svg className="shrink-0" width={size} height={size} viewBox="0 0 256 199">
-        <path d="M118.432 187.698c32.89-5.81 60.055-10.618 60.367-10.684l.568-.12l-31.052-36.935c-17.078-20.314-31.051-37.014-31.051-37.11c0-.182 32.063-88.477 32.243-88.792c.06-.105 21.88 37.567 52.893 91.32c29.035 50.323 52.973 91.815 53.195 92.203l.405.707l-98.684-.012l-98.684-.013l59.8-10.564zM0 176.435c0-.052 14.631-25.451 32.514-56.442l32.514-56.347l37.891-31.799C123.76 14.358 140.867.027 140.935.001c.069-.026-.205.664-.609 1.534s-18.919 40.582-41.145 88.25l-40.41 86.67l-29.386.037c-16.162.02-29.385-.005-29.385-.057z" fill="#0089D6" fillRule="nonzero" />
+        <path d="M118.432 187.698c32.89-5.81 60.055-10.618 60.367-10.684l.568-.12l-31.052-36.935c-17.078-20.314-31.051-37.014-31.051-37.11c0-.182 32.063-88.477 32.243-88.792c.06-.105 21.88 37.567 52.893 91.32c29.035 50.323 52.973 91.815 53.195 92.203l.405.707l-98.684-.012l-98.684-.013l59.8-10.564zM0 176.435c0-.052 14.631-25.451 32.514-56.442l32.514-56.347l37.891-31.799C123.76 14.358 140.867.027 140.935.001c.069-.026-.205.664-.609 1.534s-18.919 40.582-41.145 88.25l-40.41 86.67l-29.386.037c-16.162.02-29.385-.005-29.385-.057z" fill="#1B84FF" fillRule="nonzero" />
       </svg>
     );
   }
@@ -360,14 +360,14 @@ function ModelGroup({
                   flexDirection: "column",
                   gap: "6px",
                   padding: "10px 14px",
-                  background: "rgba(96,165,250,0.04)",
-                  border: "1px solid rgba(96,165,250,0.12)",
+                  background: "rgba(27, 132, 255,0.04)",
+                  border: "1px solid rgba(27, 132, 255,0.12)",
                   borderRadius: "10px",
                 }}
               >
                 <label
                   htmlFor={`azure-deploy-${m.id}`}
-                  style={{ fontSize: "11px", fontWeight: 600, color: "rgba(96,165,250,0.7)", letterSpacing: "0.05em", textTransform: "uppercase" }}
+                  style={{ fontSize: "11px", fontWeight: 600, color: "rgba(27, 132, 255,0.7)", letterSpacing: "0.05em", textTransform: "uppercase" }}
                 >
                   Deployment Name
                 </label>
@@ -388,7 +388,7 @@ function ModelGroup({
                     fontFamily: "inherit",
                     fontFeatureSettings: "\"tnum\"",
                   }}
-                  onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(96,165,250,0.4)"; }}
+                  onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(27, 132, 255,0.4)"; }}
                   onBlur={(e)  => { (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.08)"; }}
                 />
                 <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.2)", margin: 0, lineHeight: 1.5 }}>
@@ -579,8 +579,8 @@ function ApiKeysPanel({
             <span
               style={{
                 marginLeft: "auto", fontSize: "10px", fontWeight: 600,
-                color: "rgba(74,222,128,0.8)", background: "rgba(74,222,128,0.08)",
-                border: "1px solid rgba(74,222,128,0.2)", borderRadius: "5px",
+                color: "rgba(1, 181, 116,0.8)", background: "rgba(1, 181, 116,0.08)",
+                border: "1px solid rgba(1, 181, 116,0.2)", borderRadius: "5px",
                 padding: "2px 7px", letterSpacing: "0.04em",
               }}
             >
@@ -613,8 +613,8 @@ function ApiKeysPanel({
             <button
               onClick={onKieKeyDelete}
               style={{
-                padding: "7px 12px", borderRadius: "7px", border: "1px solid rgba(239,68,68,0.3)",
-                background: "rgba(239,68,68,0.06)", color: "rgba(239,68,68,0.7)",
+                padding: "7px 12px", borderRadius: "7px", border: "1px solid rgba(227, 26, 26,0.3)",
+                background: "rgba(227, 26, 26,0.06)", color: "rgba(227, 26, 26,0.7)",
                 cursor: "pointer", fontSize: "12px", fontWeight: 500, whiteSpace: "nowrap",
               }}
             >
@@ -650,7 +650,7 @@ function ApiKeysPanel({
               </button>
             </div>
             {kieError && (
-              <p style={{ fontSize: "11px", color: "rgba(239,68,68,0.7)", margin: 0 }}>{kieError}</p>
+              <p style={{ fontSize: "11px", color: "rgba(227, 26, 26,0.7)", margin: 0 }}>{kieError}</p>
             )}
             <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.2)", margin: 0, lineHeight: 1.5 }}>
               Get your token at{" "}
@@ -669,8 +669,8 @@ function ApiKeysPanel({
           flexDirection: "column",
           gap: "10px",
           padding: "16px",
-          background: "rgba(96,165,250,0.04)",
-          border: "1px solid rgba(96,165,250,0.14)",
+          background: "rgba(27, 132, 255,0.04)",
+          border: "1px solid rgba(27, 132, 255,0.14)",
           borderRadius: "12px",
         }}
       >
@@ -679,7 +679,7 @@ function ApiKeysPanel({
           <span
             style={{
               width: "28px", height: "28px", borderRadius: "7px",
-              background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.2)",
+              background: "rgba(27, 132, 255,0.1)", border: "1px solid rgba(27, 132, 255,0.2)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}
           >
@@ -695,8 +695,8 @@ function ApiKeysPanel({
             <span
               style={{
                 marginLeft: "auto", fontSize: "10px", fontWeight: 600,
-                color: "rgba(74,222,128,0.8)", background: "rgba(74,222,128,0.08)",
-                border: "1px solid rgba(74,222,128,0.2)", borderRadius: "5px",
+                color: "rgba(1, 181, 116,0.8)", background: "rgba(1, 181, 116,0.08)",
+                border: "1px solid rgba(1, 181, 116,0.2)", borderRadius: "5px",
                 padding: "2px 7px", letterSpacing: "0.04em",
               }}
             >
@@ -709,7 +709,7 @@ function ApiKeysPanel({
         <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
           <label
             htmlFor="azure-api-key"
-            style={{ fontSize: "11px", fontWeight: 600, color: "rgba(96,165,250,0.7)", letterSpacing: "0.05em", textTransform: "uppercase" }}
+            style={{ fontSize: "11px", fontWeight: 600, color: "rgba(27, 132, 255,0.7)", letterSpacing: "0.05em", textTransform: "uppercase" }}
           >
             API Key
           </label>
@@ -730,8 +730,8 @@ function ApiKeysPanel({
               <button
                 onClick={onAzureKeyDelete}
                 style={{
-                  padding: "7px 12px", borderRadius: "7px", border: "1px solid rgba(239,68,68,0.3)",
-                  background: "rgba(239,68,68,0.06)", color: "rgba(239,68,68,0.7)",
+                  padding: "7px 12px", borderRadius: "7px", border: "1px solid rgba(227, 26, 26,0.3)",
+                  background: "rgba(227, 26, 26,0.06)", color: "rgba(227, 26, 26,0.7)",
                   cursor: "pointer", fontSize: "12px", fontWeight: 500, whiteSpace: "nowrap",
                 }}
               >
@@ -749,7 +749,7 @@ function ApiKeysPanel({
                   onChange={(e) => setAzureInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") handleAzureSave(); }}
                   style={{ ...INPUT_STYLE, flex: 1 }}
-                  onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(96,165,250,0.4)"; }}
+                  onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(27, 132, 255,0.4)"; }}
                   onBlur={(e)  => { (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.08)"; }}
                 />
                 <button
@@ -757,8 +757,8 @@ function ApiKeysPanel({
                   disabled={!azureInput.trim() || azureSaving}
                   style={{
                     padding: "7px 14px", borderRadius: "7px", border: "none",
-                    background: azureInput.trim() ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.04)",
-                    color: azureInput.trim() ? "rgba(96,165,250,0.9)" : "rgba(255,255,255,0.25)",
+                    background: azureInput.trim() ? "rgba(27, 132, 255,0.15)" : "rgba(255,255,255,0.04)",
+                    color: azureInput.trim() ? "rgba(27, 132, 255,0.9)" : "rgba(255,255,255,0.25)",
                     cursor: azureInput.trim() ? "pointer" : "default",
                     fontSize: "12px", fontWeight: 500, whiteSpace: "nowrap",
                     transition: "background 140ms ease, color 140ms ease",
@@ -768,7 +768,7 @@ function ApiKeysPanel({
                 </button>
               </div>
               {azureError && (
-                <p style={{ fontSize: "11px", color: "rgba(239,68,68,0.7)", margin: 0 }}>{azureError}</p>
+                <p style={{ fontSize: "11px", color: "rgba(227, 26, 26,0.7)", margin: 0 }}>{azureError}</p>
               )}
             </div>
           )}
@@ -778,7 +778,7 @@ function ApiKeysPanel({
         <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
           <label
             htmlFor="azure-global-base-url"
-            style={{ fontSize: "11px", fontWeight: 600, color: "rgba(96,165,250,0.7)", letterSpacing: "0.05em", textTransform: "uppercase" }}
+            style={{ fontSize: "11px", fontWeight: 600, color: "rgba(27, 132, 255,0.7)", letterSpacing: "0.05em", textTransform: "uppercase" }}
           >
             Base URL
           </label>
@@ -789,7 +789,7 @@ function ApiKeysPanel({
             value={azureBaseUrl}
             onChange={(e) => onBaseUrlChange(e.target.value)}
             style={INPUT_STYLE}
-            onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(96,165,250,0.4)"; }}
+            onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(27, 132, 255,0.4)"; }}
             onBlur={(e)  => { (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.08)"; }}
           />
           <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.2)", margin: 0, lineHeight: 1.5 }}>
@@ -805,8 +805,8 @@ function ApiKeysPanel({
           flexDirection: "column",
           gap: "10px",
           padding: "16px",
-          background: "rgba(74,222,128,0.04)",
-          border: "1px solid rgba(74,222,128,0.14)",
+          background: "rgba(1, 181, 116,0.04)",
+          border: "1px solid rgba(1, 181, 116,0.14)",
           borderRadius: "12px",
         }}
       >
@@ -814,7 +814,7 @@ function ApiKeysPanel({
           <span
             style={{
               width: "28px", height: "28px", borderRadius: "7px",
-              background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.2)",
+              background: "rgba(1, 181, 116,0.1)", border: "1px solid rgba(1, 181, 116,0.2)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}
           >
@@ -829,9 +829,9 @@ function ApiKeysPanel({
           <span
             style={{
               marginLeft: "auto", fontSize: "10px", fontWeight: 600,
-              color: codexStatus.kind === "ready" ? "rgba(74,222,128,0.8)" : "rgba(251,146,60,0.8)",
-              background: codexStatus.kind === "ready" ? "rgba(74,222,128,0.08)" : "rgba(251,146,60,0.08)",
-              border: `1px solid ${codexStatus.kind === "ready" ? "rgba(74,222,128,0.2)" : "rgba(251,146,60,0.2)"}`,
+              color: codexStatus.kind === "ready" ? "rgba(1, 181, 116,0.8)" : "rgba(255, 181, 71,0.8)",
+              background: codexStatus.kind === "ready" ? "rgba(1, 181, 116,0.08)" : "rgba(255, 181, 71,0.08)",
+              border: `1px solid ${codexStatus.kind === "ready" ? "rgba(1, 181, 116,0.2)" : "rgba(255, 181, 71,0.2)"}`,
               borderRadius: "5px", padding: "2px 7px", letterSpacing: "0.04em", whiteSpace: "nowrap",
             }}
           >
@@ -850,8 +850,8 @@ function ApiKeysPanel({
             <button
               onClick={handleConnectCodex}
               style={{
-                padding: "7px 14px", borderRadius: "7px", border: "1px solid rgba(74,222,128,0.3)",
-                background: "rgba(74,222,128,0.1)", color: "rgba(74,222,128,0.9)",
+                padding: "7px 14px", borderRadius: "7px", border: "1px solid rgba(1, 181, 116,0.3)",
+                background: "rgba(1, 181, 116,0.1)", color: "rgba(1, 181, 116,0.9)",
                 cursor: "pointer", fontSize: "12px", fontWeight: 500, whiteSpace: "nowrap",
               }}
             >
@@ -872,8 +872,8 @@ function ApiKeysPanel({
             <button
               onClick={handleConnectCodex}
               style={{
-                padding: "7px 14px", borderRadius: "7px", border: "1px solid rgba(74,222,128,0.3)",
-                background: "rgba(74,222,128,0.1)", color: "rgba(74,222,128,0.9)",
+                padding: "7px 14px", borderRadius: "7px", border: "1px solid rgba(1, 181, 116,0.3)",
+                background: "rgba(1, 181, 116,0.1)", color: "rgba(1, 181, 116,0.9)",
                 cursor: "pointer", fontSize: "12px", fontWeight: 500, whiteSpace: "nowrap",
               }}
             >
@@ -896,7 +896,7 @@ function ApiKeysPanel({
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px" }}>
             <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.55)", margin: 0, lineHeight: 1.6 }}>
               1. Open{" "}
-              <a href={loginFlow.url} target="_blank" rel="noreferrer" style={{ color: "rgba(74,222,128,0.85)" }}>
+              <a href={loginFlow.url} target="_blank" rel="noreferrer" style={{ color: "rgba(1, 181, 116,0.85)" }}>
                 {loginFlow.url}
               </a>
               <br />
@@ -906,8 +906,8 @@ function ApiKeysPanel({
               <span
                 style={{
                   fontFamily: "monospace", fontSize: "15px", fontWeight: 700, letterSpacing: "0.06em",
-                  color: "rgba(74,222,128,0.9)", background: "rgba(74,222,128,0.08)",
-                  border: "1px solid rgba(74,222,128,0.2)", borderRadius: "6px", padding: "6px 12px",
+                  color: "rgba(1, 181, 116,0.9)", background: "rgba(1, 181, 116,0.08)",
+                  border: "1px solid rgba(1, 181, 116,0.2)", borderRadius: "6px", padding: "6px 12px",
                 }}
               >
                 {loginFlow.code}
@@ -931,7 +931,7 @@ function ApiKeysPanel({
 
         {loginFlow.status === "error" && (
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <p style={{ fontSize: "11px", color: "rgba(239,68,68,0.7)", margin: 0, flex: 1 }}>{loginFlow.error}</p>
+            <p style={{ fontSize: "11px", color: "rgba(227, 26, 26,0.7)", margin: 0, flex: 1 }}>{loginFlow.error}</p>
             <button
               onClick={handleConnectCodex}
               style={{
@@ -1001,7 +1001,7 @@ function ImageModelsPanel({
       <ProviderLegend />
       <ModelGroup
         title="Image Models"
-        accent="#fb923c"
+        accent="#ffb547"
         models={models}
         providers={providers}
         onProviderChange={onProviderChange}
@@ -1046,7 +1046,7 @@ function VideoModelsPanel({
       <ProviderLegend />
       <ModelGroup
         title="Video Models"
-        accent="#5EEAD4"
+        accent="#A9ADFF"
         models={models}
         providers={providers}
         onProviderChange={onProviderChange}
@@ -1142,8 +1142,8 @@ function TextModelsPanel({
           flexDirection: "column",
           gap: "14px",
           padding: "16px",
-          background: "rgba(96,165,250,0.04)",
-          border: "1px solid rgba(96,165,250,0.14)",
+          background: "rgba(27, 132, 255,0.04)",
+          border: "1px solid rgba(27, 132, 255,0.14)",
           borderRadius: "12px",
         }}
       >
@@ -1152,9 +1152,9 @@ function TextModelsPanel({
           <span
             style={{
               width: "28px", height: "28px", borderRadius: "7px",
-              background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.2)",
+              background: "rgba(27, 132, 255,0.1)", border: "1px solid rgba(27, 132, 255,0.2)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "11px", fontWeight: 700, color: "rgba(96,165,250,0.85)",
+              fontSize: "11px", fontWeight: 700, color: "rgba(27, 132, 255,0.85)",
             }}
           >
             Az
@@ -1168,9 +1168,9 @@ function TextModelsPanel({
           <span
             style={{
               marginLeft: "auto", fontSize: "10px", fontWeight: 600,
-              color: azureReady ? "rgba(74,222,128,0.8)" : "rgba(251,146,60,0.8)",
-              background: azureReady ? "rgba(74,222,128,0.08)" : "rgba(251,146,60,0.08)",
-              border: `1px solid ${azureReady ? "rgba(74,222,128,0.2)" : "rgba(251,146,60,0.2)"}`,
+              color: azureReady ? "rgba(1, 181, 116,0.8)" : "rgba(255, 181, 71,0.8)",
+              background: azureReady ? "rgba(1, 181, 116,0.08)" : "rgba(255, 181, 71,0.08)",
+              border: `1px solid ${azureReady ? "rgba(1, 181, 116,0.2)" : "rgba(255, 181, 71,0.2)"}`,
               borderRadius: "5px", padding: "2px 7px", letterSpacing: "0.04em", whiteSpace: "nowrap",
             }}
           >
@@ -1183,11 +1183,11 @@ function TextModelsPanel({
           <div
             style={{
               padding: "10px 12px",
-              background: "rgba(251,146,60,0.05)",
-              border: "1px solid rgba(251,146,60,0.15)",
+              background: "rgba(255, 181, 71,0.05)",
+              border: "1px solid rgba(255, 181, 71,0.15)",
               borderRadius: "8px",
               fontSize: "11px",
-              color: "rgba(251,146,60,0.7)",
+              color: "rgba(255, 181, 71,0.7)",
               lineHeight: 1.5,
             }}
           >
@@ -1203,7 +1203,7 @@ function TextModelsPanel({
           <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
             <label
               htmlFor="azure-text-model-name"
-              style={{ fontSize: "11px", fontWeight: 600, color: "rgba(96,165,250,0.7)", letterSpacing: "0.05em", textTransform: "uppercase" }}
+              style={{ fontSize: "11px", fontWeight: 600, color: "rgba(27, 132, 255,0.7)", letterSpacing: "0.05em", textTransform: "uppercase" }}
             >
               Model Name
             </label>
@@ -1223,7 +1223,7 @@ function TextModelsPanel({
                 outline: "none",
                 fontFamily: "inherit",
               }}
-              onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(96,165,250,0.4)"; }}
+              onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(27, 132, 255,0.4)"; }}
               onBlur={(e)  => { (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.08)"; }}
             />
             <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.2)", margin: 0, lineHeight: 1.5 }}>
@@ -1235,7 +1235,7 @@ function TextModelsPanel({
           <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
             <label
               htmlFor="azure-text-deployment"
-              style={{ fontSize: "11px", fontWeight: 600, color: "rgba(96,165,250,0.7)", letterSpacing: "0.05em", textTransform: "uppercase" }}
+              style={{ fontSize: "11px", fontWeight: 600, color: "rgba(27, 132, 255,0.7)", letterSpacing: "0.05em", textTransform: "uppercase" }}
             >
               Deployment
             </label>
@@ -1255,7 +1255,7 @@ function TextModelsPanel({
                 outline: "none",
                 fontFamily: "inherit",
               }}
-              onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(96,165,250,0.4)"; }}
+              onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(27, 132, 255,0.4)"; }}
               onBlur={(e)  => { (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.08)"; }}
             />
             <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.2)", margin: 0, lineHeight: 1.5 }}>
@@ -1266,7 +1266,7 @@ function TextModelsPanel({
 
         {/* API version (read-only) */}
         <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-          <span style={{ fontSize: "11px", fontWeight: 600, color: "rgba(96,165,250,0.7)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          <span style={{ fontSize: "11px", fontWeight: 600, color: "rgba(27, 132, 255,0.7)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
             API Version
           </span>
           <div style={{ padding: "7px 11px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "7px", fontSize: "12px", color: "rgba(255,255,255,0.4)", fontFamily: "monospace" }}>
@@ -1289,7 +1289,7 @@ function DebugPanel() {
       <div>
         <h2 style={{ fontSize: "15px", fontWeight: 600, color: "rgba(255,255,255,0.9)", margin: 0, marginBottom: "4px" }}>Debug</h2>
         <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.35)", margin: 0 }}>
-          Only visible when <code style={{ fontFamily: "monospace", color: "rgba(251,146,60,0.8)" }}>NEXT_PUBLIC_DEBUG=true</code>
+          Only visible when <code style={{ fontFamily: "monospace", color: "rgba(255, 181, 71,0.8)" }}>NEXT_PUBLIC_DEBUG=true</code>
         </p>
       </div>
 
@@ -1311,7 +1311,7 @@ function DebugPanel() {
             border: "none",
             cursor: "pointer",
             padding: "2px",
-            background: debugMode ? "rgba(251,146,60,0.8)" : "rgba(255,255,255,0.12)",
+            background: debugMode ? "rgba(255, 181, 71,0.8)" : "rgba(255,255,255,0.12)",
             transition: "background 200ms",
             display: "flex",
             alignItems: "center",

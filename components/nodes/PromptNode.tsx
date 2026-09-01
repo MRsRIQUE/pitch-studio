@@ -691,9 +691,9 @@ export default function PromptNode({ id, data, selected }: NodeProps<PromptNodeT
             }}
             className="flex items-center gap-1.5 transition-colors duration-150"
             style={{
-              background: textMode !== "text" ? "rgba(45,212,191,0.1)" : "rgba(255,255,255,0.05)",
-              color: textMode !== "text" ? "#2DD4BF" : "#555",
-              border: `1px solid ${textMode !== "text" ? "rgba(45,212,191,0.25)" : "rgba(255,255,255,0.07)"}`,
+              background: textMode !== "text" ? "rgba(134, 140, 255,0.1)" : "rgba(255,255,255,0.05)",
+              color: textMode !== "text" ? "#868CFF" : "#555",
+              border: `1px solid ${textMode !== "text" ? "rgba(134, 140, 255,0.25)" : "rgba(255,255,255,0.07)"}`,
               borderRadius: 6,
               padding: "2px 7px 2px 5px",
               fontSize: 10,
@@ -703,7 +703,7 @@ export default function PromptNode({ id, data, selected }: NodeProps<PromptNodeT
           >
             <span style={{
               width: 22, height: 12, borderRadius: 6, flexShrink: 0, position: "relative",
-              background: textMode !== "text" ? "#2DD4BF" : "rgba(255,255,255,0.15)",
+              background: textMode !== "text" ? "#868CFF" : "rgba(255,255,255,0.15)",
               transition: "background 150ms",
               display: "inline-block",
             }}>
@@ -711,7 +711,7 @@ export default function PromptNode({ id, data, selected }: NodeProps<PromptNodeT
                 position: "absolute", top: 2,
                 left: textMode !== "text" ? 12 : 2,
                 width: 8, height: 8, borderRadius: "50%",
-                background: textMode !== "text" ? "#0B3B38" : "#fff",
+                background: textMode !== "text" ? "#1C1B3F" : "#fff",
                 transition: "left 150ms",
               }} />
             </span>
@@ -740,7 +740,7 @@ export default function PromptNode({ id, data, selected }: NodeProps<PromptNodeT
                   : promptMaxLength !== null && localText.length > promptMaxLength
                   ? <>
                       {renderWithMentions(localText.slice(0, promptMaxLength), knownLabels)}
-                      <span style={{ background: "rgba(239,68,68,0.22)", color: "#f87171", borderRadius: 2 }}>
+                      <span style={{ background: "rgba(227, 26, 26,0.22)", color: "#ff8a8a", borderRadius: 2 }}>
                         {localText.slice(promptMaxLength)}
                       </span>
                     </>
@@ -753,7 +753,7 @@ export default function PromptNode({ id, data, selected }: NodeProps<PromptNodeT
             {!localText && textMode === "text" && (
               <div
                 aria-hidden
-                className="absolute inset-0 px-3 pt-2.5 pb-8 text-[15px] text-[#3A4055] leading-[1.6] pointer-events-none select-none"
+                className="absolute inset-0 px-3 pt-2.5 pb-8 text-[15px] text-[#33334F] leading-[1.6] pointer-events-none select-none"
               >
                 Describe what you want to generate…
               </div>
@@ -856,8 +856,8 @@ export default function PromptNode({ id, data, selected }: NodeProps<PromptNodeT
                 style={{
                   fontSize: 9,
                   lineHeight: 1,
-                  color: localText.length > promptMaxLength ? "#f87171" : "#fff",
-                  background: localText.length > promptMaxLength ? "#2a1010" : "#1a1a1a",
+                  color: localText.length > promptMaxLength ? "#ff8a8a" : "#fff",
+                  background: localText.length > promptMaxLength ? "#2a1010" : "#171728",
                 }}
               >
                 {localText.length.toLocaleString()}/{promptMaxLength.toLocaleString()}
@@ -879,12 +879,12 @@ export default function PromptNode({ id, data, selected }: NodeProps<PromptNodeT
         {/* ── Inline @mention menu (scales with canvas zoom) ─────────────── */}
         {menuOpen && (
           <div
-            className="absolute left-0 right-0 bg-[#111622] border border-[#2A2A2A] rounded-lg overflow-hidden shadow-xl"
+            className="absolute left-0 right-0 bg-[#12121F] border border-[#2A2A2A] rounded-lg overflow-hidden shadow-xl"
             style={{ top: "calc(100% + 6px)", zIndex: 50 }}
             onMouseDown={(e) => e.preventDefault()}
           >
-            <div className="px-2.5 py-1.5 border-b border-[#1E1E1E]">
-              <p className="text-[9px] text-[#4A4A45] uppercase tracking-widest">
+            <div className="px-2.5 py-1.5 border-b border-[#171728]">
+              <p className="text-[9px] text-[#33334F] uppercase tracking-widest">
                 Connected nodes
               </p>
             </div>
@@ -903,10 +903,10 @@ export default function PromptNode({ id, data, selected }: NodeProps<PromptNodeT
                 <button
                   key={n.id}
                   onClick={() => insertMention(label)}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 text-left transition-colors ${active ? "bg-[#1A2010]" : "hover:bg-[#141C28]"
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 text-left transition-colors ${active ? "bg-[#0A2018]" : "hover:bg-[#171728]"
                     }`}
                 >
-                  <div className="w-6 h-6 rounded bg-[#1A1A1A] overflow-hidden shrink-0 flex items-center justify-center">
+                  <div className="w-6 h-6 rounded bg-[#171728] overflow-hidden shrink-0 flex items-center justify-center">
                     {imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={thumbSrc(imageUrl, 24)} alt="" className="w-full h-full object-cover" />
@@ -925,11 +925,11 @@ export default function PromptNode({ id, data, selected }: NodeProps<PromptNodeT
                       <EmptyThumb />
                     )}
                   </div>
-                  <span className={`text-[11px] font-medium truncate ${active ? "text-[#2DD4BF]" : "text-[#CCCCCC]"}`}>
+                  <span className={`text-[11px] font-medium truncate ${active ? "text-[#868CFF]" : "text-[#C9D2EA]"}`}>
                     @{label}
                   </span>
                   {active && (
-                    <span className="ml-auto text-[9px] text-[#4A4A45] shrink-0">↵</span>
+                    <span className="ml-auto text-[9px] text-[#33334F] shrink-0">↵</span>
                   )}
                 </button>
               );
@@ -950,7 +950,7 @@ export default function PromptNode({ id, data, selected }: NodeProps<PromptNodeT
           {/* Panel */}
           <div
             className="relative z-10 flex flex-col rounded-xl border border-white/[0.08]"
-            style={{ width: "min(760px, 100%)", height: "min(520px, 100%)", background: "#0B0E14", boxShadow: "0 24px 80px rgba(0,0,0,0.8)" }}
+            style={{ width: "min(760px, 100%)", height: "min(520px, 100%)", background: "#0F0F1A", boxShadow: "0 24px 80px rgba(0,0,0,0.8)" }}
             onKeyDown={(e) => { if (e.key === "Escape") { setExpandOpen(false); setExpandMentionQuery(null); } }}
           >
             {/* Header */}
@@ -1028,12 +1028,12 @@ export default function PromptNode({ id, data, selected }: NodeProps<PromptNodeT
             {/* @mention menu */}
             {expandMenuOpen && (
               <div
-                className="shrink-0 border-t border-[#1E1E1E] bg-[#111622] overflow-y-auto"
+                className="shrink-0 border-t border-[#171728] bg-[#12121F] overflow-y-auto"
                 style={{ maxHeight: 160 }}
                 onMouseDown={(e) => e.preventDefault()}
               >
-                <div className="px-3 py-1.5 border-b border-[#1A1A1A]">
-                  <p className="text-[9px] text-[#4A4A45] uppercase tracking-widest">Connected nodes</p>
+                <div className="px-3 py-1.5 border-b border-[#171728]">
+                  <p className="text-[9px] text-[#33334F] uppercase tracking-widest">Connected nodes</p>
                 </div>
                 {expandFilteredMentions.map((n, idx) => {
                   const label = n.data.label as string;
@@ -1047,14 +1047,14 @@ export default function PromptNode({ id, data, selected }: NodeProps<PromptNodeT
                   const active = idx === expandSelectedIdx;
                   return (
                     <button key={n.id} onClick={() => insertMentionModal(label)}
-                      className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-left transition-colors ${active ? "bg-[#1A2010]" : "hover:bg-[#141C28]"}`}>
-                      <div className="w-5 h-5 rounded bg-[#1A1A1A] overflow-hidden shrink-0 flex items-center justify-center">
+                      className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-left transition-colors ${active ? "bg-[#0A2018]" : "hover:bg-[#171728]"}`}>
+                      <div className="w-5 h-5 rounded bg-[#171728] overflow-hidden shrink-0 flex items-center justify-center">
                         {imageUrl ? <img src={thumbSrc(imageUrl, 20)} alt="" className="w-full h-full object-cover" /> :
                           videoUrl ? <video src={videoUrl} autoPlay loop muted playsInline className="w-full h-full" style={{ objectFit: "cover" }} /> :
                             <EmptyThumb />}
                       </div>
-                      <span className={`text-[11px] font-medium truncate ${active ? "text-[#2DD4BF]" : "text-[#CCC]"}`}>@{label}</span>
-                      {active && <span className="ml-auto text-[9px] text-[#4A4A45] shrink-0">↵</span>}
+                      <span className={`text-[11px] font-medium truncate ${active ? "text-[#868CFF]" : "text-[#CCC]"}`}>@{label}</span>
+                      {active && <span className="ml-auto text-[9px] text-[#33334F] shrink-0">↵</span>}
                     </button>
                   );
                 })}
@@ -1179,20 +1179,20 @@ function syntaxHighlightYaml(yaml: string, knownLabels: string[] = []): ReactNod
 
   lines.forEach((line, i) => {
     if (/^---/.test(line) || /^\.\.\.$/.test(line)) {
-      parts.push(<span key={k++} style={{ color: "#6b7280" }}>{line}</span>);
+      parts.push(<span key={k++} style={{ color: "#5a6795" }}>{line}</span>);
     } else {
       const keyMatch = line.match(/^(\s*(?:-\s+)?)([\w\-./]+)(\s*:)(.*)/);
       if (keyMatch) {
         const [, indent, key, colon, rest] = keyMatch;
         parts.push(<span key={k++}>{indent}</span>);
-        parts.push(<span key={k++} style={{ color: "#06b6d4" }}>{key}</span>);
-        parts.push(<span key={k++} style={{ color: "#6b7280" }}>{colon}</span>);
+        parts.push(<span key={k++} style={{ color: "#0bc5ea" }}>{key}</span>);
+        parts.push(<span key={k++} style={{ color: "#5a6795" }}>{colon}</span>);
         parts.push(<span key={k++}>{colorYamlValue(rest, k, sorted)}</span>);
         k++;
       } else {
         const listMatch = line.match(/^(\s*-\s+)(.*)/);
         if (listMatch) {
-          parts.push(<span key={k++} style={{ color: "#6b7280" }}>{listMatch[1]}</span>);
+          parts.push(<span key={k++} style={{ color: "#5a6795" }}>{listMatch[1]}</span>);
           parts.push(<span key={k++}>{colorYamlValue(listMatch[2], k, sorted)}</span>);
           k++;
         } else {
@@ -1225,19 +1225,19 @@ function colorYamlValue(value: string, baseKey: number, sorted: string[] = []): 
   };
 
   if (/^(true|false|yes|no|on|off)$/i.test(trimmed)) {
-    pushValue(main, "#a78bfa");
+    pushValue(main, "#868cff");
   } else if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(trimmed) || /^0x[\da-fA-F]+$/.test(trimmed)) {
-    pushValue(main, "#fb923c");
+    pushValue(main, "#ffb547");
   } else if (/^(null|~)$/.test(trimmed)) {
-    pushValue(main, "#a78bfa");
+    pushValue(main, "#868cff");
   } else if (/^['"]/.test(trimmed)) {
-    pushValue(main, "#86efac");
+    pushValue(main, "#4ade9b");
   } else if (trimmed !== "") {
     pushValue(main, "rgba(255,255,255,0.82)");
   } else {
     pushValue(main);
   }
-  if (comment) out.push(<span key={k++} style={{ color: "#4b5563" }}>{comment}</span>);
+  if (comment) out.push(<span key={k++} style={{ color: "#5a6795" }}>{comment}</span>);
   return <>{out}</>;
 }
 
@@ -1253,7 +1253,7 @@ function syntaxHighlightJson(json: string, errorPos?: number, knownLabels: strin
       if (errorPos > from)
         parts.push(<span key={k++} style={color ? { color } : undefined}>{json.slice(from, errorPos)}</span>);
       parts.push(
-        <mark key={k++} style={{ background: "rgba(239,68,68,0.45)", color: "#f87171", borderRadius: 2, padding: "0 1px" }}>
+        <mark key={k++} style={{ background: "rgba(227, 26, 26,0.45)", color: "#ff8a8a", borderRadius: 2, padding: "0 1px" }}>
           {json[errorPos] ?? " "}
         </mark>
       );
@@ -1275,17 +1275,17 @@ function syntaxHighlightJson(json: string, errorPos?: number, knownLabels: strin
     push(last, m.index);
     if (m[1] !== undefined) {
       if (m[2] !== undefined) {
-        push(m.index, m.index + m[1].length, "#06b6d4");
-        push(m.index + m[1].length, m.index + m[0].length, "#6b7280");
+        push(m.index, m.index + m[1].length, "#0bc5ea");
+        push(m.index + m[1].length, m.index + m[0].length, "#5a6795");
       } else {
-        push(m.index, m.index + m[1].length, "#86efac");
+        push(m.index, m.index + m[1].length, "#4ade9b");
       }
     } else if (m[3] !== undefined) {
-      push(m.index, m.index + m[3].length, "#fb923c");
+      push(m.index, m.index + m[3].length, "#ffb547");
     } else if (m[4] !== undefined) {
-      push(m.index, m.index + m[4].length, "#a78bfa");
+      push(m.index, m.index + m[4].length, "#868cff");
     } else if (m[5] !== undefined) {
-      push(m.index, m.index + m[5].length, "#6b7280");
+      push(m.index, m.index + m[5].length, "#5a6795");
     }
     last = re.lastIndex;
   }

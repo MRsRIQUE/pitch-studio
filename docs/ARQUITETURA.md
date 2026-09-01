@@ -97,3 +97,43 @@ limites de duração e custo. `lib/providers.ts` decide o backend por modelo
 
 `lib/modelPresets.ts` é a contribuição do Pitch Studio: os 8 presets de persona
 do protótipo original, com sprite em `public/pitch/persona-presets-v1.png`.
+
+## Identidade visual
+
+A marca segue o "Pitch AI Brand Kit". Os tokens estão no bloco
+`IDENTIDADE PITCH AI` no topo de `app/globals.css`:
+
+| Papel | Token | Valor |
+| --- | --- | --- |
+| Marca | `--brand-violet` / `--brand-lilac` | `#4318FF` / `#868CFF` |
+| Gradiente | `--brand-gradient` | `135°, #868CFF → #4318FF` |
+| Fundo | `--surface-night` | `#0F0F1A` |
+| Cartão | `--surface-card` | `#171728` |
+| Borda | `--border` | `#262640` |
+| Texto fraco | `--text-muted` | `#8B9CC7` |
+| Sinais | `--signal-*` | Sucesso `#01B574`, Atenção `#FFB547`, Crítico `#E31A1A`, Voz `#0BC5EA`, Informação `#1B84FF` |
+
+**Acento interativo.** O kit define o Violeta `#4318FF` como cor de marca, mas
+em superfície escura ele não tem contraste para texto e ícone. O acento
+interativo é o Lilás `#868CFF`; o Violeta fica no gradiente — logo, botão
+primário e realces.
+
+**Regra dos sinais.** O kit determina que cores de sinal apareçam só em texto,
+ícone e tinta a 14–18%, nunca em áreas grandes.
+
+**Tipografia.** DM Sans em toda a interface (`--font-ui`); JetBrains Mono
+apenas em números que mudam ao vivo (`--font-metric`, tabular).
+
+**Logotipo.** `components/PitchLogo.tsx` — tile com raio de 27% do lado,
+gradiente e "P"; wordmark `PITCH STUDIO` em caixa-alta com `letter-spacing`
+0.16em. O ícone do app é `app/icon.svg`.
+
+**Handles dos nós.** O canvas usa matizes distintas para diferenciar tipos de
+conector. Em vez de colapsar tudo em uma cor, elas foram remapeadas sobre a
+paleta de sinais do kit, preservando a distinção funcional.
+
+### Chaves de armazenamento
+
+O rebrand renomeou as chaves do `localStorage` de `heliosgen*` para
+`pitch-studio*`. `lib/store.ts` e `lib/chatSessionStore.ts` migram os valores
+antigos na primeira execução, para não orfanar workflows e conversas já salvos.
