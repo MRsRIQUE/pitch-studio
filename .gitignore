@@ -1,29 +1,79 @@
-# Logs
-logs
-*.log
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+.pnpm-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+!.env.guest
+
+# vercel
+.vercel
+
+# typescript
 *.tsbuildinfo
-data/*.db
-data/*.db-*
-data/assets/*.json
-!data/assets/.gitkeep
+next-env.d.ts
+.job-store.json
+.codex-login-store.json
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Guest mode — local DB and generated media
+/data/*.json
+/data/*.db
+/data/*.db-shm
+/data/*.db-wal
+/public/generated/**
+!/public/generated/.gitkeep
+
+# Tauri desktop build artifacts
+/src-tauri/target/
+/src-tauri/loader/target/
+/src-tauri/gen/
+/src-tauri/server/
+/src-tauri/binaries/
+# Mobile icon sets Tauri regenerates on build — desktop-only project
+/src-tauri/icons/android/
+/src-tauri/icons/ios/
+/src-tauri/icons/Square*Logo.png
+/src-tauri/icons/StoreLogo.png
+# Signing / notarization secrets
+/scripts/desktop/sign.env
+/src-tauri/.node-cache/
+
+# Legado do prototipo Vite/Fastify (mantido para consulta)
+/legacy/data/*.db
+/legacy/data/*.db-*
+/legacy/data/assets/*.json
+!/legacy/data/assets/.gitkeep
+/legacy/dist
+
+# Gerados automaticamente pelo Next 16 (agentRules em next.config.ts)
+/AGENTS.md
+/CLAUDE.md
