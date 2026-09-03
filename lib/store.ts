@@ -6,24 +6,18 @@ import { persist, createJSONStorage } from "zustand/middleware";
 // because the new key may only contain an empty placeholder written before
 // the DB load restored the real workflows.
 //
-// Cadeia de chaves: "ai-workflow" -> "heliosgen" -> "pitch-studio".
-// A renomeacao para a marca Pitch Studio migra os workflows ja salvos em vez
-// de orfanar o que o usuario criou antes do rebrand.
-if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_GUEST_MODE !== "true") {
-  for (const legacyKey of ["ai-workflow", "heliosgen"]) {
+// Cadeia de chaves: "ai-workflow" -> "heliosgen" / "heliosgen-guest" ->
+// "pitch-studio" -> "pitch-studio-guest". O upstream virou local-only e passou a
+// usar uma unica chave, entao a migracao converge todas as anteriores para ela
+// em vez de orfanar os workflows criados antes do rebrand. A ordem do array vai
+// da mais antiga para a mais recente, de modo que a chave mais nova vence.
+if (typeof window !== "undefined") {
+  for (const legacyKey of ["ai-workflow", "heliosgen", "heliosgen-guest", "pitch-studio"]) {
     const old = localStorage.getItem(legacyKey);
     if (old) {
-      localStorage.setItem("pitch-studio", old);
+      localStorage.setItem("pitch-studio-guest", old);
       localStorage.removeItem(legacyKey);
     }
-  }
-}
-
-if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_GUEST_MODE === "true") {
-  const old = localStorage.getItem("heliosgen-guest");
-  if (old) {
-    localStorage.setItem("pitch-studio-guest", old);
-    localStorage.removeItem("heliosgen-guest");
   }
 }
 import { edgeStyle } from "./edgeStyles";
@@ -48,6 +42,8 @@ export interface NodeData extends Record<string, unknown> {
   status?: NodeStatus;
   // shared
   prompt?: string;
+  // comment / sticky-note node
+  comment?: string;
   // generate node
   mode?: GenerateMode;
   model?: string;
@@ -106,6 +102,7 @@ export function getNodeLabel(type: string, n: number): string {
     imageInputNode:      `Image #${n}`,
     generateNode:        `Image Generator #${n}`,
     videoGeneratorNode:  `Video Generator #${n}`,
+    commentNode:         `Comment #${n}`,
   };
   return map[type] ?? `Node #${n}`;
 }
@@ -121,7 +118,6 @@ export interface Space {
   createdAt: number;
   updatedAt?: number;
   viewport?: { x: number; y: number; zoom: number };
-  isPublic?: boolean;
 }
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -207,7 +203,6 @@ interface WorkflowStore {
   renameSpace:    (id: string, name: string) => void;
   deleteSpace:    (id: string)   => void;
   duplicateSpace: (id: string)   => void;
-  setSpacePublic: (id: string, isPublic: boolean) => void;
 
   // ── Workflow actions
   onNodesChange:      (changes: NodeChange[]) => void;
@@ -228,12 +223,6 @@ interface WorkflowStore {
   setConnectingHandleType: (type: string | null) => void;
   settingsOpen:              boolean;
   setSettingsOpen:           (v: boolean) => void;
-  authModalOpen:             boolean;
-  setAuthModalOpen:          (v: boolean) => void;
-  authModalView:             "signin" | "signup" | "forgot";
-  setAuthModalView:          (v: "signin" | "signup" | "forgot") => void;
-  resetPasswordModalOpen:    boolean;
-  setResetPasswordModalOpen: (v: boolean) => void;
   showDashboard:             boolean;
   setShowDashboard:          (v: boolean) => void;
   globalMuted:               boolean;
@@ -258,7 +247,7 @@ interface WorkflowStore {
 
 export const useWorkflowStore = create<WorkflowStore>()(
   persist(
-    (set) => {
+    (set, get) => {
       const defaultSpace = makeSpace("Space 1");
 
       return {
@@ -382,11 +371,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
             const spaces = syncSpace(s.spaces, s.activeSpaceId, s.nodes, s.edges, s.nodeCounters);
             return { spaces: [...spaces, copy] };
           }),
-
-        setSpacePublic: (id, isPublic) =>
-          set((s) => ({
-            spaces: s.spaces.map((sp) => (sp.id === id ? { ...sp, isPublic } : sp)),
-          })),
 
         // ── Workflow actions (each syncs back to spaces) ────────────────────
 
@@ -590,7 +574,19 @@ export const useWorkflowStore = create<WorkflowStore>()(
             };
           }),
 
-        updateNodeSize: (id, width, height) =>
+        updateNodeSize: (id, width, height) => {
+          // Ignore junk sizes — the ResizeObserver that drives this can fire
+          // mid-teardown / mid-transition with a collapsed (0 / non-finite)
+          // measurement, which must never be persisted as the node's real size.
+          if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return;
+
+          // Skip no-op updates — the observer also fires on every layout tick
+          // (image loads, CSS transitions); re-writing an identical size just
+          // churns `spaces` and keeps re-arming the sync debounce so it never
+          // actually flushes.
+          const current = get().nodes.find((n) => n.id === id);
+          if (current && current.width === width && current.height === height) return;
+
           set((s) => {
             const GROUP_PADDING = 24;
 
@@ -638,7 +634,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
               nodes,
               spaces: syncSpace(s.spaces, s.activeSpaceId, nodes, s.edges, s.nodeCounters),
             };
-          }),
+          });
+        },
 
         setIsRunning:     (v) => set({ isRunning: v }),
         toggleDebug:      () => set((s) => ({ debugMode: !s.debugMode })),
@@ -661,15 +658,12 @@ export const useWorkflowStore = create<WorkflowStore>()(
             const localById = new Map(s.spaces.map((sp) => [sp.id, sp]));
 
             // For each DB space, prefer whichever version is newer (local wins on tie).
-            // Always take isPublic from DB — it's set server-side via the publish API
-            // and the DB is the authoritative source for it.
             const merged = dbSpaces.map((dbSp) => {
               const local = localById.get(dbSp.id);
               if (!local) return dbSp;
               const localTs = local.updatedAt ?? local.createdAt ?? 0;
               const dbTs    = dbSp.updatedAt  ?? dbSp.createdAt  ?? 0;
-              const base = localTs >= dbTs ? local : dbSp;
-              return { ...base, isPublic: dbSp.isPublic };
+              return localTs >= dbTs ? local : dbSp;
             });
 
             // Add local-only spaces (not yet in DB).
@@ -727,14 +721,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
 
         settingsOpen:              false,
         setSettingsOpen:           (v) => set({ settingsOpen: v }),
-        authModalOpen:             false,
-        // The desktop/guest build has no accounts — never surface the auth modal.
-        setAuthModalOpen:          (v) =>
-          set({ authModalOpen: process.env.NEXT_PUBLIC_GUEST_MODE === "true" ? false : v }),
-        authModalView:             "signin",
-        setAuthModalView:          (v) => set({ authModalView: v }),
-        resetPasswordModalOpen:    false,
-        setResetPasswordModalOpen: (v) => set({ resetPasswordModalOpen: v }),
         showDashboard:             true,
         setShowDashboard:          (v) => set({ showDashboard: v }),
         globalMuted:               true,
@@ -744,7 +730,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
       };
     },
     {
-      name: process.env.NEXT_PUBLIC_GUEST_MODE === "true" ? "pitch-studio-guest" : "pitch-studio",
+      name: "pitch-studio-guest",
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         spaces: s.spaces.map((sp) => ({

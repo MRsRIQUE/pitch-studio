@@ -19,7 +19,6 @@ import { join } from "path";
 import sharp from "sharp";
 import { jobStore, type JobResult } from "./jobStore";
 import { jobEvents } from "./jobEvents";
-import { GUEST_MODE } from "./guestMode";
 import * as guestDb from "./guest/db";
 import { uploadBuffer } from "./guest/localStorage";
 
@@ -146,19 +145,17 @@ export function startMockJob(params: MockJobParams): string {
 
   jobStore.set(taskId, { status: "pending", userId: userId ?? undefined });
 
-  if (GUEST_MODE) {
-    guestDb.insertGeneration({
-      task_id:              taskId,
-      user_id:              userId,
-      generation_type:      kind,
-      status:               "pending",
-      prompt,
-      model,
-      aspect_ratio:         aspectRatio,
-      duration:             params.duration,
-      reference_image_urls: params.referenceImageUrls ?? [],
-    });
-  }
+  guestDb.insertGeneration({
+    task_id:              taskId,
+    user_id:              userId,
+    generation_type:      kind,
+    status:               "pending",
+    prompt,
+    model,
+    aspect_ratio:         aspectRatio,
+    duration:             params.duration,
+    reference_image_urls: params.referenceImageUrls ?? [],
+  });
 
   void resolveLater(taskId, params);
   return taskId;
@@ -191,7 +188,6 @@ function settle(taskId: string, kind: MockKind, result: JobResult): void {
   jobStore.set(taskId, result);
   jobEvents.emit(`job:${taskId}`, result);
 
-  if (!GUEST_MODE) return;
   if (result.status === "done") {
     guestDb.updateGeneration(
       taskId,

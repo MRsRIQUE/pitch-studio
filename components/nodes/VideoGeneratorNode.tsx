@@ -9,7 +9,6 @@ import NodeActionBar from "./NodeActionBar";
 import { useWorkflowStore, NodeData } from "@/lib/store";
 import { generationBlocked } from "@/lib/generationGate";
 import { resolveInputs } from "@/lib/executor";
-import { createClient } from "@/lib/supabase/client";
 import { useReadOnly } from "@/lib/readOnlyContext";
 import { ShieldBan } from "lucide-react";
 import { VIDEO_MODELS as VIDEO_MODEL_CFG } from "@/lib/modelConfig";
@@ -163,7 +162,6 @@ export default function VideoGeneratorNode({ id, data, selected }: NodeProps<Vid
   const readOnly = useReadOnly();
   const updateNodeData = useWorkflowStore((s) => s.updateNodeData);
   const updateNodeSize = useWorkflowStore((s) => s.updateNodeSize);
-  const setAuthModalOpen = useWorkflowStore((s) => s.setAuthModalOpen);
   const killEdgesForHandles = useWorkflowStore((s) => s.killEdgesForHandles);
   const remapTargetHandle = useWorkflowStore((s) => s.remapTargetHandle);
   const flashEdgeError = useWorkflowStore((s) => s.flashEdgeError);
@@ -685,10 +683,7 @@ export default function VideoGeneratorNode({ id, data, selected }: NodeProps<Vid
     updateNodeData(id, { extractingFrame: true });
     addToast("Extracting frame…", "info");
     try {
-      const { data: authData } = await (await import("@/lib/supabase/client")).createClient().auth.getSession();
-      const token = authData.session?.access_token;
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
       const body = isLastFrame ? { videoUrl: url, lastFrame: true } : { videoUrl: url, timeSeconds: 0 };
       const r = await fetch("/api/extract-frame", { method: "POST", headers, body: JSON.stringify(body) });
       const j = await r.json();
@@ -746,15 +741,7 @@ export default function VideoGeneratorNode({ id, data, selected }: NodeProps<Vid
       const srcUrl = v.src;
       if (!srcUrl) throw new Error("No video source");
 
-      const token = await (async () => {
-        try {
-          const { data } = await (await import("@/lib/supabase/client")).createClient().auth.getSession();
-          return data.session?.access_token;
-        } catch { return undefined; }
-      })();
-
       const extractHeaders: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) extractHeaders["Authorization"] = `Bearer ${token}`;
       const res = await fetch("/api/extract-frame", {
         method: "POST",
         headers: extractHeaders,
@@ -790,14 +777,7 @@ export default function VideoGeneratorNode({ id, data, selected }: NodeProps<Vid
 
   // ── Generate ──────────────────────────────────────────────────────────────
   const generate = useCallback(async () => {
-    let accessToken: string;
-    if (process.env.NEXT_PUBLIC_GUEST_MODE === "true") {
-      accessToken = "guest";
-    } else {
-      const { data: authData } = await createClient().auth.getSession();
-      if (!authData.session) { setAuthModalOpen(true); return; }
-      accessToken = authData.session.access_token;
-    }
+    const accessToken = "guest";
 
     const upstream = resolveInputs(id, nodes as Node<NodeData>[], edges);
     const maxRes = cfg.maxResources ?? 3;
@@ -1090,7 +1070,7 @@ export default function VideoGeneratorNode({ id, data, selected }: NodeProps<Vid
       }
     }, 3000);
   }, [id, nodes, edges, prompt, sound, seed, duration, aspectRatio, videoModelId, veoMode, isVeo,
-    mode, resolution, cfg, debugMode, textEdge, updateNodeData, setAuthModalOpen, flashEdgeError, kieKeySet, addToast]);
+    mode, resolution, cfg, debugMode, textEdge, updateNodeData, flashEdgeError, kieKeySet, addToast]);
 
   const handleGenerateBatch = useCallback(() => {
     generate();
