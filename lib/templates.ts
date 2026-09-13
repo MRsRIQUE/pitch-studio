@@ -1,6 +1,7 @@
 import type { Node, Edge } from "@xyflow/react";
 import type { NodeData } from "./store";
 import { edgeStyle } from "./edgeStyles";
+import { promptTrocaDePessoa } from "./ugcPromptKit";
 
 // ── UGC starter: 4× Image Gen → 4× Video Gen ─────────────────────────────────
 // Two independent columns, each stacked vertically:
@@ -264,5 +265,393 @@ export function makeUGCTemplate(): {
     nodes,
     edges,
     nodeCounters: { promptNode: 8, generateNode: 4, videoGeneratorNode: 4, imageInputNode: 1 },
+  };
+}
+
+
+// ── Trocar a pessoa do vídeo: vídeo de referência + Seedance 2.5 Edit ─────────
+// A receita do @ViralOps_ (bônus): um vídeo existente vira referência de
+// movimento e cena, e o prompt diz só a troca — o que muda, qual referência
+// substitui, o que fica igual. Nada vem preenchido: o usuário solta o vídeo
+// e as fotos nos nós de entrada, e os "@" do prompt são os rótulos deles.
+//
+//   [Vídeo de referência] ──referenceVideo──┐
+//   [Personagem] ──resource──┐              ├→ [Seedance 2.5 Edit]
+//   [Produto]    ──resource──┤              │
+//   [Text] ──prompt──────────┴──────────────┘
+//
+// O nó do produto é opcional: sem imagem nele, o "@Produto" do prompt fica
+// como texto e o modelo ignora; o comentário ao lado explica isso ao usuário.
+
+export const TROCA_PESSOA_TEMPLATE_NAME = "Trocar a pessoa do vídeo";
+
+export function makeTrocaPessoaTemplate(): {
+  nodes: Node<NodeData>[];
+  edges: Edge[];
+  nodeCounters: Record<string, number>;
+} {
+  const ROTULO_PESSOA = "Personagem";
+  const ROTULO_PRODUTO = "Produto";
+  const ROTULO_VIDEO = "Vídeo de referência";
+
+  const nodes: Node<NodeData>[] = [
+    {
+      id: "tp-comment",
+      type: "commentNode",
+      position: { x: 0, y: -260 },
+      style: { width: 560, height: 200 },
+      data: {
+        label: "Comment #1",
+        status: "idle",
+        comment: [
+          "TROCAR A PESSOA DO VÍDEO",
+          "1. Solte o vídeo que serve de referência no nó de vídeo (movimento, câmera e cena vêm dele).",
+          "2. Solte a foto do seu personagem em \"Personagem\".",
+          "3. \"Produto\" é opcional: sem foto, apague a linha do produto no prompt.",
+          "4. O prompt diz só o que muda e o que fica igual. Ajuste a fala (instante e texto) e gere.",
+        ].join("\n"),
+      },
+    },
+    {
+      id: "tp-video",
+      type: "videoInputNode",
+      position: { x: 0, y: 0 },
+      style: { width: 220 },
+      data: { label: ROTULO_VIDEO, status: "idle" },
+    },
+    {
+      id: "tp-pessoa",
+      type: "imageInputNode",
+      position: { x: 0, y: 300 },
+      style: { width: 200 },
+      data: { label: ROTULO_PESSOA, status: "idle" },
+    },
+    {
+      id: "tp-produto",
+      type: "imageInputNode",
+      position: { x: 0, y: 540 },
+      style: { width: 200 },
+      data: { label: ROTULO_PRODUTO, status: "idle" },
+    },
+    {
+      id: "tp-prompt",
+      type: "promptNode",
+      position: { x: 320, y: 300 },
+      style: { width: 380, height: 400 },
+      data: {
+        label: "Text #1",
+        status: "idle",
+        prompt: promptTrocaDePessoa({
+          personagem: ROTULO_PESSOA,
+          produtos: [ROTULO_PRODUTO],
+          falas: [{ em: 3, texto: "Gente... eu amei esse produto." }],
+        }),
+      },
+    },
+    {
+      id: "tp-video-gen",
+      type: "videoGeneratorNode",
+      position: { x: 780, y: 0 },
+      style: { width: 320, height: 220 },
+      data: {
+        label: "Video Generator #1",
+        status: "idle",
+        videoModel: "seedance-2-5-edit",
+        aspectRatio: "adaptive",
+        sound: true,
+      },
+    },
+  ];
+
+  const edges: Edge[] = [
+    { id: "tp-e-video", source: "tp-video", target: "tp-video-gen", targetHandle: "referenceVideo", animated: false, style: edgeStyle("referenceVideo") },
+    { id: "tp-e-pessoa", source: "tp-pessoa", target: "tp-video-gen", targetHandle: "resource", animated: false, style: edgeStyle("resource") },
+    { id: "tp-e-produto", source: "tp-produto", target: "tp-video-gen", targetHandle: "resource", animated: false, style: edgeStyle("resource") },
+    { id: "tp-e-prompt", source: "tp-prompt", target: "tp-video-gen", targetHandle: "prompt", animated: false, style: edgeStyle("prompt") },
+  ];
+
+  return {
+    nodes,
+    edges,
+    nodeCounters: { commentNode: 1, videoInputNode: 1, imageInputNode: 2, promptNode: 1, videoGeneratorNode: 1 },
+  };
+}
+
+// ── Templates de nicho para postar: gancho nos 3s, CTA no final, 9:16 ────────
+// Mesma receita da troca de pessoa/produto acima (vídeo de referência + Seedance
+// 2.5 Edit): o que muda de um nicho para outro é o comentário de instruções e o
+// prompt já roteirizado com duas falas — o gancho logo no início e o CTA perto
+// do fim. O usuário traz o vídeo de referência (com essa estrutura de post) e as
+// fotos do personagem/produto; nenhum node novo, nenhum handle novo.
+
+interface NichoConfig {
+  idPrefix: string;
+  tituloComentario: string;
+  linhasComentario: string[];
+  /** Um rótulo = produto único (opcional, se assim indicado no comentário).
+   * Dois rótulos = comparação lado a lado, ambos esperados. */
+  rotuloProdutos: string[];
+  hook: string;
+  cta: string;
+  ctaSegundoSugerido: number;
+}
+
+function makeNichoTemplate(cfg: NichoConfig): {
+  nodes: Node<NodeData>[];
+  edges: Edge[];
+  nodeCounters: Record<string, number>;
+} {
+  const ROTULO_PESSOA = "Personagem";
+  const ROTULO_VIDEO = "Vídeo de referência";
+  const id = (n: string) => `${cfg.idPrefix}-${n}`;
+
+  const nodes: Node<NodeData>[] = [
+    {
+      id: id("comment"),
+      type: "commentNode",
+      position: { x: 0, y: -320 },
+      style: { width: 580, height: 280 },
+      data: {
+        label: "Comment #1",
+        status: "idle",
+        comment: [
+          cfg.tituloComentario,
+          ...cfg.linhasComentario,
+          `4. O prompt já vem com gancho (2s) e CTA (${cfg.ctaSegundoSugerido}s) de exemplo — ajuste os textos e mova o segundo do CTA para os últimos segundos do SEU vídeo de referência.`,
+        ].join("\n"),
+      },
+    },
+    { id: id("video"), type: "videoInputNode", position: { x: 0, y: 0 }, style: { width: 220 }, data: { label: ROTULO_VIDEO, status: "idle" } },
+    { id: id("pessoa"), type: "imageInputNode", position: { x: 0, y: 300 }, style: { width: 200 }, data: { label: ROTULO_PESSOA, status: "idle" } },
+    ...cfg.rotuloProdutos.map((rotulo, i): Node<NodeData> => ({
+      id: id(`produto-${i + 1}`), type: "imageInputNode", position: { x: 0, y: 540 + i * 240 }, style: { width: 200 }, data: { label: rotulo, status: "idle" },
+    })),
+    {
+      id: id("prompt"),
+      type: "promptNode",
+      position: { x: 320, y: 300 },
+      style: { width: 380, height: 460 },
+      data: {
+        label: "Text #1",
+        status: "idle",
+        prompt: promptTrocaDePessoa({
+          personagem: ROTULO_PESSOA,
+          produtos: cfg.rotuloProdutos,
+          falas: [{ em: 2, texto: cfg.hook }, { em: cfg.ctaSegundoSugerido, texto: cfg.cta }],
+        }),
+      },
+    },
+    {
+      id: id("video-gen"),
+      type: "videoGeneratorNode",
+      position: { x: 780, y: 0 },
+      style: { width: 320, height: 220 },
+      data: { label: "Video Generator #1", status: "idle", videoModel: "seedance-2-5-edit", aspectRatio: "adaptive", sound: true },
+    },
+  ];
+
+  const edges: Edge[] = [
+    { id: id("e-video"), source: id("video"), target: id("video-gen"), targetHandle: "referenceVideo", animated: false, style: edgeStyle("referenceVideo") },
+    { id: id("e-pessoa"), source: id("pessoa"), target: id("video-gen"), targetHandle: "resource", animated: false, style: edgeStyle("resource") },
+    ...cfg.rotuloProdutos.map((_, i) => ({ id: id(`e-produto-${i + 1}`), source: id(`produto-${i + 1}`), target: id("video-gen"), targetHandle: "resource", animated: false, style: edgeStyle("resource") })),
+    { id: id("e-prompt"), source: id("prompt"), target: id("video-gen"), targetHandle: "prompt", animated: false, style: edgeStyle("prompt") },
+  ];
+
+  return {
+    nodes,
+    edges,
+    nodeCounters: { commentNode: 1, videoInputNode: 1, imageInputNode: 1 + cfg.rotuloProdutos.length, promptNode: 1, videoGeneratorNode: 1 },
+  };
+}
+
+export const FITNESS_TEMPLATE_NAME = "TikTok Fitness";
+export function makeFitnessTemplate() {
+  return makeNichoTemplate({
+    idPrefix: "nf",
+    tituloComentario: "TIKTOK FITNESS — gancho + CTA, 15-60s, 9:16",
+    linhasComentario: [
+      "1. Solte um vídeo de referência de fitness (treino, transformação, rotina) com gancho forte no início.",
+      "2. Solte a foto do seu personagem em \"Personagem\".",
+      "3. \"Suplemento\" é opcional: sem foto, apague a linha do produto no prompt.",
+    ],
+    rotuloProdutos: ["Suplemento"],
+    hook: "Gente, para de rolar o feed... isso aqui mudou meu treino.",
+    cta: "Link na bio pra você começar hoje.",
+    ctaSegundoSugerido: 15,
+  });
+}
+
+export const BELEZA_TEMPLATE_NAME = "TikTok Beleza";
+export function makeBelezaTemplate() {
+  return makeNichoTemplate({
+    idPrefix: "nb",
+    tituloComentario: "TIKTOK BELEZA — gancho + CTA, 15-60s, 9:16",
+    linhasComentario: [
+      "1. Solte um vídeo de referência de beleza (rotina, resultado, antes/depois) com gancho forte no início.",
+      "2. Solte a foto do seu personagem em \"Personagem\".",
+      "3. \"Produto\" é opcional: sem foto, apague a linha do produto no prompt.",
+    ],
+    rotuloProdutos: ["Produto de beleza"],
+    hook: "Minha pele nunca ficou assim tão rápido.",
+    cta: "Corre lá no link da bio antes que esgote.",
+    ctaSegundoSugerido: 15,
+  });
+}
+
+export const UNBOXING_TEMPLATE_NAME = "TikTok Unboxing de Tecnologia";
+export function makeUnboxingTemplate() {
+  return makeNichoTemplate({
+    idPrefix: "nu",
+    tituloComentario: "TIKTOK UNBOXING DE TECNOLOGIA — gancho + CTA, 15-60s, 9:16",
+    linhasComentario: [
+      "1. Solte um vídeo de referência de unboxing (abrir caixa, primeiro contato com o gadget) com gancho forte no início.",
+      "2. Solte a foto do seu personagem em \"Personagem\".",
+      "3. Solte a foto do gadget em \"Gadget\" — aqui o produto é o centro do vídeo, não é opcional.",
+    ],
+    rotuloProdutos: ["Gadget"],
+    hook: "Chegou o gadget que todo mundo tá comentando.",
+    cta: "Deixei o link certinho pra você garantir o seu.",
+    ctaSegundoSugerido: 15,
+  });
+}
+
+export const DEPOIMENTO_TEMPLATE_NAME = "TikTok Depoimento";
+export function makeDepoimentoTemplate() {
+  return makeNichoTemplate({
+    idPrefix: "nd",
+    tituloComentario: "TIKTOK DEPOIMENTO / PROVA SOCIAL — gancho + CTA, 15-60s, 9:16",
+    linhasComentario: [
+      "1. Solte um vídeo de referência de depoimento (alguém contando um resultado/experiência) com gancho forte no início.",
+      "2. Solte a foto do seu personagem em \"Personagem\".",
+      "3. \"Produto\" é opcional: sem foto, apague a linha do produto no prompt.",
+    ],
+    rotuloProdutos: ["Produto"],
+    hook: "Eu quase não acreditei no resultado disso aqui.",
+    cta: "Se quiser o mesmo resultado, o link tá na bio.",
+    ctaSegundoSugerido: 15,
+  });
+}
+
+export const COMPARACAO_TEMPLATE_NAME = "TikTok Comparação de Produto";
+export function makeComparacaoTemplate() {
+  return makeNichoTemplate({
+    idPrefix: "nc",
+    tituloComentario: "TIKTOK COMPARAÇÃO DE PRODUTO — gancho + CTA, 15-60s, 9:16",
+    linhasComentario: [
+      "1. Solte um vídeo de referência que já compara dois itens lado a lado, com gancho forte no início.",
+      "2. Solte a foto do seu personagem em \"Personagem\".",
+      "3. Solte as fotos dos dois produtos em \"Produto A\" e \"Produto B\" — os dois são esperados aqui, a comparação é o vídeo inteiro.",
+    ],
+    rotuloProdutos: ["Produto A", "Produto B"],
+    hook: "Todo mundo pergunta qual desses dois vale mais a pena.",
+    cta: "Eu deixo o meu favorito linkado na bio.",
+    ctaSegundoSugerido: 15,
+  });
+}
+
+// ── TikTok Live — apoio para uma live de verdade, não automação ─────────────
+// Isto é DIFERENTE dos templates de post acima: não gera um clipe pronto pra
+// postar, gera (1) um loop de vitrine de produto para tocar como fundo/janela
+// secundária ENQUANTO o host está pessoalmente ao vivo, e (2) um roteiro
+// pronto pra servir de teleprompter manual. De propósito, NÃO reproduz o
+// padrão do "LIVE IA" (extensão que toca vídeo em loop sozinha, simulando
+// presença humana) — o TikTok exige presença humana real para os recursos de
+// monetização de live, e automação desse tipo é risco real de banimento.
+
+export const LIVE_TEMPLATE_NAME = "TikTok Live — Apoio (não automação)";
+
+const ROTEIRO_LIVE = [
+  "ROTEIRO PARA A SUA LIVE NO TIKTOK — leia e adapte antes de ir ao ar.",
+  "Isto é para você seguir enquanto está PESSOALMENTE ao vivo, respondendo ao chat em tempo real — não é para tocar sozinho no seu lugar.",
+  "",
+  "ABERTURA (primeiros 30s, gancho pra quem acabou de entrar)",
+  "\"Oi, gente! Que bom que você chegou agora — fica só mais um minuto que eu vou mostrar uma coisa que vocês vão amar.\"",
+  "[Cumprimente quem está chegando pelo nome quando aparecer no chat.]",
+  "",
+  "APRESENTAÇÃO DO PRODUTO",
+  "\"Esse aqui é o [PRODUTO]. Deixa eu mostrar de perto...\"",
+  "[Mostre o produto físico na câmera, vire pra mostrar todos os ângulos.]",
+  "",
+  "PROVA SOCIAL",
+  "\"Muita gente que já comprou voltou pra contar que [RESULTADO/BENEFÍCIO REAL].\"",
+  "[Leia um comentário/depoimento real se tiver print salvo.]",
+  "",
+  "OFERTA E URGÊNCIA (repita a cada poucos minutos)",
+  "\"Só durante a live, [OFERTA/DESCONTO]. Depois que eu sair do ar, volta ao preço normal.\"",
+  "",
+  "TRATANDO OBJEÇÕES (tenha 2-3 prontas)",
+  "\"Pergunta que sempre chega: [OBJEÇÃO COMUM]. Na real, [RESPOSTA CURTA E HONESTA].\"",
+  "",
+  "CHAMADA PRA SEGUIR E COMPARTILHAR (repita)",
+  "\"Se você tá gostando, segue aqui e manda pra um amigo que ia curtir isso também.\"",
+  "",
+  "ENCERRAMENTO",
+  "\"Valeu por ficar comigo até aqui! Quem quiser garantir o [PRODUTO], o link tá fixado. Te vejo na próxima live!\"",
+  "",
+  "DICA: mantenha esse roteiro como guia, não como texto decorado — a live fica melhor quando você conversa de verdade com quem está assistindo.",
+].join("\n");
+
+const PROMPT_VITRINE_LIVE = [
+  "A clean, professional product showcase loop for a live-stream backdrop.",
+  "The product from the reference photo sits on a simple pedestal with soft studio lighting and a softly blurred neutral background.",
+  "The camera slowly orbits 360 degrees around the product at a constant height and speed, starting and ending at the exact same angle and framing so the clip loops seamlessly when played on repeat.",
+  "No cuts, no zoom changes, no text overlays, no people, no logos beyond what is already on the product. Smooth, continuous, hypnotic motion.",
+].join(" ");
+
+export function makeLiveTemplate(): {
+  nodes: Node<NodeData>[];
+  edges: Edge[];
+  nodeCounters: Record<string, number>;
+} {
+  const nodes: Node<NodeData>[] = [
+    {
+      id: "live-comment-aviso",
+      type: "commentNode",
+      position: { x: 0, y: -600 },
+      style: { width: 1100, height: 180 },
+      data: {
+        label: "Comment #1",
+        status: "idle",
+        comment: [
+          "APOIO PARA LIVE NO TIKTOK — isto NÃO é um vídeo pronto pra postar nem uma live automática.",
+          "1. \"Vitrine em loop\" (abaixo): solte a foto do seu produto e gere um vídeo curto que gira 360° e volta ao ponto de partida — toque isso como FUNDO/vitrine numa janela secundária ENQUANTO você está pessoalmente ao vivo, respondendo ao chat.",
+          "2. \"Roteiro da live\" (ao lado): pronto pra você ler/adaptar antes de entrar ao vivo — funciona como teleprompter manual.",
+          "3. NUNCA toque só a vitrine em loop sozinha no lugar de uma live de verdade: o TikTok exige presença humana real pra liberar os recursos de monetização de live, e simular uma live automática é risco real de banimento.",
+        ].join("\n"),
+      },
+    },
+    {
+      id: "live-comment-roteiro",
+      type: "commentNode",
+      position: { x: 0, y: -380 },
+      style: { width: 1100, height: 400 },
+      data: { label: "Comment #2 · Roteiro da live", status: "idle", comment: ROTEIRO_LIVE },
+    },
+    { id: "live-produto", type: "imageInputNode", position: { x: 0, y: 60 }, style: { width: 200 }, data: { label: "Produto", status: "idle" } },
+    {
+      id: "live-prompt",
+      type: "promptNode",
+      position: { x: 320, y: 60 },
+      style: { width: 380, height: 420 },
+      data: { label: "Text #1", status: "idle", prompt: PROMPT_VITRINE_LIVE },
+    },
+    {
+      id: "live-video-gen",
+      type: "videoGeneratorNode",
+      position: { x: 780, y: 60 },
+      style: { width: 320, height: 220 },
+      data: { label: "Vitrine em loop", status: "idle", videoModel: "seedance-2", aspectRatio: "9:16", sound: false },
+    },
+  ];
+
+  const edges: Edge[] = [
+    { id: "live-e-produto", source: "live-produto", target: "live-video-gen", targetHandle: "startFrame", animated: false, style: edgeStyle("startFrame") },
+    { id: "live-e-prompt", source: "live-prompt", target: "live-video-gen", targetHandle: "prompt", animated: false, style: edgeStyle("prompt") },
+  ];
+
+  return {
+    nodes,
+    edges,
+    nodeCounters: { commentNode: 2, imageInputNode: 1, promptNode: 1, videoGeneratorNode: 1 },
   };
 }

@@ -38,6 +38,15 @@ interface Upload {
   created_at: string;
 }
 
+interface ClonedVoice {
+  id: string;
+  user_id: string;
+  voice_id: string;
+  name: string;
+  source_url?: string | null;
+  created_at: string;
+}
+
 interface FolderRecord {
   id: string;
   user_id: string;
@@ -184,6 +193,32 @@ export function deleteUpload(id: string, userId: string): void {
   db().prepare("DELETE FROM uploads WHERE id = ? AND user_id = ?").run(id, userId);
 }
 
+// ── Cloned voices ──────────────────────────────────────────────────────────
+
+export function insertClonedVoice(data: Omit<ClonedVoice, "id" | "created_at">): void {
+  db()
+    .prepare("INSERT INTO cloned_voices (id, user_id, voice_id, name, source_url, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(voice_id) DO NOTHING")
+    .run(randomUUID(), data.user_id, data.voice_id, data.name, data.source_url ?? null, now());
+}
+
+export function getClonedVoices(userId: string): ClonedVoice[] {
+  const rows = db()
+    .prepare("SELECT * FROM cloned_voices WHERE user_id = ? ORDER BY created_at DESC LIMIT 200")
+    .all(userId) as Record<string, unknown>[];
+  return rows.map((r) => ({
+    id: r.id as string,
+    user_id: r.user_id as string,
+    voice_id: r.voice_id as string,
+    name: r.name as string,
+    source_url: (r.source_url as string) ?? null,
+    created_at: r.created_at as string,
+  }));
+}
+
+export function deleteClonedVoice(voiceId: string, userId: string): void {
+  db().prepare("DELETE FROM cloned_voices WHERE voice_id = ? AND user_id = ?").run(voiceId, userId);
+}
+
 // ── Asset Cache ────────────────────────────────────────────────────────────
 
 export function lookupAssetHash(hash: string): string | null {
@@ -206,13 +241,13 @@ export function storeAssetHash(hash: string, cdnUrl: string, mimeType: string, b
 
 // ── Settings ───────────────────────────────────────────────────────────────
 
-function getSetting(key: string): string | null {
+export function getSetting(key: string): string | null {
   const r = db().prepare("SELECT value FROM settings WHERE key = ?").get(key) as
     | { value: string }
     | undefined;
   return r?.value ?? null;
 }
-function setSetting(key: string, value: string): void {
+export function setSetting(key: string, value: string): void {
   db()
     .prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
     .run(key, value);

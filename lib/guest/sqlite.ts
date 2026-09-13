@@ -72,6 +72,12 @@ function createSchema(d: DatabaseSync): void {
     CREATE TABLE IF NOT EXISTS spaces (
       id TEXT PRIMARY KEY, name TEXT, data TEXT, updated_at INTEGER
     );
+
+    CREATE TABLE IF NOT EXISTS cloned_voices (
+      id TEXT PRIMARY KEY, user_id TEXT, voice_id TEXT UNIQUE, name TEXT,
+      source_url TEXT, created_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_cloned_voices_user ON cloned_voices (user_id, created_at DESC);
   `);
 }
 

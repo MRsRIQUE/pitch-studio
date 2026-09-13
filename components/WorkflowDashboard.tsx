@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import { useWorkflowStore, Space } from "@/lib/store";
-import { makeUGCTemplate } from "@/lib/templates";
+import { makeUGCTemplate, makeTrocaPessoaTemplate, TROCA_PESSOA_TEMPLATE_NAME, makeFitnessTemplate, FITNESS_TEMPLATE_NAME, makeBelezaTemplate, BELEZA_TEMPLATE_NAME, makeUnboxingTemplate, UNBOXING_TEMPLATE_NAME, makeDepoimentoTemplate, DEPOIMENTO_TEMPLATE_NAME, makeComparacaoTemplate, COMPARACAO_TEMPLATE_NAME, makeLiveTemplate, LIVE_TEMPLATE_NAME } from "@/lib/templates";
 import { timeAgo } from "@/lib/useSpaceSync";
 import { WorkflowHero } from "@/components/WorkflowHero";
 import DotCanvasBackground from "@/components/ui/DotCanvasBackground";
@@ -204,7 +204,22 @@ const TEMPLATE_PREVIEWS = [
   "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/4.png",
 ];
 
-function TemplateCard({ onLoad, onReset }: { onLoad: () => void; onReset: (e: React.MouseEvent) => void }) {
+function TemplateCard({
+  onLoad,
+  onReset,
+  title = "UGC Template",
+  subtitle = "4× Image → 4× Video",
+  previews = TEMPLATE_PREVIEWS,
+  art,
+}: {
+  onLoad: () => void;
+  onReset: (e: React.MouseEvent) => void;
+  title?: string;
+  subtitle?: string;
+  /** Quatro capas. Sem elas, o card usa `art` no lugar da grade. */
+  previews?: string[];
+  art?: React.ReactNode;
+}) {
   return (
     <div
       className="wsd-tmpl"
@@ -214,7 +229,11 @@ function TemplateCard({ onLoad, onReset }: { onLoad: () => void; onReset: (e: Re
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onLoad(); }}
     >
       <div className="wsd-thumbs">
-        {TEMPLATE_PREVIEWS.map((url, i) => (
+        {art ? (
+          <div className="wsd-thumb-cell wsd-thumb-cell-empty" style={{ gridColumn: "1 / -1", gridRow: "1 / -1" }}>
+            {art}
+          </div>
+        ) : previews.map((url, i) => (
           <div key={i} className="wsd-thumb-cell">
             <NextImage src={url} alt="" fill sizes="160px" style={{ objectFit: "cover" }} />
           </div>
@@ -228,7 +247,7 @@ function TemplateCard({ onLoad, onReset }: { onLoad: () => void; onReset: (e: Re
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontSize: "15px", fontWeight: 600, color: "#fff", letterSpacing: "-0.015em" }}>
-            UGC Template
+            {title}
           </div>
           <button
             onClick={onReset}
@@ -252,10 +271,45 @@ function TemplateCard({ onLoad, onReset }: { onLoad: () => void; onReset: (e: Re
           fontSize: "10px", fontWeight: 500, letterSpacing: "0.04em",
           color: "rgba(134, 140, 255,0.6)", textTransform: "uppercase",
         }}>
-          <span>4× Image → 4× Video</span>
+          <span>{subtitle}</span>
         </div>
       </div>
     </div>
+  );
+}
+
+/** A arte do card de troca: três entradas viram um vídeo. Só traço, sem foto,
+ *  porque este template nasce vazio — não há capa para mostrar. */
+function TrocaPessoaArt() {
+  return (
+    <svg viewBox="0 0 160 106" width="70%" height="70%" fill="none" stroke="rgba(180,170,255,0.85)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="8" y="10" width="44" height="28" rx="5" />
+      <path d="M24 18v12l10-6z" fill="rgba(180,170,255,0.85)" stroke="none" />
+      <rect x="8" y="46" width="44" height="28" rx="5" />
+      <circle cx="30" cy="57" r="5" />
+      <path d="M18 72c2-6 6-9 12-9s10 3 12 9" />
+      <rect x="8" y="82" width="44" height="18" rx="5" strokeDasharray="3 3" />
+      <path d="M52 24h30M52 60h30M52 91h30" strokeDasharray="2 4" />
+      <path d="M82 24v67" />
+      <path d="M82 55h20" />
+      <path d="M102 50l6 5-6 5" />
+      <rect x="112" y="30" width="40" height="50" rx="7" stroke="rgba(255,255,255,0.9)" />
+      <path d="M126 48v14l12-7z" fill="rgba(255,255,255,0.9)" stroke="none" />
+    </svg>
+  );
+}
+
+/** A arte do card de apoio a live: um roteiro (clipboard) com um selo "ao vivo",
+ *  para não parecer o mesmo ícone de vídeo-pronto-pra-postar dos outros cards. */
+function LiveArt() {
+  return (
+    <svg viewBox="0 0 160 106" width="70%" height="70%" fill="none" stroke="rgba(180,170,255,0.85)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="45" y="8" width="70" height="90" rx="6" />
+      <path d="M68 8v-4h20v4" />
+      <path d="M59 30h52M59 44h52M59 58h40M59 72h46" />
+      <circle cx="132" cy="22" r="9" fill="rgba(227,26,26,0.85)" stroke="none" />
+      <circle cx="132" cy="22" r="15" strokeDasharray="2 3" />
+    </svg>
   );
 }
 
@@ -679,28 +733,43 @@ export default function WorkflowDashboard() {
   };
 
   const TEMPLATE_NAME = "UGC Template";
+  const NICHO_TEMPLATES = [
+    { name: FITNESS_TEMPLATE_NAME, make: makeFitnessTemplate, subtitle: "Fitness · referência + Seedance 2.5 Edit" },
+    { name: BELEZA_TEMPLATE_NAME, make: makeBelezaTemplate, subtitle: "Beleza · referência + Seedance 2.5 Edit" },
+    { name: UNBOXING_TEMPLATE_NAME, make: makeUnboxingTemplate, subtitle: "Unboxing de tecnologia · referência + Seedance 2.5 Edit" },
+    { name: DEPOIMENTO_TEMPLATE_NAME, make: makeDepoimentoTemplate, subtitle: "Depoimento · referência + Seedance 2.5 Edit" },
+    { name: COMPARACAO_TEMPLATE_NAME, make: makeComparacaoTemplate, subtitle: "Comparação de produto · referência + Seedance 2.5 Edit" },
+  ];
+  const TEMPLATE_NAMES = new Set([TEMPLATE_NAME, TROCA_PESSOA_TEMPLATE_NAME, LIVE_TEMPLATE_NAME, ...NICHO_TEMPLATES.map((t) => t.name)]);
 
-  const spawnFreshTemplate = () => {
+  /* Um template velho com o mesmo nome é descartado antes: senão o usuário
+     acumularia cópias a cada clique no card. */
+  const spawnFreshTemplate = (name: string, make: () => Parameters<typeof createSpace>[1]) => {
     const store = useWorkflowStore.getState();
-    const existing = store.spaces.find((sp) => sp.name === TEMPLATE_NAME);
+    const existing = store.spaces.find((sp) => sp.name === name);
     if (existing) {
       if (store.spaces.length === 1) store.createSpace("Space 1");
       deleteSpace(existing.id);
     }
-    createSpace(TEMPLATE_NAME, makeUGCTemplate());
+    createSpace(name, make());
     const newId = useWorkflowStore.getState().activeSpaceId;
     router.push(`/workflow/${newId}`);
   };
 
-  const handleLoadTemplate = () => spawnFreshTemplate();
-
+  const handleLoadTemplate = () => spawnFreshTemplate(TEMPLATE_NAME, makeUGCTemplate);
   const handleResetTemplate = (e: React.MouseEvent) => {
     e.stopPropagation();
-    spawnFreshTemplate();
+    spawnFreshTemplate(TEMPLATE_NAME, makeUGCTemplate);
+  };
+
+  const handleLoadTrocaPessoa = () => spawnFreshTemplate(TROCA_PESSOA_TEMPLATE_NAME, makeTrocaPessoaTemplate);
+  const handleResetTrocaPessoa = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    spawnFreshTemplate(TROCA_PESSOA_TEMPLATE_NAME, makeTrocaPessoaTemplate);
   };
 
   const sorted = [...spaces]
-    .filter((sp) => sp.nodes.length > 0 && sp.name !== TEMPLATE_NAME)
+    .filter((sp) => sp.nodes.length > 0 && !TEMPLATE_NAMES.has(sp.name))
     .sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt));
 
   return (
@@ -778,6 +847,30 @@ export default function WorkflowDashboard() {
         }}>
           <CreateCard onCreate={handleCreate} />
           <TemplateCard onLoad={handleLoadTemplate} onReset={handleResetTemplate} />
+          <TemplateCard
+            onLoad={handleLoadTrocaPessoa}
+            onReset={handleResetTrocaPessoa}
+            title={TROCA_PESSOA_TEMPLATE_NAME}
+            subtitle="Vídeo de referência → Seedance 2.5 Edit"
+            art={<TrocaPessoaArt />}
+          />
+          {NICHO_TEMPLATES.map((t) => (
+            <TemplateCard
+              key={t.name}
+              onLoad={() => spawnFreshTemplate(t.name, t.make)}
+              onReset={(e) => { e.stopPropagation(); spawnFreshTemplate(t.name, t.make); }}
+              title={t.name}
+              subtitle={t.subtitle}
+              art={<TrocaPessoaArt />}
+            />
+          ))}
+          <TemplateCard
+            onLoad={() => spawnFreshTemplate(LIVE_TEMPLATE_NAME, makeLiveTemplate)}
+            onReset={(e) => { e.stopPropagation(); spawnFreshTemplate(LIVE_TEMPLATE_NAME, makeLiveTemplate); }}
+            title={LIVE_TEMPLATE_NAME}
+            subtitle="Vitrine em loop + roteiro — apoio, não vídeo pronto"
+            art={<LiveArt />}
+          />
           {sorted.map((sp) => (
             <SpaceCard key={sp.id} space={sp} onOpen={() => openSpace(sp.id)} />
           ))}
