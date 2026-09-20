@@ -8,7 +8,7 @@ import { MEDIA_DIR } from "./guest/paths";
 import { uploadBuffer } from "./storage";
 import { insertUpload } from "./guest/db";
 import { GUEST_USER_ID } from "./guestMode";
-import type { Timeline } from "./timelineEditor";
+import { clipFit, type Timeline } from "./timelineEditor";
 
 const exec = promisify(execFile);
 export async function mediaBytes(url: string): Promise<Buffer> {
@@ -66,6 +66,15 @@ export function buildCaptionAss(words: CaptionWord[], width: number, height: num
   }
   return `[Script Info]\nScriptType: v4.00+\nPlayResX: ${width}\nPlayResY: ${height}\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Caption,Arial,${fontSize},&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,${outline},0,2,40,40,${marginV},1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n${events.join("\n")}\n`;
 }
+/** Como encaixar a mídia numa caixa w×h. "cover" (padrão) amplia preservando a proporção
+    e corta as sobras — sem barra preta e sem deformar, igual ao TikTok/CapCut. "contain"
+    encaixa inteiro e preenche o resto com transparência (a base por baixo aparece).
+    "fill" é o esticamento que era o único comportamento até 2026-09-20. */
+const fitFilter = (w: number, h: number, fit: string) =>
+  fit === "fill" ? `scale=${w}:${h}`
+    : fit === "contain" ? `format=yuva420p,scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=black@0`
+      : `scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h}`;
+
 export async function processMedia(body: MediaRequest) {
   const temp = await mkdtemp(join(tmpdir(), "pitch-production-"));
   try {
@@ -162,15 +171,16 @@ export async function processMedia(body: MediaRequest) {
         const x = Math.round((width - w2) * number(clip.x, 0.5, 0, 1));
         const y = Math.round((height - h2) * number(clip.y, 0.5, 0, 1));
         const vLabel = `v${idx}`;
+        const encaixe = fitFilter(w2, h2, clipFit(clip));
         if (clip.kind === "image") {
           args.push("-loop", "1", "-t", String(clipDuration), "-i", path);
-          filters.push(`[${idx}:v]setpts=PTS-STARTPTS+${start}/TB,scale=${w2}:${h2}[${vLabel}]`);
+          filters.push(`[${idx}:v]setpts=PTS-STARTPTS+${start}/TB,${encaixe}[${vLabel}]`);
         } else {
           args.push("-i", path);
           const clipInfo = await probe(path);
           const sourceDuration = Number(clipInfo.format.duration);
           const sourceIn = number(clip.sourceIn, 0, 0, Math.max(0, sourceDuration - 0.05));
-          filters.push(`[${idx}:v]trim=start=${sourceIn}:duration=${clipDuration},setpts=PTS-STARTPTS+${start}/TB,scale=${w2}:${h2}[${vLabel}]`);
+          filters.push(`[${idx}:v]trim=start=${sourceIn}:duration=${clipDuration},setpts=PTS-STARTPTS+${start}/TB,${encaixe}[${vLabel}]`);
           if (!clip.muted && clipInfo.streams.some(s => s.codec_type === "audio")) {
             const aLabel = `a${idx}`;
             filters.push(`[${idx}:a]atrim=start=${sourceIn}:duration=${clipDuration},asetpts=PTS-STARTPTS+${start}/TB,volume=${number(clip.volume, 1, 0, 2)}[${aLabel}]`);

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { isLive, sourceTimeAt, type Timeline } from "@/lib/timelineEditor";
+import { clipFit, isLive, sourceTimeAt, type Timeline } from "@/lib/timelineEditor";
 
 /* ============================================================
    Composição ao vivo — camada de PINTURA (DOM empilhado).
@@ -13,11 +13,10 @@ import { isLive, sourceTimeAt, type Timeline } from "@/lib/timelineEditor";
    recebe `time`/`playing` e faz a mídia obedecer. É essa separação que
    permite trocar DOM por canvas depois sem tocar no resto do editor.
 
-   Fidelidade: a prévia imita o render, não o substitui. Em particular ela
-   ESTICA o clipe para o tamanho do destino (`object-fit: fill`), porque é
-   exatamente o que o `scale=W*s:H*s` do compose-multitrack faz hoje — um
-   16:9 numa saída 9:16 sai deformado nos dois lados. Honestidade proposital:
-   corrigir isso é decisão de render, ainda em aberto com o usuário.
+   Fidelidade: a prévia imita o render, não o substitui. O `object-fit` de cada
+   clipe espelha o enquadramento que o ffmpeg vai aplicar (`clipFit`): cover
+   amplia e corta, contain encaixa inteiro, fill estica. O que continua diferente
+   é o sincronismo (~1 quadro) e a fonte do texto (navegador ≠ ffmpeg).
    ============================================================ */
 
 /** Quanto a mídia pode derivar do relógio antes de um reseek, em segundos.
@@ -80,6 +79,7 @@ export default function TimelinePreview({ timeline, time, playing }: {
           height: `${clip.scale * 100}%`,
           zIndex: clip.track + 1,
           display: live ? undefined : "none",
+          objectFit: clipFit(clip), // espelha o fitFilter do compose-multitrack
         };
         return clip.kind === "video" ? (
           <video

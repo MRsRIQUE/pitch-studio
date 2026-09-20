@@ -30,6 +30,19 @@ export interface TimelineClip {
   y: number;
   /** Escala normalizada (0..1) do clipe em relação ao quadro de saída. 1 = tela cheia. */
   scale: number;
+  /** Como a mídia preenche a caixa quando a proporção dela não bate com a do destino.
+      "cover" (padrão) amplia e corta as sobras — é o que TikTok/CapCut fazem com vídeo
+      vertical de fonte 16:9. "contain" encaixa inteiro e deixa o resto transparente.
+      "fill" estica e deforma (era o comportamento único até 2026-09-20). Campo existe
+      como ponto de extensão para um ajuste por clipe; ainda não há UI para trocá-lo. */
+  fit?: ClipFit;
+}
+
+export type ClipFit = "cover" | "contain" | "fill";
+
+/** Enquadramento efetivo de um clipe: o padrão de quem não declarou é "cover". */
+export function clipFit(clip: Pick<TimelineClip, "fit">): ClipFit {
+  return clip.fit ?? "cover";
 }
 
 export interface TimelineText {
@@ -65,6 +78,7 @@ export const newTimelineClip = (over: Pick<TimelineClip, "url" | "kind" | "sourc
   x: 0.5,
   y: 0.5,
   scale: 1,
+  fit: "cover",
   ...over,
 });
 
