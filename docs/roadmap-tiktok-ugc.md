@@ -112,8 +112,8 @@ commitada**. O que falta:
 4. **Editor mais completo estilo CapCut** — múltiplas trilhas, texto/legenda estilizável,
    transições, stickers. **Fase 1 implementada e testada (2026-09-13)** — ver seção própria
    "Item 4 — editor multi-trilha, Fase 1" mais abaixo para todo o detalhe técnico e de
-   validação. Faltam as fases seguintes (transições, stickers), que aguardam alinhamento com o
-   usuário antes de construir.
+   validação. **Fase 2 (2026-09-20)**: preview ao vivo composta, playhead e split — ver a seção
+   própria. Faltam transições e stickers.
 5. **Templates de TikTok para postar** — ✅ implementado (2026-09-13). 5 categorias em
    `lib/templates.ts`: `makeFitnessTemplate`, `makeBelezaTemplate`, `makeUnboxingTemplate`,
    `makeDepoimentoTemplate`, `makeComparacaoTemplate` (+ suas `*_TEMPLATE_NAME`), todas
@@ -222,6 +222,65 @@ de "clipe em trilha" porque tipicamente não ocupam uma trilha de vídeo inteira
 quiser depois — uma preview ao vivo composta (canvas + múltiplos `<video>` ocultos), que é um
 projeto à parte em complexidade.
 
+## Item 4 — Fase 2: preview ao vivo, playhead e split (2026-09-20)
+
+Fase 1 commitada em `12a47e9`. O usuário escolheu a preview ao vivo antes das transições,
+sabendo que era a opção mais cara, pelo desbloqueio: acabar com a edição às cegas.
+
+**Decisão de arquitetura confirmada**: composição por **DOM empilhado**, não canvas. Cada clipe
+no ar é um `<video>`/`<img>` posicionado em porcentagem sobre um palco com a proporção da saída,
+empilhado por `z-index` = trilha; o navegador compõe e mistura o áudio (clipes + bgm em loop +
+narração) sozinho. O canvas (`drawImage` num loop de rAF) precisaria exatamente da mesma
+engrenagem de `<video>` ocultos e relógio, sem resolver o áudio — só somaria um loop de desenho.
+Para manter a porta aberta, o relógio ficou isolado em `useTimelinePlayback.ts`: trocar a camada
+de pintura depois não encosta no resto do editor.
+
+- `lib/timelineEditor.ts` — helpers puros novos, agnósticos de como se pinta: `splitClip` /
+  `splitTimelineClip` (o lado direito ganha id novo e avança o `sourceIn`; imagem não avança,
+  a origem é um quadro só), `clipsAtTime` / `textsAtTime` (quem está no ar, do fundo para a
+  frente), `sourceTimeAt`, `isLive` (fim exclusivo, pra não desenhar dois clipes na emenda) e
+  `MIN_CLIP_DURATION`.
+- `components/nodes/useTimelinePlayback.ts` — só o relógio: `time`, `playing`, `play`/`pause`/
+  `toggle`/`seek`, avançando por `requestAnimationFrame` com espelho em ref (nada de efeito
+  colateral dentro de updater, que o StrictMode chamaria duas vezes).
+- `components/nodes/TimelinePreview.tsx` — a camada de pintura. Segue o relógio com reseek por
+  deriva (folga de 0,25s tocando pra não engasgar; 0,05s parado pra o scrub ser fiel).
+- `components/nodes/TimelineEditor.tsx` — playhead arrastável pela régua (não deseleciona o
+  clipe: mover o playhead é preparação pro corte), botão "✂ Dividir no playhead" (desabilitado
+  quando o corte deixaria lasca < 0,2s), transporte ▶/⏸, e a preview composta no lugar do
+  antigo preview de clipe isolado.
+
+**Fidelidade proposital**: a preview ESTICA o clipe (`object-fit: fill`) porque é o que o
+`scale=W*s:H*s` do `compose-multitrack` faz — um 16:9 numa saída 9:16 sai deformado. É bug
+pré-existente do render, que a preview só tornou visível; a correção (cover/contain/manual) é
+decisão separada, combinada com o usuário para quando chegar a vez. A preview também não é
+autoridade: sincronismo de ~1 quadro e fonte do navegador ≠ fonte do ffmpeg.
+
+**Validação real feita**:
+1. Helpers puros: 24 asserts num script standalone (matemática do corte, continuidade na emenda
+   `sourceTimeAt(esq, corte) === dir.sourceIn`, recusa nas bordas, imutabilidade da timeline
+   original, ordem de desenho por trilha) — 24 ok.
+2. Navegador: 20 asserts de ponta a ponta numa página temporária com mídia sintética
+   (`clipA.webm` 16:9 no fundo, `clipB.webm` 9:16 como PiP, PNG e texto), incluindo decodificação
+   real (`readyState`/`videoWidth`), geometria do PiP batendo com a conta do `overlay` (49,5% /
+   5,5% / 45%), scrub levando o playhead a 3,00s com a mídia seguindo (`currentTime ≈ 3`), split
+   virando duas caixas de 180px, ▶ fazendo o relógio andar e os clipes tocarem, ⏸ parando tudo,
+   e zero erro de console — 20 ok. Conferido também por screenshot: o timecode queimado no PiP
+   mostrava `B 01s` em t=3s (timeline 3s − início 2s = 1s na origem), prova visual do sync.
+3. **O Chrome da extensão de automação não decodifica vídeo nenhum** neste ambiente — nem mp4
+   nem webm, nem mídia gerada pelo próprio app (spinner infinito, `readyState` 0). Não é bug do
+   editor. A validação usou o Chromium do Playwright já baixado em `~/AppData/Local/ms-playwright`,
+   dirigido por um arnês CDP mínimo (WebSocket nativo do Node 24, nenhuma dependência nova no
+   projeto). Fica o registro para a próxima sessão não perder tempo com o mesmo desvio.
+4. **Não testado**: timeline grande. Todo clipe entra com `preload="auto"`; com dezenas de
+   clipes isso pode pesar em rede/memória, e o limite atual do render é 60 clipes.
+
+**O que falta pra fases seguintes**: transições (o caminho barato na arquitetura atual é fade de
+alpha por clipe — `format=yuva420p,fade=t=in:alpha=1` antes do `overlay` — e não `xfade`, que
+exige adjacência na mesma trilha e re-cronometra a timeline inteira), stickers (o render já
+suporta: é clipe `kind:"image"` com x/y/scale; falta só arrastar sobre o palco, que agora existe)
+e a correção do esticamento.
+
 ## Decisões já confirmadas com o usuário (2026-09-13)
 
 - **STT (item 1):** ElevenLabs Speech-to-Text — implementado, ver item 1 acima.
@@ -252,8 +311,8 @@ projeto à parte em complexidade.
 3. ✅ Clonagem de voz na ElevenLabs (item 2).
 4. ✅ Templates de post por nicho reaproveitando `makeTrocaPessoaTemplate` (item 5).
 5. ✅ Templates de LIVE (apoio, não automação) (item 6).
-6. ✅ Editor multi-trilha (item 4) — **Fase 1** (sem transições/stickers): multi-trilha de
-   vídeo/imagem + texto, testada de ponta a ponta (ver seção própria). Fases seguintes
-   (transições, stickers) aguardam alinhamento com o usuário. **Próximo passo: revisar com o
-   usuário e decidir se avança de fase, ou commit + pausa.**
+6. ✅ Editor multi-trilha (item 4) — **Fase 1** (multi-trilha, commitada em `12a47e9`) e
+   **Fase 2** (preview ao vivo + playhead + split, validada no navegador; ver seções próprias).
+   **Próximo passo: transições (fade de alpha) ou stickers, e a correção do esticamento do
+   `scale` — nesta ordem, se o usuário concordar.**
 7. Itens de menor prioridade (item 7) ficam registrados, sem data.

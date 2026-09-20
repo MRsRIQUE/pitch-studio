@@ -2,11 +2,12 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { productionRequest } from "@/lib/productionClient";
-import { newTimelineClip, newTimelineText, timelineDuration, trackCount, type Timeline, type TimelineClip, type TimelineText } from "@/lib/timelineEditor";
+import { MIN_CLIP_DURATION, newTimelineClip, newTimelineText, splitTimelineClip, timelineDuration, trackCount, type Timeline, type TimelineClip, type TimelineText } from "@/lib/timelineEditor";
+import TimelinePreview from "./TimelinePreview";
+import { useTimelinePlayback } from "./useTimelinePlayback";
 import "./timeline.css";
 
 const TRACK_HEIGHT = 60;
-const MIN_DURATION = 0.2;
 
 export default function TimelineEditor({ initial, onClose, onRendered }: {
   initial: Timeline;
@@ -22,11 +23,20 @@ export default function TimelineEditor({ initial, onClose, onRendered }: {
 
   const duration = Math.max(5, timelineDuration(timeline));
   const tracks = Math.max(1, trackCount(timeline));
+  const { time, playing, pause, toggle, seek } = useTimelinePlayback(duration);
   const selectedClip = selected?.kind === "clip" ? timeline.clips.find((c) => c.id === selected.id) : undefined;
   const selectedText = selected?.kind === "text" ? timeline.texts.find((t) => t.id === selected.id) : undefined;
+  const canSplit = !!selectedClip
+    && time - selectedClip.start >= MIN_CLIP_DURATION
+    && selectedClip.start + selectedClip.duration - time >= MIN_CLIP_DURATION;
 
   const patchClip = (id: string, patch: Partial<TimelineClip>) => setTimeline((t) => ({ ...t, clips: t.clips.map((c) => (c.id === id ? { ...c, ...patch } : c)) }));
   const patchText = (id: string, patch: Partial<TimelineText>) => setTimeline((t) => ({ ...t, texts: t.texts.map((x) => (x.id === id ? { ...x, ...patch } : x)) }));
+
+  function splitAtPlayhead() {
+    if (!selectedClip) return;
+    setTimeline((t) => splitTimelineClip(t, selectedClip.id, time));
+  }
 
   function removeSelected() {
     if (!selected) return;
@@ -70,6 +80,30 @@ export default function TimelineEditor({ initial, onClose, onRendered }: {
     finally { setBusy(false); }
   }
 
+  /** Arrasta o playhead pela régua. Não deseleciona (stopPropagation): mover o
+      playhead é quase sempre preparação para cortar o clipe que está selecionado. */
+  function scrub(e: React.PointerEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    e.preventDefault();
+    pause(); // arrastar a régua enquanto toca briga com o relógio
+    const target: HTMLDivElement = e.currentTarget, pointerId = e.pointerId;
+    const rect = target.getBoundingClientRect();
+    const timeAt = (clientX: number) => Math.max(0, Math.min(duration, (clientX - rect.left) / pxPerSec));
+    seek(timeAt(e.clientX));
+    try { target.setPointerCapture(pointerId); } catch { /* segue sem captura; os listeners no próprio elemento ainda funcionam */ }
+    function onMove(ev: PointerEvent) { if (ev.pointerId === pointerId) seek(timeAt(ev.clientX)); }
+    function onUp(ev: PointerEvent) {
+      if (ev.pointerId !== pointerId) return;
+      target.removeEventListener("pointermove", onMove);
+      target.removeEventListener("pointerup", onUp);
+      target.removeEventListener("pointercancel", onUp);
+      try { target.releasePointerCapture(pointerId); } catch { /* já liberado */ }
+    }
+    target.addEventListener("pointermove", onMove);
+    target.addEventListener("pointerup", onUp);
+    target.addEventListener("pointercancel", onUp);
+  }
+
   function dragClip(e: React.PointerEvent<HTMLDivElement>, clip: TimelineClip, mode: "move" | "trim-left" | "trim-right") {
     e.stopPropagation();
     e.preventDefault();
@@ -85,10 +119,10 @@ export default function TimelineEditor({ initial, onClose, onRendered }: {
         const newTrack = Math.max(0, origin.track + Math.round(dy / TRACK_HEIGHT));
         patchClip(clip.id, { start: Math.max(0, origin.start + dx), track: newTrack });
       } else if (mode === "trim-right") {
-        const maxDuration = clip.kind === "image" ? 600 : Math.max(MIN_DURATION, clip.sourceDuration - origin.sourceIn);
-        patchClip(clip.id, { duration: Math.min(maxDuration, Math.max(MIN_DURATION, origin.duration + dx)) });
+        const maxDuration = clip.kind === "image" ? 600 : Math.max(MIN_CLIP_DURATION, clip.sourceDuration - origin.sourceIn);
+        patchClip(clip.id, { duration: Math.min(maxDuration, Math.max(MIN_CLIP_DURATION, origin.duration + dx)) });
       } else {
-        const maxDx = origin.duration - MIN_DURATION;
+        const maxDx = origin.duration - MIN_CLIP_DURATION;
         const minDx = clip.kind === "image" ? -origin.start : Math.max(-origin.sourceIn, -origin.start);
         const clamped = Math.max(minDx, Math.min(maxDx, dx));
         patchClip(clip.id, { start: origin.start + clamped, sourceIn: Math.max(0, origin.sourceIn + clamped), duration: origin.duration - clamped });
@@ -133,23 +167,23 @@ export default function TimelineEditor({ initial, onClose, onRendered }: {
   return createPortal(
     <div className="tle-overlay">
       <div className="tle-header">
-        <h2>Editor completo — multi-trilha (fase 1: sem transições/stickers ainda)</h2>
+        <h2>Editor completo — multi-trilha (sem transições/stickers ainda)</h2>
         <button onClick={onClose} disabled={busy}>Fechar sem renderizar</button>
         <button className="tle-primary" onClick={() => void render()} disabled={busy || !timeline.clips.length}>{busy ? "Renderizando…" : "Renderizar e usar"}</button>
       </div>
       {error && <p className="tle-error" role="alert">{error}</p>}
       <div className="tle-preview">
-        {selectedClip ? (
-          selectedClip.kind === "video"
-            ? <video key={selectedClip.id} src={selectedClip.url} controls />
-            : <img key={selectedClip.id} src={selectedClip.url} alt="" />
-        ) : <span className="tle-empty">Selecione um clipe para pré-visualizar. Sem composição ao vivo nesta fase — renderize para ver o resultado final.</span>}
+        {timeline.clips.length
+          ? <TimelinePreview timeline={timeline} time={time} playing={playing} />
+          : <span className="tle-empty">Adicione um vídeo ou imagem para começar.</span>}
       </div>
       <div className="tle-toolbar">
         <label className="tle-file">+ Vídeo<input type="file" accept="video/*" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void addMedia(f, "video"); }} /></label>
         <label className="tle-file">+ Imagem<input type="file" accept="image/*" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void addMedia(f, "image"); }} /></label>
         <button onClick={addText}>+ Texto</button>
-        <span className="tle-duration">{duration.toFixed(1)}s · {tracks} trilha{tracks !== 1 ? "s" : ""}</span>
+        <button className="tle-transport" onClick={toggle} disabled={!timeline.clips.length}>{playing ? "⏸ Pausar" : "▶ Tocar"}</button>
+        <button onClick={splitAtPlayhead} disabled={!canSplit} title="Divide o clipe selecionado em dois no playhead">✂ Dividir no playhead</button>
+        <span className="tle-duration">{duration.toFixed(1)}s · {tracks} trilha{tracks !== 1 ? "s" : ""} · {time.toFixed(2)}s</span>
         <div className="tle-zoom">
           <button onClick={() => setPxPerSec((z) => Math.max(15, z - 15))}>−</button>
           <button onClick={() => setPxPerSec((z) => Math.min(300, z + 15))}>+</button>
@@ -157,7 +191,7 @@ export default function TimelineEditor({ initial, onClose, onRendered }: {
       </div>
       <div className="tle-tracks" onPointerDown={() => setSelected(null)}>
         <div style={{ width: timelineWidth, position: "relative" }}>
-          <div className="tle-ruler" style={{ width: timelineWidth }}>
+          <div className="tle-ruler" style={{ width: timelineWidth }} onPointerDown={scrub}>
             {ruler.map((s) => <span key={s} style={{ left: s * pxPerSec }}>{s}s</span>)}
           </div>
           {Array.from({ length: tracks }, (_, track) => (
@@ -190,12 +224,13 @@ export default function TimelineEditor({ initial, onClose, onRendered }: {
               </div>
             ))}
           </div>
+          <div className="tle-playhead" style={{ left: time * pxPerSec }} />
         </div>
       </div>
       <div className="tle-panel">
         {selectedClip && <>
           <label>Início (s)<input type="number" min="0" step="0.1" value={selectedClip.start.toFixed(2)} onChange={(e) => patchClip(selectedClip.id, { start: Math.max(0, Number(e.target.value)) })} /></label>
-          <label>Duração (s)<input type="number" min={MIN_DURATION} step="0.1" value={selectedClip.duration.toFixed(2)} onChange={(e) => patchClip(selectedClip.id, { duration: Math.max(MIN_DURATION, Number(e.target.value)) })} /></label>
+          <label>Duração (s)<input type="number" min={MIN_CLIP_DURATION} step="0.1" value={selectedClip.duration.toFixed(2)} onChange={(e) => patchClip(selectedClip.id, { duration: Math.max(MIN_CLIP_DURATION, Number(e.target.value)) })} /></label>
           <label>Trilha<input type="number" min="0" step="1" value={selectedClip.track} onChange={(e) => patchClip(selectedClip.id, { track: Math.max(0, Math.round(Number(e.target.value))) })} /></label>
           <label>Posição X (0-1)<input type="number" min="0" max="1" step="0.05" value={selectedClip.x} onChange={(e) => patchClip(selectedClip.id, { x: Math.max(0, Math.min(1, Number(e.target.value))) })} /></label>
           <label>Posição Y (0-1)<input type="number" min="0" max="1" step="0.05" value={selectedClip.y} onChange={(e) => patchClip(selectedClip.id, { y: Math.max(0, Math.min(1, Number(e.target.value))) })} /></label>
@@ -207,7 +242,7 @@ export default function TimelineEditor({ initial, onClose, onRendered }: {
         {selectedText && <>
           <label>Texto<input type="text" value={selectedText.text} onChange={(e) => patchText(selectedText.id, { text: e.target.value })} /></label>
           <label>Início (s)<input type="number" min="0" step="0.1" value={selectedText.start.toFixed(2)} onChange={(e) => patchText(selectedText.id, { start: Math.max(0, Number(e.target.value)) })} /></label>
-          <label>Duração (s)<input type="number" min={MIN_DURATION} step="0.1" value={selectedText.duration.toFixed(2)} onChange={(e) => patchText(selectedText.id, { duration: Math.max(MIN_DURATION, Number(e.target.value)) })} /></label>
+          <label>Duração (s)<input type="number" min={MIN_CLIP_DURATION} step="0.1" value={selectedText.duration.toFixed(2)} onChange={(e) => patchText(selectedText.id, { duration: Math.max(MIN_CLIP_DURATION, Number(e.target.value)) })} /></label>
           <label>Cor<input type="color" value={selectedText.color} onChange={(e) => patchText(selectedText.id, { color: e.target.value })} /></label>
           <label>Tamanho<input type="number" min="8" max="400" step="2" value={selectedText.fontSize} onChange={(e) => patchText(selectedText.id, { fontSize: Number(e.target.value) })} /></label>
           <label>Posição<select value={selectedText.position} onChange={(e) => patchText(selectedText.id, { position: e.target.value as TimelineText["position"] })}>{["top", "center", "bottom"].map((p) => <option key={p} value={p}>{p}</option>)}</select></label>

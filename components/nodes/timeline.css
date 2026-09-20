@@ -39,3 +39,14 @@
 .tle-panel input[type=text]{min-width:220px}
 .tle-panel .tle-danger{margin-left:auto;align-self:center;background:#4a2430;border-color:#7a3444;color:#f4c6cf}
 .tle-error{color:#f2a6a6;font-size:12px;padding:0 16px 8px}
+.tle-ruler{cursor:ew-resize}
+.tle-playhead{position:absolute;top:0;bottom:0;width:2px;background:#ff5f7a;pointer-events:none;z-index:3;box-shadow:0 0 6px #ff5f7a99}
+.tle-playhead::before{content:"";position:absolute;top:0;left:-5px;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #ff5f7a}
+.tle-toolbar button:disabled{opacity:.45;cursor:default;background:#2c2836}
+.tle-stage{position:relative;height:38vh;container-type:size;background:#000;border-radius:8px;overflow:hidden}
+.tle-stage video,.tle-stage img{position:absolute;object-fit:fill;max-height:none;max-width:none;border-radius:0}
+.tle-stage-text{position:absolute;left:0;right:0;padding:0 2%;font-family:Arial,Helvetica,sans-serif;font-weight:700;line-height:1.12;white-space:pre-wrap;z-index:999;-webkit-text-stroke-color:rgba(0,0,0,.85);paint-order:stroke fill}
+.tle-stage-text-top{top:8%}
+.tle-stage-text-center{top:50%;transform:translateY(-50%)}
+.tle-stage-text-bottom{bottom:10%}
+.tle-toolbar .tle-transport{background:#3d2f55;border-color:#7b58b5;min-width:96px}

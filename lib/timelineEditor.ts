@@ -99,3 +99,61 @@ export function clampClip(clip: TimelineClip): TimelineClip {
   const maxDuration = clip.kind === "image" ? clip.duration : Math.max(0.1, clip.sourceDuration - sourceIn);
   return { ...clip, sourceIn, duration: Math.max(0.1, Math.min(clip.duration, maxDuration)), start: Math.max(0, clip.start) };
 }
+
+/* ── Fase 2 — playhead, split e amostragem por instante ─────────────────────
+   Estes helpers são puros e agnósticos de como a preview desenha o quadro
+   (canvas, <video> empilhados ou outra coisa): descrevem só QUEM está no ar
+   num instante e ONDE cortar. A decisão da técnica de composição não muda
+   nada aqui. */
+
+/** Menor pedaço que faz sentido manter depois de um corte, em segundos. */
+export const MIN_CLIP_DURATION = 0.2;
+
+/** Tempo dentro da mídia de origem que corresponde ao instante `at` da timeline. */
+export function sourceTimeAt(clip: TimelineClip, at: number): number {
+  return clip.sourceIn + (at - clip.start);
+}
+
+/** O clipe está no ar no instante `at`? Fim é exclusivo, pra não desenhar dois clipes na emenda. */
+export function isLive(item: { start: number; duration: number }, at: number): boolean {
+  return at >= item.start && at < item.start + item.duration;
+}
+
+/** Clipes no ar em `at`, do fundo para a frente — a ordem em que devem ser desenhados. */
+export function clipsAtTime(timeline: Timeline, at: number): TimelineClip[] {
+  return timeline.clips.filter((c) => isLive(c, at)).sort((a, b) => a.track - b.track);
+}
+
+/** Textos no ar em `at`. */
+export function textsAtTime(timeline: Timeline, at: number): TimelineText[] {
+  return timeline.texts.filter((t) => isLive(t, at));
+}
+
+/** Divide um clipe em dois no instante `at` da timeline. Devolve null se o corte
+    deixaria qualquer um dos lados menor que MIN_CLIP_DURATION (inclusive quando
+    `at` cai fora do clipe). O lado direito ganha id novo e avança o sourceIn —
+    para imagem não há o que avançar, a origem é um quadro só. */
+export function splitClip(clip: TimelineClip, at: number): [TimelineClip, TimelineClip] | null {
+  const offset = at - clip.start;
+  if (offset < MIN_CLIP_DURATION || clip.duration - offset < MIN_CLIP_DURATION) return null;
+  return [
+    { ...clip, duration: offset },
+    {
+      ...clip,
+      id: crypto.randomUUID(),
+      start: at,
+      duration: clip.duration - offset,
+      sourceIn: clip.kind === "image" ? clip.sourceIn : clip.sourceIn + offset,
+    },
+  ];
+}
+
+/** Aplica `splitClip` dentro da timeline, preservando a ordem dos clipes.
+    Devolve a mesma timeline (por identidade) quando o corte não é possível. */
+export function splitTimelineClip(timeline: Timeline, clipId: string, at: number): Timeline {
+  const clip = timeline.clips.find((c) => c.id === clipId);
+  if (!clip) return timeline;
+  const parts = splitClip(clip, at);
+  if (!parts) return timeline;
+  return { ...timeline, clips: timeline.clips.flatMap((c) => (c.id === clipId ? parts : [c])) };
+}
