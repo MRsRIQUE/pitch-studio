@@ -8,6 +8,7 @@ import { MEDIA_DIR } from "./guest/paths";
 import { uploadBuffer } from "./storage";
 import { insertUpload } from "./guest/db";
 import { GUEST_USER_ID } from "./guestMode";
+import type { Timeline } from "./timelineEditor";
 
 const exec = promisify(execFile);
 export async function mediaBytes(url: string): Promise<Buffer> {
@@ -32,7 +33,7 @@ const number = (value: unknown, fallback: number, min: number, max: number) => {
 };
 export interface Clip { url: string; start: number; end: number; muted?: boolean; volume?: number }
 export interface CaptionWord { text: string; start: number; end: number }
-export interface MediaRequest { operation: string; url?: string; start?: number; end?: number; speed?: number; volume?: number; pitch?: number; effect?: string; scale?: number; fps?: number; width?: number; height?: number; left?: number; top?: number; rows?: number; columns?: number; threshold?: number; clips?: Clip[]; audioUrl?: string; narrationUrl?: string; audioVolume?: number; narrationVolume?: number; brightness?: number; saturation?: number; rotation?: number; replacementUrl?: string; maskUrl?: string; words?: CaptionWord[] }
+export interface MediaRequest { operation: string; url?: string; start?: number; end?: number; speed?: number; volume?: number; pitch?: number; effect?: string; scale?: number; fps?: number; width?: number; height?: number; left?: number; top?: number; rows?: number; columns?: number; threshold?: number; clips?: Clip[]; audioUrl?: string; narrationUrl?: string; audioVolume?: number; narrationVolume?: number; brightness?: number; saturation?: number; rotation?: number; replacementUrl?: string; maskUrl?: string; words?: CaptionWord[]; timeline?: Timeline }
 async function ffmpeg(args: string[], cwd?: string) { return exec("ffmpeg", ["-hide_banner", "-nostdin", "-y", ...args], { timeout: 1_200_000, maxBuffer: 24 * 1024 * 1024, windowsHide: true, cwd }); }
 async function probe(path: string) { const { stdout } = await exec("ffprobe", ["-v", "error", "-show_format", "-show_streams", "-of", "json", path], { windowsHide: true, timeout: 30000 }); return JSON.parse(stdout) as { format: { duration: string }; streams: { codec_type: string; width?: number; height?: number }[] }; }
 
@@ -133,6 +134,83 @@ export async function processMedia(body: MediaRequest) {
         filters.push(`${Array.from({ length: tracks.length + 1 }, (_, i) => `[a${i}]`).join("")}amix=inputs=${tracks.length + 1}:duration=first:normalize=0[mix]`);
         output = join(temp, "mixed.mp4"); await ffmpeg([...args, "-filter_complex", filters.join(";"), "-map", "0:v:0", "-map", "[mix]", "-c:v", "copy", "-c:a", "aac", "-t", String(total), "-movflags", "+faststart", output]);
       }
+      return { url: await saveMedia(await readFile(output), "video/mp4"), duration: total };
+    }
+    if (body.operation === "compose-multitrack") {
+      const timeline = body.timeline;
+      if (!timeline || !Array.isArray(timeline.clips) || !timeline.clips.length) throw new Error("Adicione ao menos um clipe à timeline.");
+      if (timeline.clips.length > 60) throw new Error("Limite de 60 clipes por timeline.");
+      const texts = Array.isArray(timeline.texts) ? timeline.texts : [];
+      const width = Math.floor(number(timeline.width, 1080, 64, 3840) / 2) * 2;
+      const height = Math.floor(number(timeline.height, 1920, 64, 3840) / 2) * 2;
+      const total = Math.min(1200, Math.max(0.5, ...timeline.clips.map(c => number(c.start, 0, 0, 1200) + number(c.duration, 1, 0.1, 1200)), ...texts.map(t => number(t.start, 0, 0, 1200) + number(t.duration, 1, 0.1, 1200))));
+
+      const args: string[] = ["-f", "lavfi", "-i", `color=c=black:s=${width}x${height}:d=${total}`, "-f", "lavfi", "-i", `anullsrc=r=48000:cl=stereo:d=${total}`];
+      const filters: string[] = [];
+      const audioLabels: string[] = ["1:a"];
+      let inputIndex = 2;
+      const overlays: { videoLabel: string; start: number; end: number; x: number; y: number }[] = [];
+
+      for (const clip of [...timeline.clips].sort((a, b) => a.track - b.track)) {
+        const idx = inputIndex++;
+        const path = join(temp, `mt-${idx}`);
+        await writeFile(path, await mediaBytes(clip.url));
+        const start = number(clip.start, 0, 0, total);
+        const clipDuration = number(clip.duration, 1, 0.1, total - start + 0.1);
+        const scale = number(clip.scale, 1, 0.05, 1);
+        const w2 = Math.max(2, Math.round(width * scale / 2) * 2), h2 = Math.max(2, Math.round(height * scale / 2) * 2);
+        const x = Math.round((width - w2) * number(clip.x, 0.5, 0, 1));
+        const y = Math.round((height - h2) * number(clip.y, 0.5, 0, 1));
+        const vLabel = `v${idx}`;
+        if (clip.kind === "image") {
+          args.push("-loop", "1", "-t", String(clipDuration), "-i", path);
+          filters.push(`[${idx}:v]setpts=PTS-STARTPTS+${start}/TB,scale=${w2}:${h2}[${vLabel}]`);
+        } else {
+          args.push("-i", path);
+          const clipInfo = await probe(path);
+          const sourceDuration = Number(clipInfo.format.duration);
+          const sourceIn = number(clip.sourceIn, 0, 0, Math.max(0, sourceDuration - 0.05));
+          filters.push(`[${idx}:v]trim=start=${sourceIn}:duration=${clipDuration},setpts=PTS-STARTPTS+${start}/TB,scale=${w2}:${h2}[${vLabel}]`);
+          if (!clip.muted && clipInfo.streams.some(s => s.codec_type === "audio")) {
+            const aLabel = `a${idx}`;
+            filters.push(`[${idx}:a]atrim=start=${sourceIn}:duration=${clipDuration},asetpts=PTS-STARTPTS+${start}/TB,volume=${number(clip.volume, 1, 0, 2)}[${aLabel}]`);
+            audioLabels.push(aLabel);
+          }
+        }
+        overlays.push({ videoLabel: vLabel, start, end: start + clipDuration, x, y });
+      }
+
+      let current = "";
+      let labelSeq = 0;
+      for (const o of overlays) { const next = `ov${labelSeq++}_${o.videoLabel}`; filters.push(`[${current || "0:v"}][${o.videoLabel}]overlay=${o.x}:${o.y}:enable='between(t,${o.start},${o.end})'[${next}]`); current = next; }
+      if (texts.length) await writeFile(join(temp, "font.ttf"), await readFile("C:\\Windows\\Fonts\\arialbd.ttf"));
+      for (const [i, t] of texts.entries()) {
+        const start = number(t.start, 0, 0, total), textDuration = number(t.duration, 1, 0.1, total - start + 0.1);
+        const fontSize = Math.max(8, Math.round(number(t.fontSize, 64, 8, 400) * (height / 1920)));
+        const y = t.position === "top" ? String(Math.round(height * 0.08)) : t.position === "bottom" ? `h-th-${Math.round(height * 0.1)}` : "(h-th)/2";
+        const x = t.align === "left" ? "40" : t.align === "right" ? "w-tw-40" : "(w-tw)/2";
+        const color = /^#[0-9a-fA-F]{6}$/.test(String(t.color)) ? `0x${String(t.color).slice(1)}` : "white";
+        const clean = String(t.text ?? "").replace(/[\\':]/g, "").slice(0, 200).trim() || " ";
+        const next = `txt${i}`;
+        filters.push(`[${current}]drawtext=fontfile=font.ttf:text='${clean}':fontcolor=${color}:fontsize=${fontSize}:x=${x}:y=${y}:borderw=3:bordercolor=black@0.85:enable='between(t,${start},${start + textDuration})'[${next}]`);
+        current = next;
+      }
+
+      const tracks = [timeline.bgmUrl, timeline.narrationUrl].filter(Boolean) as string[];
+      for (const url of tracks) {
+        const idx = inputIndex++;
+        const path = join(temp, `mt-audio-${idx}`);
+        await writeFile(path, await mediaBytes(url));
+        const isBgm = url === timeline.bgmUrl;
+        args.push(...(isBgm ? ["-stream_loop", "-1"] : []), "-i", path);
+        const label = `atrack${idx}`;
+        filters.push(`[${idx}:a]volume=${number(isBgm ? timeline.bgmVolume : timeline.narrationVolume, isBgm ? 0.3 : 1, 0, 2)}[${label}]`);
+        audioLabels.push(label);
+      }
+      filters.push(`${audioLabels.map(l => `[${l}]`).join("")}amix=inputs=${audioLabels.length}:duration=longest:normalize=0[mixaudio]`);
+
+      const output = join(temp, "multitrack.mp4");
+      await ffmpeg([...args, "-filter_complex", filters.join(";"), "-map", `[${current}]`, "-map", "[mixaudio]", "-c:v", "libx264", "-preset", "fast", "-crf", "20", "-pix_fmt", "yuv420p", "-t", String(total), "-c:a", "aac", "-movflags", "+faststart", output], temp);
       return { url: await saveMedia(await readFile(output), "video/mp4"), duration: total };
     }
     const info = await probe(input); const duration = Number(info.format.duration);

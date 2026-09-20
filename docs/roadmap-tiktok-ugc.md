@@ -9,17 +9,16 @@ sobre a qual este mapa constrói.
 
 ## Estado atual (2026-09-13)
 
-5 das 7 prioridades prontas — itens 1 (transcrição), 2 (clonagem de voz), 3 (legenda queimada),
-5 (5 templates de nicho) e 6 (apoio para live) — todas com `tsc`/`eslint` limpos e validadas
-(a legenda queimada de ponta a ponta com vídeo sintético; os templates estruturalmente com
-scripts standalone). **Nada foi commitado ainda.** O que falta:
+Itens 1, 2, 3, 5 e 6 commitados no branch `feat/sync-heliosgen` (commit `942c1f1`, conferido
+pelo usuário com `git show --stat` + `tsc --noEmit`). Item 4 tem sua Fase 1 (multi-trilha, sem
+transições/stickers) implementada e testada de ponta a ponta nesta sessão — **ainda não
+commitada**. O que falta:
 
 - **Testar com uma chave ElevenLabs real**: transcrição (item 1), clonagem de voz (item 2) e o
   fluxo completo da legenda queimada (item 3) seguem a documentação oficial da API, mas não
   foram exercitados contra o serviço real nesta sessão (sem chave conectada).
-- **Item 4 — editor multi-track completo**: não começado. Decisão de arquitetura em aberto
-  (estender `ProductionTimeline`/`smartEditNode` vs. componente/tela nova) — parar para alinhar
-  com o usuário antes de construir, como pedido no briefing do papel.
+- **Item 4**: Fase 1 pronta e testada (ver seção própria abaixo) — falta commitar, e falta
+  alinhar com o usuário antes de atacar as fases seguintes (transições, stickers).
 - **Item 7**: só registrado no mapa abaixo, sem construção.
 
 ## O que já existe (não reconstruir)
@@ -111,9 +110,10 @@ scripts standalone). **Nada foi commitado ainda.** O que falta:
    campos e formato de resposta confirmados via busca antes de implementar), mas o usuário
    deve validar com uma chave real antes de considerar esses dois itens 100% prontos.
 4. **Editor mais completo estilo CapCut** — múltiplas trilhas, texto/legenda estilizável,
-   transições, stickers. Hoje é `ProductionTimeline` modo edit: corte + concatenação + 2
-   trilhas de áudio, sem timeline visual multi-track. Decisão pendente: estender
-   `ProductionTimeline`/`smartEditNode` ou criar um node/tela nova — ver "Perguntas em aberto".
+   transições, stickers. **Fase 1 implementada e testada (2026-09-13)** — ver seção própria
+   "Item 4 — editor multi-trilha, Fase 1" mais abaixo para todo o detalhe técnico e de
+   validação. Faltam as fases seguintes (transições, stickers), que aguardam alinhamento com o
+   usuário antes de construir.
 5. **Templates de TikTok para postar** — ✅ implementado (2026-09-13). 5 categorias em
    `lib/templates.ts`: `makeFitnessTemplate`, `makeBelezaTemplate`, `makeUnboxingTemplate`,
    `makeDepoimentoTemplate`, `makeComparacaoTemplate` (+ suas `*_TEMPLATE_NAME`), todas
@@ -159,6 +159,69 @@ scripts standalone). **Nada foi commitado ainda.** O que falta:
    linear guiado (roteiro→avatar→gerar) por cima do canvas de nós para usuários não-técnicos
    (inspirado no wizard de 6 passos do 3xapp.shop).
 
+## Item 4 — editor multi-trilha, Fase 1 (2026-09-13)
+
+**Decisão de arquitetura confirmada**: componente/tela nova (overlay em tela cheia, `createPortal`
+no `document.body`, `z-index:100000`, mesmo padrão de `MediaPickerModal.tsx`), **não** estender
+`ProductionTimeline`/`smartEditNode`. Motivo: um editor multi-trilha de verdade precisa de
+arraste contínuo (corte, reordenar, playhead) que entra em conflito direto com os gestos do
+`@xyflow/react` (pan/zoom/marquee) — o código atual já usa `nodrag nowheel` como remendo pra uma
+UI bem mais simples. O Smart Edit atual continua exatamente como está; um botão novo "Abrir
+editor completo (multi-trilha)" no Smart Edit abre a tela nova, pré-carregada com os clipes já
+adicionados (recalculando offsets sequenciais + reprobando duração real de cada um).
+
+**Fase 1 = só multi-trilha** (decisão confirmada, sem transições nem stickers ainda):
+
+- `lib/timelineEditor.ts` — tipos compartilhados (`Timeline`, `TimelineClip`, `TimelineText`) e
+  helpers puros, sem dependência de servidor.
+- `lib/productionMedia.ts` — nova operação `compose-multitrack`: N trilhas de vídeo/imagem
+  sobrepostas (posição x/y/escala normalizados 0-1) via `overlay=...:enable='between(t,...)'`
+  do ffmpeg, com `trim`+`setpts` pra alinhar cada clipe no ponto certo da timeline global, mais
+  uma trilha de texto via `drawtext` (fonte explícita `arialbd.ttf`, copiada pro diretório
+  temporário — **`drawtext` sem fontconfig configurado falha ao resolver fonte por nome**,
+  diferente do `subtitles`/libass da legenda do item 3, que usa a API nativa de fonte do
+  Windows). Áudio: mixa o áudio de cada clipe de vídeo não mudo (realinhado com `atrim`+`asetpts`)
+  + bgm (em loop) + narração via `amix`, sempre incluindo uma base de silêncio com
+  `duration=longest` pra garantir que o áudio cobre a timeline inteira mesmo com trilhas de
+  vídeo cheias de buracos.
+- `components/nodes/TimelineEditor.tsx` + `timeline.css` — a UI: trilhas horizontais com caixas
+  arrastáveis (mover = tempo + trilha; alças nas bordas = cortar início/fim), trilha de texto
+  dedicada, painel de propriedades do item selecionado, preview do clipe selecionado (**sem
+  composição ao vivo** — decisão deliberada de escopo: renderiza pra ver o resultado final,
+  igual ao Smart Edit de hoje), zoom da régua, upload direto de vídeo/imagem novos.
+
+**Validação real feita** (não só `tsc`/`eslint`):
+1. Backend: script standalone com clipes sintéticos (vermelho/verde/azul/imagem amarela +
+   texto + bgm em loop) via ffmpeg puro — **achei e corrigi 2 bugs reais**: (a) `inputIndex`
+   sendo reaproveitado tanto pra índice de input do ffmpeg quanto pra sufixo de rótulo dos
+   overlays, inflando o índice usado pra bgm/narração; (b) `drawtext` sem fonte explícita falha
+   com `Fontconfig error` neste ambiente. Depois da correção, validei visualmente (frames
+   extraídos) que overlay, imagem, texto e áudio aparecem/somem nos instantes certos.
+2. Frontend: subi o dev server (já rodando na 3000) e testei o componente isolado numa página
+   temporária (`app/test-timeline-editor/`, removida depois), via Chrome automation +
+   `javascript_tool` pra despachar `PointerEvent`s reais (a ação `left_click_drag` da ferramenta
+   de automação não sintetiza um evento de ponteiro completo — sem `button`/`isPrimary`/
+   `pointerType`, o que por si só não aciona o `onPointerDown`; um `PointerEvent` construído à
+   mão com essas propriedades funciona igual a um mouse de verdade). **Achei e corrigi um bug
+   real de robustez**: `setPointerCapture` lança `NotFoundError` quando chamado sem estar
+   envolto em try/catch e o navegador não reconhece o ponteiro como "ativo" (o que só acontece
+   com dispatch 100% sintético, não com mouse/touch real — mas o código não tinha proteção).
+   Depois de blindar com try/catch, confirmei mover clipe, cortar início, cortar fim e mover
+   texto, todos com a matemática exata esperada e sem exceção no console.
+3. **Não testado**: o botão "Renderizar e usar" de ponta a ponta dentro do app de verdade (o
+   seed de teste usava URLs `r2.dev` externas, que `mediaBytes()` rejeita de propósito — só
+   aceita mídia já importada pro acervo local; isso não é bug, é a mesma trava de segurança que
+   todas as outras operações de `lib/productionMedia.ts` já têm). O caminho de upload
+   (`+ Vídeo`/`+ Imagem`) segue o mesmo padrão já comprovado de `AudioStudio.tsx`/
+   `ProductionNode.tsx` (`/api/upload-asset`), não testado ao vivo mas de baixo risco por
+   precedente direto.
+
+**O que falta pra fases seguintes** (não construir sem alinhar de novo): transições entre
+clipes adjacentes (`xfade`), stickers (overlays de imagem arrastáveis sobre o preview, distintos
+de "clipe em trilha" porque tipicamente não ocupam uma trilha de vídeo inteira), e — se o usuário
+quiser depois — uma preview ao vivo composta (canvas + múltiplos `<video>` ocultos), que é um
+projeto à parte em complexidade.
+
 ## Decisões já confirmadas com o usuário (2026-09-13)
 
 - **STT (item 1):** ElevenLabs Speech-to-Text — implementado, ver item 1 acima.
@@ -189,6 +252,8 @@ scripts standalone). **Nada foi commitado ainda.** O que falta:
 3. ✅ Clonagem de voz na ElevenLabs (item 2).
 4. ✅ Templates de post por nicho reaproveitando `makeTrocaPessoaTemplate` (item 5).
 5. ✅ Templates de LIVE (apoio, não automação) (item 6).
-6. Editor multi-track completo (item 4) — o item mais caro, o único que falta das 6 primeiras
-   prioridades. **Próximo passo.**
+6. ✅ Editor multi-trilha (item 4) — **Fase 1** (sem transições/stickers): multi-trilha de
+   vídeo/imagem + texto, testada de ponta a ponta (ver seção própria). Fases seguintes
+   (transições, stickers) aguardam alinhamento com o usuário. **Próximo passo: revisar com o
+   usuário e decidir se avança de fase, ou commit + pausa.**
 7. Itens de menor prioridade (item 7) ficam registrados, sem data.

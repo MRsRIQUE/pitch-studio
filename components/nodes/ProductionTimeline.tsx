@@ -4,10 +4,13 @@ import { useWorkflowStore, type NodeData } from "@/lib/store";
 import { productionRequest, productionAI, parseProductionJSON, outputToCanvas } from "@/lib/productionClient";
 import type { Clip } from "@/lib/productionMedia";
 import { newShot, type Shot } from "@/lib/production";
+import { newTimelineClip, type Timeline } from "@/lib/timelineEditor";
+import TimelineEditor from "./TimelineEditor";
 
 export default function ProductionTimeline({ id, data, videoUrl, mode }: { id: string; data: NodeData; videoUrl: string; mode: "edit" | "breakdown" }) {
   const nodes = useWorkflowStore(s => s.nodes), edges = useWorkflowStore(s => s.edges), update = useWorkflowStore(s => s.updateNodeData);
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [previewIndex, setPreviewIndex] = useState(0), [previewTime, setPreviewTime] = useState(0);
+  const [editorTimeline, setEditorTimeline] = useState<Timeline | null>(null);
   const player = useRef<HTMLVideoElement>(null), abort = useRef<AbortController | null>(null);
   const clips = (data.clips as Clip[] | undefined) ?? [];
   const patch = (values: Partial<NodeData>) => update(id, values);
@@ -17,6 +20,17 @@ export default function ProductionTimeline({ id, data, videoUrl, mode }: { id: s
   useEffect(() => () => abort.current?.abort(), []);
   async function addClips(signal: AbortSignal) { const urls = [...new Set([videoUrl, ...connectedVideos].filter(Boolean))]; if (!urls.length) throw new Error("Conecte ou envie um vídeo primeiro."); const next: Clip[] = []; for (const url of urls) { if (clips.some(c => c.url === url)) continue; const result = await productionRequest<{ duration: number }>("/api/production/media", { operation: "probe", url }, signal); next.push({ url, start: 0, end: result.duration, volume: 1 }); } patch({ clips: [...clips, ...next] }); }
   async function render(signal: AbortSignal) { const result = await productionRequest<{ url: string }>("/api/production/media", { operation: "compose", clips, width: Number(data.outputWidth ?? 1280), height: Number(data.outputHeight ?? 720), audioUrl: data.bgmUrl, narrationUrl: data.narrationUrl, audioVolume: data.bgmVolume ?? 0.3, narrationVolume: 1 }, signal); patch({ videoUrl: result.url }); outputToCanvas(id, result.url, "video", "Montagem final"); }
+  async function openTimelineEditor(signal: AbortSignal) {
+    const width = Number(data.outputWidth ?? 1080), height = Number(data.outputHeight ?? 1920);
+    let cursor = 0;
+    const timelineClips = [];
+    for (const clip of clips) {
+      const probed = await productionRequest<{ duration: number }>("/api/production/media", { operation: "probe", url: clip.url }, signal);
+      timelineClips.push(newTimelineClip({ url: clip.url, kind: "video", sourceDuration: probed.duration, track: 0, start: cursor, duration: clip.end - clip.start, sourceIn: clip.start, muted: clip.muted, volume: clip.volume }));
+      cursor += clip.end - clip.start;
+    }
+    setEditorTimeline({ width, height, clips: timelineClips, texts: [], bgmUrl: data.bgmUrl as string | undefined, bgmVolume: Number(data.bgmVolume ?? 0.3), narrationUrl: data.narrationUrl as string | undefined, narrationVolume: 1 });
+  }
   async function caption(signal: AbortSignal) {
     if (!data.videoUrl) throw new Error("Renderize a montagem antes de gerar legendas.");
     const transcript = await productionRequest<{ words: { text: string; start: number; end: number }[] }>("/api/production/audio", { operation: "transcribe", url: String(data.videoUrl) }, signal);
@@ -65,6 +79,8 @@ export default function ProductionTimeline({ id, data, videoUrl, mode }: { id: s
     <button disabled={busy || !clips.length || !data.prompt} onClick={() => void act(async signal => { const reply = await productionAI(`Você é montador de vídeo. Reorganize e recorte a timeline conforme as instruções. Retorne APENAS JSON array de {index,start,end,muted}. index se refere ao índice de clipe (base 0), não invente fontes; tempos dentro dos intervalos originais. Modo ${data.editMode || "Default"}. Clipes: ${JSON.stringify(clips.map((c, i) => ({ index: i, start: c.start, end: c.end })))}. Pedido: ${data.prompt}` , String(data.model ?? "claude-sonnet-4-6"), signal); const plan = parseProductionJSON<{ index: number; start: number; end: number; muted?: boolean }[]>(reply); if (!Array.isArray(plan) || !plan.length || plan.length > 100 || plan.some(p => !Number.isInteger(p.index) || !clips[p.index] || !Number.isFinite(p.start) || !Number.isFinite(p.end) || p.start < clips[p.index].start || p.end > clips[p.index].end || p.end <= p.start)) throw new Error("A IA propôs cortes inválidos. A timeline anterior foi preservada."); patch({ clips: plan.map(p => ({ ...clips[p.index], start: p.start, end: p.end, muted: !!p.muted })) }); })}>Aplicar edição com IA</button>
     <div className="pn-grid">{[{ key: "bgmUrl", label: "Música de fundo" }, { key: "narrationUrl", label: "Narração" }].map(p => <label key={p.key}>{p.label}<select value={String(data[p.key] ?? "")} onChange={e => patch({ [p.key]: e.target.value })}><option value="">Nenhuma</option>{audioNodes.map(n => <option key={n.id} value={String(n.data.audioUrl)}>{n.data.label}</option>)}</select></label>)}<label>Volume da música<input type="number" min="0" max="2" step="0.1" value={Number(data.bgmVolume ?? 0.3)} onChange={e => patch({ bgmVolume: Number(e.target.value) })} /></label><label>Formato<select value={`${data.outputWidth ?? 1280}x${data.outputHeight ?? 720}`} onChange={e => { const [w, h] = e.target.value.split("x").map(Number); patch({ outputWidth: w, outputHeight: h }); }}><option value="1280x720">16:9 · 720p</option><option value="1920x1080">16:9 · 1080p</option><option value="1080x1920">9:16 · 1080p</option><option value="1080x1080">1:1 · 1080p</option></select></label></div><button disabled={busy || !clips.length} onClick={() => void act(render)}>Renderizar montagem → Canvas</button><p className="pn-note">Prévia de cortes no player. Música, narração e mixagem são aplicadas à exportação final.</p>
     <button disabled={busy || !data.videoUrl} onClick={() => void act(caption)}>Gerar legenda estilo TikTok</button><p className="pn-note">Transcreve a montagem já renderizada e queima a legenda com destaque palavra a palavra. Renderize de novo depois de trocar cortes, música ou narração.</p>
+    <button disabled={busy} onClick={() => void act(openTimelineEditor)}>Abrir editor completo (multi-trilha)</button><p className="pn-note">Várias trilhas de vídeo/imagem sobrepostas + texto estilizável. Sem transições/stickers ainda — fase 1.</p>
     </>}{busy && <p role="status">Processando mídia…</p>}{error && <p className="pn-error" role="alert">{error}</p>}
+    {editorTimeline && <TimelineEditor initial={editorTimeline} onClose={() => setEditorTimeline(null)} onRendered={(url) => { patch({ videoUrl: url }); outputToCanvas(id, url, "video", "Montagem multi-trilha"); setEditorTimeline(null); }} />}
   </>;
 }

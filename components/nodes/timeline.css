@@ -1,0 +1,41 @@
+.tle-overlay{position:fixed;inset:0;z-index:100000;display:flex;flex-direction:column;background:#1a1720;color:#fff}
+.tle-header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#221e2c;border-bottom:1px solid #33304066;flex-shrink:0}
+.tle-header h2{font-size:14px;font-weight:600;margin:0;flex:1;color:#fff}
+.tle-header button{appearance:none;border:1px solid #4a4458;background:#2c2836;color:#e3ddf0;border-radius:8px;padding:8px 14px;font:inherit;font-size:13px;cursor:pointer}
+.tle-header button:hover:not(:disabled){background:#3a3546}
+.tle-header button:disabled{opacity:.5;cursor:default}
+.tle-header .tle-primary{background:#7b58b5;border-color:#7b58b5;color:#fff}
+.tle-header .tle-primary:hover:not(:disabled){background:#8f6bcb}
+.tle-preview{flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:#0d0b12;padding:14px;min-height:0}
+.tle-preview video,.tle-preview img{max-height:38vh;max-width:100%;border-radius:8px;background:#000}
+.tle-preview .tle-empty{color:#8a8296;font-size:13px}
+.tle-toolbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:#221e2c;border-bottom:1px solid #33304066;flex-shrink:0;flex-wrap:wrap}
+.tle-toolbar label.tle-file{display:inline-flex;align-items:center;gap:6px;border:1px solid #4a4458;background:#2c2836;color:#e3ddf0;border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer}
+.tle-toolbar label.tle-file input{display:none}
+.tle-toolbar button{appearance:none;border:1px solid #4a4458;background:#2c2836;color:#e3ddf0;border-radius:8px;padding:7px 12px;font:inherit;font-size:12px;cursor:pointer}
+.tle-toolbar button:hover{background:#3a3546}
+.tle-zoom{display:inline-flex;align-items:center;gap:4px;margin-left:auto}
+.tle-zoom button{padding:5px 9px}
+.tle-duration{font-size:12px;color:#b3abc4;font-variant-numeric:tabular-nums}
+.tle-tracks{flex:1;overflow:auto;position:relative;background:#151219}
+.tle-ruler{position:sticky;top:0;left:0;height:22px;background:#1e1a26;border-bottom:1px solid #332f40;z-index:2}
+.tle-ruler span{position:absolute;top:2px;font-size:10px;color:#7f778f;transform:translateX(2px)}
+.tle-row{position:relative;height:60px;border-bottom:1px solid #26222e}
+.tle-row-label{position:sticky;left:0;top:0;display:inline-block;font-size:10px;color:#8a8296;background:#1e1a26cc;padding:2px 6px;border-radius:0 4px 4px 0;z-index:1}
+.tle-row.tle-row-text{background:#1c1522}
+.tle-clip{position:absolute;top:4px;bottom:4px;border-radius:6px;background:#4a3a72;border:1px solid #7b58b5;overflow:hidden;cursor:grab;display:flex;align-items:center;padding:0 8px;font-size:11px;color:#f1ecfa;user-select:none}
+.tle-clip.tle-clip-image{background:#3a5a72;border-color:#4f89ab}
+.tle-clip.tle-selected{outline:2px solid #cbb8f5;outline-offset:1px}
+.tle-clip .tle-clip-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
+.tle-handle{position:absolute;top:0;bottom:0;width:9px;cursor:ew-resize;background:rgba(255,255,255,0.12)}
+.tle-handle.tle-handle-left{left:0;border-radius:6px 0 0 6px}
+.tle-handle.tle-handle-right{right:0;border-radius:0 6px 6px 0}
+.tle-text-clip{position:absolute;top:6px;bottom:6px;border-radius:6px;background:#7a5a2c;border:1px solid #c98f3e;cursor:grab;display:flex;align-items:center;padding:0 8px;font-size:11px;color:#fff2dd;user-select:none}
+.tle-text-clip.tle-selected{outline:2px solid #f5cf8f;outline-offset:1px}
+.tle-panel{flex-shrink:0;border-top:1px solid #33304066;background:#221e2c;padding:12px 16px;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;min-height:20px}
+.tle-panel label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#b3abc4;font-weight:500}
+.tle-panel input,.tle-panel select{background:#151219;border:1px solid #3a3546;color:#f1ecfa;border-radius:6px;padding:6px 8px;font:inherit;font-size:12px}
+.tle-panel input[type=color]{padding:2px;width:44px}
+.tle-panel input[type=text]{min-width:220px}
+.tle-panel .tle-danger{margin-left:auto;align-self:center;background:#4a2430;border-color:#7a3444;color:#f4c6cf}
+.tle-error{color:#f2a6a6;font-size:12px;padding:0 16px 8px}
