@@ -44,9 +44,12 @@
 .tle-playhead::before{content:"";position:absolute;top:0;left:-5px;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #ff5f7a}
 .tle-toolbar button:disabled{opacity:.45;cursor:default;background:#2c2836}
 .tle-stage{position:relative;height:38vh;container-type:size;background:#000;border-radius:8px;overflow:hidden}
-.tle-stage video,.tle-stage img{position:absolute;max-height:none;max-width:none;border-radius:0}
+.tle-stage video,.tle-stage img{position:absolute;max-height:none;max-width:none;border-radius:0;background:transparent}
 .tle-stage-text{position:absolute;left:0;right:0;padding:0 2%;font-family:Arial,Helvetica,sans-serif;font-weight:700;line-height:1.12;white-space:pre-wrap;z-index:999;-webkit-text-stroke-color:rgba(0,0,0,.85);paint-order:stroke fill}
 .tle-stage-text-top{top:8%}
 .tle-stage-text-center{top:50%;transform:translateY(-50%)}
 .tle-stage-text-bottom{bottom:10%}
 .tle-toolbar .tle-transport{background:#3d2f55;border-color:#7b58b5;min-width:96px}
+.tle-stage .tle-arrastavel{cursor:grab}
+.tle-stage .tle-arrastavel:active{cursor:grabbing}
+.tle-stage .tle-alvo{outline:2px dashed #cbb8f5;outline-offset:-2px}

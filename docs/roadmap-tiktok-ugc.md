@@ -109,8 +109,8 @@ commitada**. O que falta:
    `"delete-voice"` (item 2) — a integração segue a documentação oficial da API (endpoints,
    campos e formato de resposta confirmados via busca antes de implementar), mas o usuário
    deve validar com uma chave real antes de considerar esses dois itens 100% prontos.
-4. **Editor mais completo estilo CapCut** — múltiplas trilhas, texto/legenda estilizável,
-   transições, stickers. **Fase 1 implementada e testada (2026-09-13)** — ver seção própria
+4. **Editor mais completo estilo CapCut** — ✅ múltiplas trilhas, texto, prévia ao vivo com
+   playhead e corte, transições por fade, stickers arrastáveis e enquadramento cover. **Fase 1 implementada e testada (2026-09-13)** — ver seção própria
    "Item 4 — editor multi-trilha, Fase 1" mais abaixo para todo o detalhe técnico e de
    validação. **Fase 2 (2026-09-20)**: preview ao vivo composta, playhead e split — ver a seção
    própria. Faltam transições e stickers.
@@ -338,6 +338,42 @@ vermelho, no meio as duas cores juntas, termina verde, progressão monotônica n
 (opacidade 0 no primeiro quadro, ~0,5 na metade do fade, cheia depois, caindo de novo no fade de
 saída, e os dois campos novos no painel com o valor do clipe).
 
+### 3c. Stickers arrastáveis sobre o palco
+
+**Sem tipo novo no modelo**: um sticker é um clipe `kind:"image"` numa trilha de cima, que o
+render já compunha desde a fase 1. O que faltava era (a) poder arrastá-lo sobre a prévia e (b)
+um jeito de criá-lo já pequeno.
+
+- `TimelinePreview` ganhou props opcionais (`selectedId`/`onSelect`/`onMove`): clicar no palco
+  seleciona, arrastar muda `x`/`y` — a mesma âncora normalizada que o `overlay` do ffmpeg usa.
+  A conta do arraste divide o deslocamento pela **folga** (`1 - scale`), porque `left` no palco é
+  `(1-scale)*x`; com `scale` 1 a folga é zero e o clipe não se mexe (por isso um sticker nasce
+  pequeno). Continua sendo só camada de pintura: o relógio segue em `useTimelinePlayback`.
+- Botão "+ Sticker" no editor: sobe a imagem pelo mesmo caminho do "+ Imagem"
+  (`/api/upload-asset`) e cria o clipe com `scale: 0.25`, `fit: "contain"` (para PNG com
+  transparência não ser cortado pelo cover) e duração igual à da timeline.
+- Contorno tracejado no clipe selecionado e cursor `grab` no palco.
+
+**Bug real encontrado pela conferência visual** (os asserts numéricos passavam): a área
+transparente do sticker aparecia **preta** na prévia. Não era o PNG (o canvas confirmou alpha 0)
+nem o render (o ffmpeg compunha certo): era a regra `.tle-preview video,.tle-preview img{…
+background:#000}`, escrita na fase 1 para o preview de clipe único, que também pegava os
+elementos dentro do palco e tapava a camada de baixo. Corrigido com `background:transparent` na
+regra do palco. Sem olhar a imagem, esse bug teria passado — todo sticker com transparência
+apareceria como um retângulo preto no editor.
+
+**Validação (15 asserts)**: 6 no render pela API — sticker com transparência sobre vídeo de
+fundo, conferindo por pixel que o miolo opaco aparece, que a margem transparente deixa o fundo
+passar (tanto em `contain` quanto em `cover`, cada um com a geometria própria de corte) e que
+sticker com fade mistura em vez de sumir ou tapar; 9 na prévia via CDP — classe de arrastável só
+em quem tem folga, posição inicial `(1-scale)*x`, arraste movendo exatamente o que o ponteiro
+andou, seleção acontecendo junto, limite grudando na borda sem sair do quadro, e clipe de tela
+cheia imóvel.
+
+**Rastro dos testes**: as validações de render passaram pela API de verdade, então cada uma
+gravou um `upload` `source='production'` no SQLite local — 11 vídeos de teste no acervo, que o
+usuário pode apagar quando quiser (eram os únicos com essa origem na base).
+
 ## Decisões já confirmadas com o usuário (2026-09-13)
 
 - **STT (item 1):** ElevenLabs Speech-to-Text — implementado, ver item 1 acima.
@@ -370,6 +406,7 @@ saída, e os dois campos novos no painel com o valor do clipe).
 5. ✅ Templates de LIVE (apoio, não automação) (item 6).
 6. ✅ Editor multi-trilha (item 4) — **Fase 1** (multi-trilha, commitada em `12a47e9`) e
    **Fase 2** (preview ao vivo + playhead + split, validada no navegador; ver seções próprias).
-   **Próximo passo: transições (fade de alpha) ou stickers, e a correção do esticamento do
-   `scale` — nesta ordem, se o usuário concordar.**
+   **Fase 3** (enquadramento cover, transições por fade, stickers arrastáveis). O item 4 está
+   completo no escopo combinado; o que sobrar vira melhoria (redimensionar sticker no palco,
+   `<select>` de enquadramento no painel, carregar mídia sob demanda em timeline grande).
 7. Itens de menor prioridade (item 7) ficam registrados, sem data.

@@ -45,7 +45,7 @@ export default function TimelineEditor({ initial, onClose, onRendered }: {
     setSelected(null);
   }
 
-  async function addMedia(file: File, kind: "video" | "image") {
+  async function addMedia(file: File, kind: "video" | "image", extra: Partial<TimelineClip> = {}) {
     setBusy(true); setError("");
     try {
       if (file.size > 200 * 1024 * 1024) throw new Error("Limite: 200 MB.");
@@ -57,7 +57,7 @@ export default function TimelineEditor({ initial, onClose, onRendered }: {
         const probed = await productionRequest<{ duration: number }>("/api/production/media", { operation: "probe", url: result.cdnUrl });
         sourceDuration = probed.duration;
       }
-      const clip = newTimelineClip({ url: result.cdnUrl, kind, sourceDuration, track: tracks, duration: Math.min(5, sourceDuration) });
+      const clip = newTimelineClip({ url: result.cdnUrl, kind, sourceDuration, track: tracks, duration: Math.min(5, sourceDuration), ...extra });
       setTimeline((t) => ({ ...t, clips: [...t.clips, clip] }));
       setSelected({ kind: "clip", id: clip.id });
     } catch (e) { setError(e instanceof Error ? e.message : "Falha ao adicionar mídia."); }
@@ -167,19 +167,27 @@ export default function TimelineEditor({ initial, onClose, onRendered }: {
   return createPortal(
     <div className="tle-overlay">
       <div className="tle-header">
-        <h2>Editor completo — multi-trilha (sem stickers ainda)</h2>
+        <h2>Editor completo — multi-trilha</h2>
         <button onClick={onClose} disabled={busy}>Fechar sem renderizar</button>
         <button className="tle-primary" onClick={() => void render()} disabled={busy || !timeline.clips.length}>{busy ? "Renderizando…" : "Renderizar e usar"}</button>
       </div>
       {error && <p className="tle-error" role="alert">{error}</p>}
       <div className="tle-preview">
         {timeline.clips.length
-          ? <TimelinePreview timeline={timeline} time={time} playing={playing} />
+          ? <TimelinePreview
+              timeline={timeline}
+              time={time}
+              playing={playing}
+              selectedId={selected?.kind === "clip" ? selected.id : undefined}
+              onSelect={(id) => setSelected({ kind: "clip", id })}
+              onMove={(id, x, y) => patchClip(id, { x, y })}
+            />
           : <span className="tle-empty">Adicione um vídeo ou imagem para começar.</span>}
       </div>
       <div className="tle-toolbar">
         <label className="tle-file">+ Vídeo<input type="file" accept="video/*" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void addMedia(f, "video"); }} /></label>
         <label className="tle-file">+ Imagem<input type="file" accept="image/*" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void addMedia(f, "image"); }} /></label>
+        <label className="tle-file">+ Sticker<input type="file" accept="image/*" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void addMedia(f, "image", { scale: 0.25, fit: "contain", start: 0, duration: Math.max(1, duration) }); }} /></label>
         <button onClick={addText}>+ Texto</button>
         <button className="tle-transport" onClick={toggle} disabled={!timeline.clips.length}>{playing ? "⏸ Pausar" : "▶ Tocar"}</button>
         <button onClick={splitAtPlayhead} disabled={!canSplit} title="Divide o clipe selecionado em dois no playhead">✂ Dividir no playhead</button>
