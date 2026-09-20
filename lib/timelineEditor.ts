@@ -36,6 +36,10 @@ export interface TimelineClip {
       "fill" estica e deforma (era o comportamento único até 2026-09-20). Campo existe
       como ponto de extensão para um ajuste por clipe; ainda não há UI para trocá-lo. */
   fit?: ClipFit;
+  /** Transição de entrada: segundos de fade a partir do início do clipe. */
+  fadeIn?: number;
+  /** Transição de saída: segundos de fade até o fim do clipe. */
+  fadeOut?: number;
 }
 
 export type ClipFit = "cover" | "contain" | "fill";
@@ -150,14 +154,18 @@ export function textsAtTime(timeline: Timeline, at: number): TimelineText[] {
 export function splitClip(clip: TimelineClip, at: number): [TimelineClip, TimelineClip] | null {
   const offset = at - clip.start;
   if (offset < MIN_CLIP_DURATION || clip.duration - offset < MIN_CLIP_DURATION) return null;
+  // Os fades ficam nas bordas EXTERNAS: se os dois lados herdassem os dois fades,
+  // a emenda piscaria preto no ponto do corte, que é justamente onde o usuário
+  // quer continuidade.
   return [
-    { ...clip, duration: offset },
+    { ...clip, duration: offset, fadeOut: undefined },
     {
       ...clip,
       id: crypto.randomUUID(),
       start: at,
       duration: clip.duration - offset,
       sourceIn: clip.kind === "image" ? clip.sourceIn : clip.sourceIn + offset,
+      fadeIn: undefined,
     },
   ];
 }
@@ -170,4 +178,34 @@ export function splitTimelineClip(timeline: Timeline, clipId: string, at: number
   const parts = splitClip(clip, at);
   if (!parts) return timeline;
   return { ...timeline, clips: timeline.clips.flatMap((c) => (c.id === clipId ? parts : [c])) };
+}
+
+/* ── Transições (fade de alpha) ─────────────────────────────────────────────
+   Fade por clipe, não `xfade`: o grafo do render sobrepõe clipes por `overlay`
+   com tempos absolutos, e o `xfade` exigiria adjacência na mesma trilha e
+   re-cronometraria a timeline inteira (encurtando o total e desalinhando tudo
+   que o usuário posicionou). Com alpha, dois clipes que se sobrepõem no tempo
+   já produzem um crossfade sem mexer em mais nada. */
+
+/** Fades efetivos do clipe, já limitados: nenhum passa da duração e a soma dos
+    dois também não — quando estouram, são repartidos proporcionalmente, para o
+    render e a prévia nunca discordarem sobre o mesmo clipe. */
+export function clipFades(clip: Pick<TimelineClip, "fadeIn" | "fadeOut" | "duration">): { entrada: number; saida: number } {
+  const total = Math.max(0, clip.duration);
+  let entrada = Math.max(0, Math.min(clip.fadeIn ?? 0, total));
+  let saida = Math.max(0, Math.min(clip.fadeOut ?? 0, total));
+  const soma = entrada + saida;
+  if (soma > total && soma > 0) { const k = total / soma; entrada *= k; saida *= k; }
+  return { entrada, saida };
+}
+
+/** Opacidade do clipe no instante `at` da timeline (0..1). Fora do ar, 0. */
+export function clipOpacityAt(clip: TimelineClip, at: number): number {
+  if (!isLive(clip, at)) return 0;
+  const { entrada, saida } = clipFades(clip);
+  const fim = clip.start + clip.duration;
+  let o = 1;
+  if (entrada > 0 && at < clip.start + entrada) o = Math.min(o, (at - clip.start) / entrada);
+  if (saida > 0 && at > fim - saida) o = Math.min(o, (fim - at) / saida);
+  return Math.max(0, Math.min(1, o));
 }

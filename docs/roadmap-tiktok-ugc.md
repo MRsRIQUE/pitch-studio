@@ -281,6 +281,63 @@ exige adjacência na mesma trilha e re-cronometra a timeline inteira), stickers 
 suporta: é clipe `kind:"image"` com x/y/scale; falta só arrastar sobre o palco, que agora existe)
 e a correção do esticamento.
 
+## Item 4 — Fase 3: enquadramento, transições e stickers (2026-09-20)
+
+O usuário aprovou as três de uma vez, na ordem técnica que eu escolhesse. Ordem adotada:
+enquadramento primeiro (muda geometria e modelo de dados que as outras duas usam), transições
+depois, stickers por último.
+
+### 3a. Enquadramento `cover` no lugar do esticamento — commit `123b808`
+
+Decisão do usuário: **cover** como padrão (amplia e corta, sem barra preta), que é o que
+TikTok/CapCut fazem com vertical de fonte 16:9. O campo `fit` (`"cover" | "contain" | "fill"`)
+entrou em `TimelineClip` como **ponto de extensão** para um ajuste por clipe; a UI para trocá-lo
+não foi construída, por instrução do usuário — é um `<select>` no painel quando ele quiser.
+`clipFit()` resolve o padrão, então **clipe antigo sem o campo já sai como cover**.
+
+- `cover` = `scale=W:H:force_original_aspect_ratio=increase` + `crop=W:H`.
+- `contain` = `format=yuva420p` + `pad` com `color=black@0` — sobra **transparente**, não barra
+  opaca, senão um PiP em contain taparia a camada de baixo (e é o que os stickers querem).
+- `fill` = o `scale=W:H` de antes, mantido como legado.
+- A prévia espelha tudo via `object-fit`, então ela parou de mentir.
+
+**Validação (9 asserts)**: 6 no render pelo caminho REAL (POST em `/api/production/media` no dev
+server, fonte 16:9 com terços vermelho|verde|azul, saída 9:16, pixel conferido com `sharp` no
+quadro extraído). A conta prevista: cover amplia 5,33× e o corte central de 1080px pega 31,6% do
+meio — dentro do terço verde; o quadro sai todo verde, sem barra. `fill` mantém os três terços
+deformados; `contain` mostra os três sem deformar com a base aparecendo. Mais 3 na prévia via CDP
+(`object-fit` computado). **Esse teste é também a primeira validação de ponta a ponta do
+`compose-multitrack` pela API**, lacuna aberta desde a fase 1.
+
+### 3b. Transições por fade de alpha
+
+**Por que não `xfade`**: o grafo do render sobrepõe clipes por `overlay` com tempos absolutos;
+`xfade` exigiria adjacência na mesma trilha e **re-cronometraria a timeline inteira** (um
+crossfade de 0,5s encurta o total e desalinha tudo que o usuário posicionou). Com alpha, dois
+clipes que se sobrepõem no tempo já produzem crossfade sem mexer em mais nada.
+
+- `fadeIn`/`fadeOut` (segundos) por clipe; `clipFades()` limita os dois à duração e reparte
+  proporcionalmente quando estouram, para render e prévia **nunca discordarem** sobre o mesmo
+  clipe; `clipOpacityAt()` dá a opacidade num instante.
+- Render: `format=yuva420p` + `fade=t=in/out:alpha=1` com `st` absoluto (os `setpts` já
+  colocaram o clipe no tempo global). Sem alpha no formato, o `fade` escureceria para preto em
+  vez de deixar ver a camada de baixo. O áudio do clipe acompanha com `afade`.
+- Prévia: `opacity` no elemento e volume multiplicado pela mesma curva.
+- Painel: campos "Fade entrada (s)" e "Fade saída (s)".
+- **Bug encontrado pelo próprio teste**: dividir um clipe com fades dava fade dos dois lados em
+  cada metade, fazendo a emenda **piscar preto** justo onde se quer continuidade. `splitClip`
+  passou a deixar os fades só nas bordas externas (esquerda mantém a entrada, direita mantém a
+  saída).
+
+**Validação (30 asserts)**: 16 nos helpers puros (rampas de entrada/saída, fim exclusivo,
+repartição proporcional quando os fades estouram, negativos, e o corte sem piscar); 9 no render
+pela API — fade sobre a base preta medido por pixel (miolo cheio, metade do fade entre 20% e 80%
+do cheio, nos dois lados), **crossfade de verdade** com verde entrando sobre vermelho (começa
+vermelho, no meio as duas cores juntas, termina verde, progressão monotônica nos dois canais) e o
+`afade` conferido por `volumedetect` (início ~mais baixo que o miolo); 5 na prévia via CDP
+(opacidade 0 no primeiro quadro, ~0,5 na metade do fade, cheia depois, caindo de novo no fade de
+saída, e os dois campos novos no painel com o valor do clipe).
+
 ## Decisões já confirmadas com o usuário (2026-09-13)
 
 - **STT (item 1):** ElevenLabs Speech-to-Text — implementado, ver item 1 acima.

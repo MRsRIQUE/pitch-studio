@@ -167,7 +167,7 @@ export default function TimelineEditor({ initial, onClose, onRendered }: {
   return createPortal(
     <div className="tle-overlay">
       <div className="tle-header">
-        <h2>Editor completo — multi-trilha (sem transições/stickers ainda)</h2>
+        <h2>Editor completo — multi-trilha (sem stickers ainda)</h2>
         <button onClick={onClose} disabled={busy}>Fechar sem renderizar</button>
         <button className="tle-primary" onClick={() => void render()} disabled={busy || !timeline.clips.length}>{busy ? "Renderizando…" : "Renderizar e usar"}</button>
       </div>
@@ -235,6 +235,8 @@ export default function TimelineEditor({ initial, onClose, onRendered }: {
           <label>Posição X (0-1)<input type="number" min="0" max="1" step="0.05" value={selectedClip.x} onChange={(e) => patchClip(selectedClip.id, { x: Math.max(0, Math.min(1, Number(e.target.value))) })} /></label>
           <label>Posição Y (0-1)<input type="number" min="0" max="1" step="0.05" value={selectedClip.y} onChange={(e) => patchClip(selectedClip.id, { y: Math.max(0, Math.min(1, Number(e.target.value))) })} /></label>
           <label>Escala (0-1)<input type="number" min="0.05" max="1" step="0.05" value={selectedClip.scale} onChange={(e) => patchClip(selectedClip.id, { scale: Math.max(0.05, Math.min(1, Number(e.target.value))) })} /></label>
+          <label>Fade entrada (s)<input type="number" min="0" max={selectedClip.duration} step="0.1" value={selectedClip.fadeIn ?? 0} onChange={(e) => patchClip(selectedClip.id, { fadeIn: Math.max(0, Number(e.target.value)) })} /></label>
+          <label>Fade saída (s)<input type="number" min="0" max={selectedClip.duration} step="0.1" value={selectedClip.fadeOut ?? 0} onChange={(e) => patchClip(selectedClip.id, { fadeOut: Math.max(0, Number(e.target.value)) })} /></label>
           {selectedClip.kind === "video" && <label>Volume<input type="number" min="0" max="2" step="0.1" value={selectedClip.volume ?? 1} onChange={(e) => patchClip(selectedClip.id, { volume: Math.max(0, Number(e.target.value)) })} /></label>}
           {selectedClip.kind === "video" && <label><input type="checkbox" checked={!!selectedClip.muted} onChange={(e) => patchClip(selectedClip.id, { muted: e.target.checked })} /> Silenciar</label>}
           <button className="tle-danger" onClick={removeSelected}>Remover clipe</button>

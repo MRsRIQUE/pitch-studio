@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { clipFit, isLive, sourceTimeAt, type Timeline } from "@/lib/timelineEditor";
+import { clipFit, clipOpacityAt, isLive, sourceTimeAt, type Timeline } from "@/lib/timelineEditor";
 
 /* ============================================================
    Composição ao vivo — camada de PINTURA (DOM empilhado).
@@ -53,7 +53,8 @@ export default function TimelinePreview({ timeline, time, playing }: {
       const el = videos.current.get(clip.id);
       if (!el) continue;
       el.muted = !!clip.muted;
-      el.volume = Math.max(0, Math.min(1, clip.volume ?? 1)); // o navegador não passa de 1; o ffmpeg vai até 2
+      // o volume acompanha o fade, como o afade do render faz (navegador não passa de 1)
+      el.volume = Math.max(0, Math.min(1, (clip.volume ?? 1) * clipOpacityAt(clip, time)));
       follow(el, sourceTimeAt(clip, time), isLive(clip, time));
     }
 
@@ -80,6 +81,7 @@ export default function TimelinePreview({ timeline, time, playing }: {
           zIndex: clip.track + 1,
           display: live ? undefined : "none",
           objectFit: clipFit(clip), // espelha o fitFilter do compose-multitrack
+          opacity: clipOpacityAt(clip, time), // espelha o fade de alpha do render
         };
         return clip.kind === "video" ? (
           <video
