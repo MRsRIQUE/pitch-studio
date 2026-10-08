@@ -1,19 +1,24 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState, Suspense } from "react";
-import { flushSync } from "react-dom";
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useChatSessionStore, type StoredMessage, type ChatSession } from "@/lib/chatSessionStore";
 import { getToken } from "@/lib/galleryUtils";
 import { PitchMark } from "@/components/PitchLogo";
-import { MODEL_GROUPS, MODELS, type ModelId } from "@/lib/models";
-import { SYSTEM_PROMPT } from "@/lib/systemPrompt";
-import { Send, ChevronUp, Copy, Check } from "lucide-react";
-import { motion } from "motion/react";
-import DotCanvasBackground from "@/components/ui/DotCanvasBackground";
-import TypewriterHeading from "@/components/ui/TypewriterHeading";
+import { CHAT_MODEL_GROUPS as MODEL_GROUPS, CHAT_MODELS as MODELS, type ModelId } from "@/lib/models";
+import { CHAT_PROMPT, contextoChat, executarAcaoChat, workflowDaConversa } from "@/lib/chatActions";
+import { lerTurno } from "@/lib/assistantTurno";
+import { CodexConnection } from "@/components/assistente/CodexConnection";
+import { ChatArtifact } from "@/components/assistente/ChatArtifact";
+import { ChevronUp, Copy, Check } from "@/components/icones";
 import { useWorkflowStore } from "@/lib/store";
-import { loadAzureBaseUrl, loadAzureTextDeployment, loadAzureTextModelName } from "@/components/SettingsModal";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { ComposerShell } from "@/components/gallery/Composer/ComposerShell";
+import "./chat.css";
+import { loadAzureBaseUrl, loadAzureTextDeployment, loadAzureTextModelName } from "@/lib/azureSettings";
 
 // ── Logo ──────────────────────────────────────────────────────────────────────
 
@@ -21,276 +26,100 @@ function LogoIcon({ size = 40 }: { size?: number }) {
   return <PitchMark size={size} />;
 }
 
-// ── Model picker ──────────────────────────────────────────────────────────────
-
 function ModelPicker({
-  model, onChange, direction = "up", disabledIds = [],
+  model, onChange, disabledIds = [],
 }: {
   model: ModelId;
   onChange: (id: ModelId) => void;
-  direction?: "up" | "down";
   disabledIds?: string[];
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function onPointer(e: PointerEvent) {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    }
-    window.addEventListener("pointerdown", onPointer);
-    return () => window.removeEventListener("pointerdown", onPointer);
-  }, []);
-
-  const current = MODELS.find(m => m.id === model);
-  const dropPos = direction === "up"
-    ? { bottom: "calc(100% + 6px)" }
-    : { top: "calc(100% + 6px)" };
-
   return (
-    <div ref={ref} style={{ position: "relative", flexShrink: 0 }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          display: "flex", alignItems: "center", gap: "5px",
-          padding: "0 8px", height: "32px", borderRadius: "8px",
-          background: open ? "rgba(255,255,255,0.09)" : "transparent",
-          border: "1px solid transparent",
-          color: "rgba(255,255,255,0.5)", fontSize: "12px",
-          fontFamily: "inherit", cursor: "pointer",
-          transition: "background 120ms, color 120ms", whiteSpace: "nowrap",
-        }}
-      >
-        {current?.label}
-        <ChevronUp
-          size={12}
-          style={{
-            opacity: 0.5,
-            transform: direction === "up"
-              ? (open ? "rotate(180deg)" : "none")
-              : (open ? "none" : "rotate(180deg)"),
-            transition: "transform 120ms",
-          }}
-        />
-      </button>
-      {open && (
-        <div style={{
-          position: "absolute", right: 0, ...dropPos,
-          minWidth: "180px", background: "rgba(15, 15, 26,0.98)",
-          border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.6)", overflow: "hidden", zIndex: 100,
-        }}>
-          <div style={{ padding: "4px" }}>
-            {MODEL_GROUPS.map((group, gi) => (
-              <div key={group.label}>
-                {gi > 0 && <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />}
-                <div style={{ padding: "4px 8px 2px", fontSize: "10px", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)" }}>
-                  {group.label}
-                </div>
-                {group.models.map(m => {
-                  const disabled = disabledIds.includes(m.id);
-                  return (
-                    <button
-                      key={m.id}
-                      onClick={() => { if (!disabled) { onChange(m.id); setOpen(false); } }}
-                      title={disabled ? "Configure Azure in Settings → API Keys" : undefined}
-                      style={{
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
-                        width: "100%", padding: "7px 8px", borderRadius: "7px", border: "none",
-                        background: model === m.id ? "rgba(134, 140, 255,0.12)" : "transparent",
-                        color: disabled ? "rgba(255,255,255,0.25)" : model === m.id ? "rgba(169, 173, 255,0.95)" : "rgba(255,255,255,0.7)",
-                        fontSize: "13px", fontFamily: "inherit",
-                        cursor: disabled ? "not-allowed" : "pointer",
-                        textAlign: "left", transition: "background 100ms",
-                        opacity: disabled ? 0.5 : 1,
-                      }}
-                      onMouseEnter={e => { if (!disabled && model !== m.id) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
-                      onMouseLeave={e => { if (!disabled && model !== m.id) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-                    >
-                      <span>{m.label}</span>
-                      <span style={{ fontSize: "10px", color: disabled ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.28)", marginLeft: "8px" }}>
-                        {disabled ? "needs Azure key" : m.desc}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+    <DropdownMenu>
+      <DropdownMenuTrigger className="pc-pill" aria-label="Modelo de IA">
+        {MODELS.find(m => m.id === model)?.label}
+        <ChevronUp size={14} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" side="top" className="max-h-80 overflow-y-auto rounded-ms-lg">
+        <DropdownMenuRadioGroup value={model} onValueChange={id => onChange(id as ModelId)}>
+          {MODEL_GROUPS.map((group, index) => (
+            <React.Fragment key={group.label}>
+              {index > 0 && <DropdownMenuSeparator />}
+              <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+              {group.models.map(m => (
+                <DropdownMenuRadioItem key={m.id} value={m.id} disabled={disabledIds.includes(m.id)}>
+                  {m.label}
+                  {disabledIds.includes(m.id) && <span className="ml-2 text-ms-sm text-ms-text-tertiary">Configure a chave {m.id === "azure-auto" ? "Azure" : "Kie.ai"}</span>}
+                </DropdownMenuRadioItem>
+              ))}
+            </React.Fragment>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function Welcome() {
+  return (
+    <div className="chat-welcome">
+      <LogoIcon size={40} />
+      <h2 className="text-ms-3xl font-normal text-ms-text">O que vamos criar?</h2>
+      <p className="text-ms-lg text-ms-text-secondary">Crie personagens com retratos por IA, monte workflows ou refine seus prompts.</p>
     </div>
   );
 }
 
-// ── Cycling placeholder ───────────────────────────────────────────────────────
-
-const PLACEHOLDER_SENTENCES = [
-  "Convert this prompt into a JSON prompt",
-  "Improve this prompt by giving more camera details",
-  "Generate a prompt to create an image of a girl holding a flower",
-  "Make this prompt more cinematic and add lighting details",
-  "Rewrite this prompt for a photorealistic style",
-];
-
-function useCyclingPlaceholder(paused: boolean) {
-  const [text, setText] = useState("");
-  const idx = useRef(0);
-  const phase = useRef<"typing" | "waiting" | "deleting">("typing");
-  const char = useRef(0);
-
-  useEffect(() => {
-    if (paused) return;
-
-    let timeout: ReturnType<typeof setTimeout>;
-
-    function tick() {
-      const sentence = PLACEHOLDER_SENTENCES[idx.current];
-
-      if (phase.current === "typing") {
-        char.current++;
-        setText(sentence.slice(0, char.current));
-        if (char.current >= sentence.length) {
-          phase.current = "waiting";
-          timeout = setTimeout(tick, 2000);
-        } else {
-          timeout = setTimeout(tick, 42);
-        }
-      } else if (phase.current === "waiting") {
-        phase.current = "deleting";
-        timeout = setTimeout(tick, 40);
-      } else {
-        char.current--;
-        setText(sentence.slice(0, char.current));
-        if (char.current <= 0) {
-          idx.current = (idx.current + 1) % PLACEHOLDER_SENTENCES.length;
-          phase.current = "typing";
-          timeout = setTimeout(tick, 300);
-        } else {
-          timeout = setTimeout(tick, 28);
-        }
-      }
-    }
-
-    timeout = setTimeout(tick, 400);
-    return () => clearTimeout(timeout);
-  }, [paused]);
-
-  return text;
+function ConnectionNotice({ unavailable }: { unavailable: boolean }) {
+  if (!unavailable) return null;
+  return <p className="text-ms-sm text-ms-text-secondary mt-3">Conecte a chave do provedor para usar este modelo ou selecione um modelo conectado. <button type="button" className="underline" onClick={() => useWorkflowStore.getState().setSettingsOpen(true)}>Abrir configurações</button></p>;
 }
 
-// ── Landing view (no active session) ─────────────────────────────────────────
-
-
 function LandingView({
-  onSubmit, model, onModelChange,
+  onSubmit, model, onModelChange, rascunho = "",
 }: {
   onSubmit: (text: string) => void;
   model: ModelId;
   onModelChange: (id: ModelId) => void;
+  rascunho?: string;
 }) {
-  const [input, setInput] = useState("");
-  const [headingDone, setHeadingDone] = useState(false);
+  const [input, setInput] = useState(rascunho);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const animatedPlaceholder = useCyclingPlaceholder(!headingDone || input.length > 0);
-  const kieKeySet   = useWorkflowStore((s) => s.kieKeySet);
-  const azureKeySet = useWorkflowStore((s) => s.azureKeySet);
-  const disabledIds = azureKeySet === true ? [] : ["azure-auto"];
+  const kieKeySet = useWorkflowStore(s => s.kieKeySet);
+  const azureKeySet = useWorkflowStore(s => s.azureKeySet);
+  const disabledIds = [...(azureKeySet === true ? [] : ["azure-auto"]), ...(kieKeySet === false ? MODELS.filter(m => m.id !== "azure-auto" && m.id !== "codex-chatgpt").map(m => m.id) : [])];
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  function submit(text: string) {
-    const trimmed = text.trim();
-    if (trimmed) onSubmit(trimmed);
-  }
-
-  function onKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(input); }
+  function submit() {
+    if (input.trim() && !disabledIds.includes(model)) onSubmit(input.trim());
   }
 
   return (
-    <div style={{
-      flex: 1, display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center",
-      padding: "0 24px 80px", position: "relative", overflow: "hidden",
-    }}>
-      <DotCanvasBackground />
-      {/* Logo */}
-      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
-      <LogoIcon size={48} />
-
-      {/* Title */}
-      <TypewriterHeading text="I'm here to help you make better prompts." onDone={() => setHeadingDone(true)} />
-      <motion.p
-        initial={{ filter: "blur(10px)", opacity: 0 }}
-        animate={{ filter: "blur(0px)", opacity: 1 }}
-        transition={{ duration: 1 }}
-        style={{ color: "rgba(255,255,255,0.4)", fontSize: "15px", marginBottom: "40px", textAlign: "center" }}
-      >
-        Give me a prompt and I&apos;ll make it better.
-      </motion.p>
-
-      {/* Input + suggestions */}
-      <div style={{ width: "100%", maxWidth: "680px" }}>
-        {/* Input bar */}
-        <div style={{
-          display: "flex", alignItems: "center",
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.12)",
-          borderRadius: "18px",
-          padding: "10px 10px 10px 20px",
-          boxShadow: "0 0 0 1px rgba(255,255,255,0.03) inset",
-          transition: "border-color 150ms",
-        }}>
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={onKey}
-            placeholder={input.length > 0 ? "" : animatedPlaceholder}
-            rows={1}
-            style={{
-              flex: 1, background: "transparent", border: "none", outline: "none",
-              resize: "none", color: "rgba(255,255,255,0.88)", fontSize: "15px",
-              fontFamily: "inherit", lineHeight: "24px", maxHeight: "120px",
-              overflowY: "auto", padding: 0,
-            }}
-            onInput={e => {
-              const t = e.currentTarget;
-              t.style.height = "auto";
-              t.style.height = Math.min(t.scrollHeight, 120) + "px";
-            }}
-          />
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "12px", flexShrink: 0 }}>
-            <ModelPicker model={model} onChange={onModelChange} direction="down" disabledIds={disabledIds} />
-            <button
-              onClick={() => submit(input)}
-              disabled={!input.trim() || kieKeySet === false || disabledIds.includes(model)}
-              style={{
-                width: "36px", height: "36px", borderRadius: "50%", border: "none",
-                background: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.25)" : "rgba(255,255,255,0.07)",
-                color: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.9)" : "rgba(255,255,255,0.25)",
-                cursor: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "pointer" : "not-allowed",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                flexShrink: 0, transition: "background 150ms, color 150ms",
-              }}
-            >
-              <Send size={15} />
-            </button>
-          </div>
-        </div>
-
-      </div>
+    <div className="chat-empty">
+      <Welcome />
+      <div className="chat-composer-placement">
+        <ComposerShell
+          beam
+          value={input}
+          onChange={setInput}
+          onSubmit={submit}
+          disabled={!input.trim() || disabledIds.includes(model)}
+          placeholder="Ex.: Crie a Ana, uma apresentadora de skincare, e um workflow de 3 vídeos…"
+          submitLabel="Enviar mensagem"
+          submitOn="enter"
+          maxLength={null}
+          textareaRef={inputRef}
+          trailing={<ModelPicker model={model} onChange={onModelChange} disabledIds={disabledIds} />}
+        />
+        {model === "codex-chatgpt" ? <CodexConnection /> : <ConnectionNotice unavailable={disabledIds.includes(model)} />}
       </div>
     </div>
   );
 }
 
-// ── Chat window ───────────────────────────────────────────────────────────────
+// ── Conversa ───────────────────────────────────────────────────────────────
 
-interface LiveMessage {
-  role: "user" | "assistant";
-  content: string;
+interface LiveMessage extends StoredMessage {
   streaming?: boolean;
 }
 
@@ -313,7 +142,7 @@ function ChatWindow({
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const kieKeySet   = useWorkflowStore((s) => s.kieKeySet);
   const azureKeySet = useWorkflowStore((s) => s.azureKeySet);
-  const disabledIds = azureKeySet === true ? [] : ["azure-auto"];
+  const disabledIds = [...(azureKeySet === true ? [] : ["azure-auto"]), ...(kieKeySet === false ? MODELS.filter(m => m.id !== "azure-auto" && m.id !== "codex-chatgpt").map(m => m.id) : [])];
 
   function handleModelChange(id: ModelId) { setModel(id); onModelChange?.(id); }
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -326,7 +155,7 @@ function ChatWindow({
 
   const send = useCallback(async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || isStreaming) return;
+    if (!trimmed || abortRef.current || isStreaming) return;
     if (onAuthRequired) { onAuthRequired(); return; }
 
     const contextMessages: StoredMessage[] = [
@@ -334,16 +163,13 @@ function ChatWindow({
       { role: "user", content: trimmed },
     ];
 
-    const assistantIdx = contextMessages.length; // index in the new messages array
-    flushSync(() => {
-      setMessages((prev) => [
+    setMessages((prev) => [
         ...prev.filter((m) => !m.streaming),
         { role: "user", content: trimmed },
         { role: "assistant", content: "", streaming: true },
       ]);
-      setInput("");
-      setIsStreaming(true);
-    });
+    setInput("");
+    setIsStreaming(true);
 
     onUpdate(contextMessages, model);
 
@@ -358,70 +184,52 @@ function ChatWindow({
         azureModelName:  loadAzureTextModelName(),
       } : {};
 
-      const res = await fetch("/api/assistant", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            ...contextMessages.map((m) => ({ role: m.role, content: m.content })),
-          ],
-          stream: true,
-          ...azureConfig,
-        }),
-        signal: abort.signal,
-      });
-
-      if (!res.ok || !res.body) {
-        let errMsg = "Request failed";
-        try { const j = await res.json(); errMsg = j.error ?? errMsg; } catch { errMsg = await res.text().catch(() => errMsg); }
-        setMessages((prev) => prev.map((m, i) => i === assistantIdx ? { ...m, content: `Error: ${errMsg}`, streaming: false } : m));
-        setIsStreaming(false);
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      let accumulated = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split("\n");
-        buf = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const json = line.slice(6).trim();
-          if (json === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(json);
-            const chunk =
-              (parsed.type === "content_block_delta" ? parsed.delta?.text : null) ??
-              parsed.choices?.[0]?.delta?.content ??
-              null;
-            if (chunk) accumulated += chunk;
-          } catch { /* skip malformed SSE */ }
+      const history = [...contextMessages];
+      let workflowId = workflowDaConversa(history);
+      if (workflowId) useWorkflowStore.getState().switchSpace(workflowId);
+      for (let round = 0; round < 8; round++) {
+        const res = await fetch("/api/assistant", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({ model, tools: "chat", messages: [
+            { role: "system", content: `${CHAT_PROMPT}\n\n${contextoChat(workflowId)}` },
+            ...history.map(({ role, content, toolCalls, toolCallId }) => ({ role, content, toolCalls, toolCallId })),
+          ], ...azureConfig }),
+          signal: abort.signal,
+        });
+        if (!res.ok || !res.body) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Não foi possível enviar a mensagem.");
         }
-        // One state update per network read — the await above yields to the browser for painting
-        setMessages((prev) => prev.map((m, i) =>
-          i === assistantIdx ? { ...m, content: accumulated } : m
-        ));
+        const turno = await lerTurno(res.body, content => setMessages([...history, { role: "assistant", content, streaming: true }]));
+        if (turno.falha) throw new Error(turno.falha);
+        if (!turno.chamadas.length) {
+          history.push({ role: "assistant", content: turno.texto || "Não recebi uma resposta. Tente novamente." });
+          onUpdate([...history], model);
+          setMessages([...history]);
+          return;
+        }
+        history.push({ role: "assistant", content: turno.texto, toolCalls: turno.chamadas });
+        for (const call of turno.chamadas) {
+          const result = await executarAcaoChat(call, workflowId);
+          history.push(result);
+          if (result.artifact?.tipo === "workflow") workflowId = result.artifact.id;
+        }
+        // Persist complete tool-call/result pairs before requesting the next turn.
+        onUpdate([...history], model);
+        setMessages([...history, { role: "assistant", content: "", streaming: true }]);
       }
-
-      const finalMessages: StoredMessage[] = [...contextMessages, { role: "assistant", content: accumulated }];
-      setMessages(finalMessages.map((m) => ({ ...m })));
-      onUpdate(finalMessages, model);
+      history.push({ role: "assistant", content: "As ações acima foram salvas. Envie uma nova mensagem para continuar a montagem." });
+      onUpdate(history, model);
+      setMessages(history);
     } catch (err: unknown) {
-      if ((err as Error)?.name !== "AbortError") {
-        setMessages((prev) => prev.map((m, i) => i === assistantIdx ? { ...m, content: "Request failed.", streaming: false } : m));
-      }
+      // Keep already completed actions even if the provider fails while narrating them.
+      const saved = useChatSessionStore.getState().sessions.find(s => s.id === session.id)?.messages ?? contextMessages;
+      const final: StoredMessage[] = [...saved, { role: "assistant", content: (err as Error)?.name === "AbortError" ? "Resposta interrompida. As ações concluídas foram salvas." : `Erro: ${err instanceof Error ? err.message : "Não foi possível enviar a mensagem."}` }];
+      onUpdate(final, model);
+      setMessages(final);
     } finally {
+      abortRef.current = null;
       setIsStreaming(false);
     }
   }, [isStreaming, model, onAuthRequired, session, onUpdate]);
@@ -435,169 +243,69 @@ function ChatWindow({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function onKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); }
-  }
-
-  // ── Empty state: centered welcome + input ──────────────────────────────────
-  if (messages.length === 0 && !isStreaming) {
-    return (
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px 80px", minWidth: 0 }}>
-        <LogoIcon size={48} />
-        <TypewriterHeading text="I'm here to help you make better prompts." />
-        <div style={{ width: "100%", maxWidth: "680px" }}>
-          <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "18px", padding: "10px 10px 10px 20px", transition: "border-color 150ms" }}>
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={onKey}
-              placeholder="Describe your image or video idea…"
-              rows={1}
-              style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", color: "rgba(255,255,255,0.88)", fontSize: "15px", fontFamily: "inherit", lineHeight: "24px", maxHeight: "120px", overflowY: "auto", padding: 0 }}
-              onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px"; }}
-            />
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "12px", flexShrink: 0 }}>
-              <ModelPicker model={model} onChange={handleModelChange} direction="down" disabledIds={disabledIds} />
-              <button onClick={() => send(input)} disabled={!input.trim() || kieKeySet === false || disabledIds.includes(model)} style={{ width: "36px", height: "36px", borderRadius: "50%", border: "none", background: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.25)" : "rgba(255,255,255,0.07)", color: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.9)" : "rgba(255,255,255,0.25)", cursor: input.trim() && kieKeySet !== false && !disabledIds.includes(model) ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 150ms, color 150ms" }}>
-                <Send size={15} />
-              </button>
-            </div>
-          </div>
-        </div>
-        <style>{`@keyframes chatDot { 0%,80%,100%{opacity:.3;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} } @keyframes cursorBlink { 0%,100%{opacity:.6} 50%{opacity:0} }`}</style>
-      </div>
-    );
-  }
-
-  // ── Normal chat layout ─────────────────────────────────────────────────────
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0 }}>
-      {/* Header */}
-      <div style={{ padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-        <h2 style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "#fff", letterSpacing: "-0.02em" }}>
-          {session.title}
-        </h2>
-      </div>
-
-      {/* Messages */}
-      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-        {messages.map((m, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "72%" }}>
-              <div style={{
-                padding: "10px 14px",
-                borderRadius: m.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                background: m.role === "user" ? "rgba(134, 140, 255,0.15)" : "rgba(255,255,255,0.06)",
-                border: m.role === "user" ? "1px solid rgba(134, 140, 255,0.25)" : "1px solid rgba(255,255,255,0.07)",
-                fontSize: "14px", lineHeight: 1.6,
-                color: m.role === "user" ? "#FFFFFF" : "rgba(255,255,255,0.88)",
-                whiteSpace: "pre-wrap", wordBreak: "break-word",
-              }}>
+    <div className="chat-window">
+      <div ref={scrollRef} className="chat-messages" role="log" aria-label="Mensagens da conversa" aria-busy={isStreaming}>
+        <div className="chat-container chat-message-list">
+          {messages.length === 0 && !isStreaming && <Welcome />}
+          {messages.map((m, i) => m.role === "tool" ? (
+            <div key={i} className="chat-message chat-message--assistant">
+              {m.artifact ? <ChatArtifact artifact={m.artifact} /> : <p className="text-ms-sm text-ms-text-secondary">{m.content}</p>}
+            </div>
+          ) : !m.content && !m.streaming ? null : (
+            <article key={i} className={`chat-message chat-message--${m.role}`} aria-label={m.role === "user" ? "Você" : "Assistente"}>
+              <div className="chat-message-text">
                 {m.content}
                 {m.streaming && (
                   m.content
-                    ? <span style={{ display: "inline-block", width: "2px", height: "14px", background: "rgba(255,255,255,0.6)", borderRadius: "1px", marginLeft: "2px", verticalAlign: "text-bottom", animation: "cursorBlink 0.8s ease-in-out infinite" }} />
-                    : <span style={{ display: "inline-flex", gap: "3px", alignItems: "center" }}>
-                        {[0, 1, 2].map(d => (
-                          <span key={d} style={{ width: "4px", height: "4px", borderRadius: "50%", background: "rgba(255,255,255,0.4)", animation: `chatDot 1s ${d * 0.2}s infinite` }} />
-                        ))}
-                      </span>
+                    ? <span className="chat-cursor" aria-hidden="true" />
+                    : <span className="chat-thinking" role="status">Preparando resposta…</span>
                 )}
               </div>
               {m.role === "assistant" && !m.streaming && m.content && (
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(m.content);
-                    setCopiedIdx(i);
-                    setTimeout(() => setCopiedIdx(null), 1500);
+                <button type="button" className="chat-copy"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(m.content);
+                      setCopiedIdx(i);
+                      setTimeout(() => setCopiedIdx(null), 1500);
+                    } catch { setCopiedIdx(null); }
                   }}
-                  title="Copy response"
-                  style={{
-                    marginTop: "4px",
-                    display: "flex", alignItems: "center", gap: "4px",
-                    padding: "3px 8px", borderRadius: "6px", border: "none",
-                    background: "transparent", color: copiedIdx === i ? "rgba(134, 140, 255,0.8)" : "rgba(255,255,255,0.25)",
-                    fontSize: "11px", fontFamily: "inherit", cursor: "pointer",
-                    transition: "color 150ms, background 150ms",
-                  }}
-                  onMouseEnter={e => { if (copiedIdx !== i) (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.55)"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = copiedIdx === i ? "rgba(134, 140, 255,0.8)" : "rgba(255,255,255,0.25)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                  aria-label={copiedIdx === i ? "Resposta copiada" : "Copiar resposta"}
                 >
-                  {copiedIdx === i ? <Check size={11} /> : <Copy size={11} />}
-                  {copiedIdx === i ? "Copied" : "Copy"}
+                  {copiedIdx === i ? <Check size={14} /> : <Copy size={14} />}
+                  {copiedIdx === i ? "Copiado" : "Copiar"}
                 </button>
               )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Input bar */}
-      <div style={{ padding: "16px", borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-        <div style={{
-          display: "flex", alignItems: "center",
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: "12px",
-          padding: "8px 8px 8px 14px",
-          transition: "border-color 150ms",
-        }}>
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={onKey}
-            placeholder="Send a message…"
-            rows={1}
-            disabled={isStreaming}
-            style={{
-              flex: 1, background: "transparent", border: "none", outline: "none",
-              resize: "none", color: "rgba(255,255,255,0.88)", fontSize: "14px",
-              fontFamily: "inherit", lineHeight: "22px", maxHeight: "120px",
-              overflowY: "auto", padding: 0,
-            }}
-            onInput={e => {
-              const t = e.currentTarget;
-              t.style.height = "auto";
-              t.style.height = Math.min(t.scrollHeight, 120) + "px";
-            }}
-          />
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "8px", flexShrink: 0 }}>
-            <ModelPicker model={model} onChange={handleModelChange} disabledIds={disabledIds} />
-            <button
-              onClick={() => send(input)}
-              disabled={!input.trim() || isStreaming || kieKeySet === false || disabledIds.includes(model)}
-              style={{
-                width: "32px", height: "32px", borderRadius: "8px", border: "none",
-                background: input.trim() && !isStreaming && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.25)" : "rgba(255,255,255,0.07)",
-                color: input.trim() && !isStreaming && kieKeySet !== false && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.9)" : "rgba(255,255,255,0.25)",
-                cursor: input.trim() && !isStreaming && kieKeySet !== false && !disabledIds.includes(model) ? "pointer" : "not-allowed",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                flexShrink: 0, transition: "background 150ms, color 150ms",
-              }}
-            >
-              <Send size={14} />
-            </button>
-          </div>
+            </article>
+          ))}
         </div>
       </div>
 
-      <style>{`
-        @keyframes chatDot {
-          0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-          40% { opacity: 1; transform: scale(1); }
-        }
-        @keyframes cursorBlink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-      `}</style>
+      <div className="chat-composer-footer">
+        <div className="chat-composer-placement">
+          <ComposerShell
+            beam
+            value={input}
+            onChange={setInput}
+            onSubmit={() => { if (!disabledIds.includes(model)) void send(input); }}
+            disabled={!input.trim() || disabledIds.includes(model)}
+            busy={isStreaming}
+            placeholder="Envie uma mensagem…"
+            submitLabel="Enviar mensagem"
+            submitOn="enter"
+            maxLength={null}
+            textareaRef={inputRef}
+            trailing={<ModelPicker model={model} onChange={handleModelChange} disabledIds={disabledIds} />}
+          />
+          {model === "codex-chatgpt" ? <CodexConnection /> : <ConnectionNotice unavailable={disabledIds.includes(model)} />}
+        </div>
+      </div>
     </div>
   );
 }
 
-// ── Inner page (uses useSearchParams) ────────────────────────────────────────
+// ── Sessão selecionada pela URL ────────────────────────────────────────
 
 function ChatInner() {
   const router = useRouter();
@@ -605,37 +313,46 @@ function ChatInner() {
   const idParam = searchParams.get("id");
 
   const { sessions, createSession, upsertSession, preferredModel, setPreferredModel } = useChatSessionStore();
-  const [hydrated, setHydrated] = useState(false);
-  const [landingModel, setLandingModel] = useState<ModelId>("claude-sonnet-4-6");
-  const [pendingMessage, setPendingMessage] = useState("");
-
-  // Sync landingModel from store once hydrated
-  useEffect(() => { if (hydrated) setLandingModel(preferredModel as ModelId); }, [hydrated]);
-
-  useEffect(() => {
-    const unsub = useChatSessionStore.persist?.onFinishHydration(() => setHydrated(true));
-    if (useChatSessionStore.persist?.hasHydrated()) setHydrated(true);
-    return unsub;
-  }, []);
+  const hydrated = useSyncExternalStore(
+    useCallback((notify: () => void) => useChatSessionStore.persist.onFinishHydration(notify), []),
+    () => useChatSessionStore.persist.hasHydrated(),
+    () => false,
+  );
+  const landingModel = preferredModel as ModelId;
+  const [pendingMessage, setPendingMessage] = useState<{ id: string; text: string } | null>(null);
 
   const activeSession = idParam ? (sessions.find(s => s.id === idParam) ?? null) : null;
 
+  /* `?q=` — quem chega de outra tela com um prompt pronto (o "Criar estilo
+     conversando" dos Estilos, por exemplo) cai aqui com o campo preenchido, sem
+     mensagem pendurada no histórico: quem envia continua sendo a pessoa. */
+  const rascunho = searchParams.get("q") ?? "";
+
   function handleLandingSubmit(text: string) {
     const id = createSession(landingModel, text.slice(0, 50));
-    setPendingMessage(text);
+    setPendingMessage({ id, text });
     router.push(`/chat?id=${id}`);
   }
 
   if (!hydrated) {
     return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontSize: "14px" }}>
-        Loading…
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ms-text-tertiary)", fontSize: "14px" }}>
+        Carregando…
       </div>
     );
   }
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+    <div className="chat-window">
+      <header className="shrink-0 px-6 pt-5">
+        <div className="mx-auto w-full max-w-[1310px]">
+          <div className="flex h-6 items-center justify-between gap-6">
+            <h1 className="truncate text-ms-xl font-normal leading-6 text-ms-text">
+              {activeSession?.title || "Assistente"}
+            </h1>
+          </div>
+        </div>
+      </header>
       {activeSession ? (
         <ChatWindow
           key={activeSession.id}
@@ -643,24 +360,25 @@ function ChatInner() {
           onUpdate={(msgs, mdl) => upsertSession(activeSession.id, msgs, mdl)}
           defaultModel={preferredModel}
           onModelChange={setPreferredModel}
-          initialMessage={pendingMessage || undefined}
+          initialMessage={pendingMessage?.id === activeSession.id && activeSession.messages.length === 0 ? pendingMessage.text : undefined}
         />
       ) : (
         <LandingView
           onSubmit={handleLandingSubmit}
           model={landingModel}
-          onModelChange={id => { setLandingModel(id); setPreferredModel(id); }}
+          onModelChange={setPreferredModel}
+          rascunho={rascunho}
         />
       )}
     </div>
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── Página ──────────────────────────────────────────────────────────────────────
 
 export default function ChatPage() {
   return (
-    <div className="flex-1 flex overflow-hidden min-h-0">
+    <div className="chat-page flex-1 flex overflow-hidden min-h-0">
       <Suspense fallback={<div style={{ flex: 1 }} />}>
         <ChatInner />
       </Suspense>

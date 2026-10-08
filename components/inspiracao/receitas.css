@@ -1,0 +1,160 @@
+/* ============================================================
+   RECEITAS — a grade de cards do chip "Receitas"
+
+   Tokens da casa (`--ms-*`, `--app-v2-*`), mesmos da Inspiração. A grade
+   é de cartões de altura livre, não masonry: aqui não há capa para
+   ditar proporção, e três colunas de texto legível valem mais do que
+   quatro de texto apertado.
+   ============================================================ */
+
+.rec-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 18px;
+  padding: 4px 0 24px;
+}
+
+.rec-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--ms-border);
+  border-radius: 16px;
+  background: var(--app-v2-bg-component);
+  color: var(--ms-text);
+}
+
+.rec-card__topo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rec-card__titulo {
+  margin: 0;
+  font-size: var(--ms-text-lg);
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.rec-card__modelos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rec-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--ms-bg-subtle);
+  font-size: var(--ms-text-xs);
+  line-height: 1;
+  color: var(--app-v2-text-secondary);
+}
+
+.rec-pill--video {
+  background: color-mix(in srgb, var(--app-v2-brand-solid) 12%, transparent);
+  color: var(--app-v2-brand-solid);
+}
+
+.rec-card__resumo {
+  margin: 0;
+  font-size: var(--ms-text-base);
+  line-height: 1.6;
+  color: var(--app-v2-text-secondary);
+}
+
+.rec-card__passos {
+  border-top: 1px solid var(--ms-border);
+  padding-top: 10px;
+}
+
+.rec-card__passos summary {
+  cursor: pointer;
+  font-size: var(--ms-text-sm);
+  font-weight: 500;
+  color: var(--app-v2-text-tertiary);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rec-card__passos summary::-webkit-details-marker { display: none; }
+
+.rec-card__passos summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform .15s ease;
+}
+
+.rec-card__passos[open] summary::before { transform: rotate(45deg); }
+
+.rec-card__passos ol {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--ms-text-sm);
+  line-height: 1.55;
+  color: var(--app-v2-text-secondary);
+}
+
+.rec-card__rodape {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rec-card__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rec-botao {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--ms-border);
+  border-radius: 10px;
+  background: var(--ms-bg);
+  font: inherit;
+  font-size: var(--ms-text-sm);
+  font-weight: 500;
+  color: var(--ms-text);
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, transform .1s ease;
+}
+
+.rec-botao:hover { background: var(--ms-bg-subtle); }
+.rec-botao:active { transform: scale(.97); }
+
+.rec-botao--principal {
+  border-color: transparent;
+  background: var(--app-v2-brand-solid);
+  color: var(--ms-text-on-brand);
+}
+
+.rec-botao--principal:hover { filter: brightness(1.05); background: var(--app-v2-brand-solid); }
+
+.rec-card__credito {
+  font-size: var(--ms-text-xs);
+  color: var(--app-v2-text-tertiary);
+}
+
+@media (max-width: 720px) {
+  .rec-grade { grid-template-columns: 1fr; }
+}

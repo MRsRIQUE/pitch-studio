@@ -1,11 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { AppSidebar } from "@/components/AppSidebar";
+import { ShellApp } from "@/components/ShellApp";
 import GlobalModals from "@/components/GlobalModals";
 import KieBanner from "@/components/KieBanner";
 import UpdateBanner from "@/components/UpdateBanner";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cookies } from "next/headers";
 
@@ -23,15 +22,24 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "700"],
 });
 
+// O icone do app vem das convencoes de arquivo do Next (app/icon.svg e
+// app/apple-icon.png) — ambos ja desenham a marca "P" no gradiente do kit.
 export const metadata: Metadata = {
-  title: "Pitch Studio",
-  description: "Crie e edite imagens e videos com IA em pipelines visuais.",
+  applicationName: "Pitch Studio",
+  title: {
+    default: "Pitch Studio",
+    template: "%s · Pitch Studio",
+  },
+  description: "Crie e edite imagens e vídeos com IA em pipelines visuais.",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  // Tinta a barra do navegador com a mesma cor da pagina. O Violeta da marca
+  // ficaria descolado do chrome claro — ele vive no logo e no botao primario.
+  themeColor: "#f9f9f9",
 };
 
 export default async function RootLayout({
@@ -45,22 +53,19 @@ export default async function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${dmSans.variable} ${jetbrainsMono.variable} antialiased dark`}
+      className={`${dmSans.variable} ${jetbrainsMono.variable} antialiased`}
       style={{ height: "100%" }}
     >
-      <body className="text-white h-full overflow-hidden" style={{ background: "var(--surface-night)" }}>
+      <body className="h-full overflow-hidden">
         <TooltipProvider>
-          <SidebarProvider defaultOpen={sidebarOpen} className="h-full">
-            <AppSidebar />
-            <SidebarInset style={{ backgroundColor: "transparent" }} className="flex flex-col min-h-0 min-w-0 border-l border-r border-t border-white/[0.08] mx-2 mt-2 rounded-tl-xl rounded-tr-xl">
-              <KieBanner />
-              <UpdateBanner />
-              <div className="md:hidden flex items-center h-10 px-3 border-b border-white/[0.08] shrink-0">
-                <SidebarTrigger className="text-white/50 hover:text-white hover:bg-white/[0.05] transition-colors rounded-lg p-1.5 [&_svg]:size-4" />
-              </div>
-              {children}
-            </SidebarInset>
-          </SidebarProvider>
+          {/* Quem decide se há navegação é o `ShellApp`: a página de projeto e o
+              canvas de workflow são full-bleed, como na referência. */}
+          <ShellApp
+            sidebarOpen={sidebarOpen}
+            banners={<><KieBanner /><UpdateBanner /></>}
+          >
+            {children}
+          </ShellApp>
         </TooltipProvider>
         <GlobalModals />
       </body>

@@ -140,7 +140,7 @@ export function updateGeneration(
 
 export function recoverJob(
   taskId: string,
-): Pick<Generation, "status" | "video_url" | "image_url" | "image_urls" | "error_msg"> | null {
+): Pick<Generation, "user_id" | "status" | "model" | "video_url" | "image_url" | "image_urls" | "error_msg"> | null {
   const r = db().prepare("SELECT * FROM generations WHERE task_id = ?").get(taskId) as GenRow | undefined;
   return r ? rowToGeneration(r) : null;
 }
@@ -285,6 +285,84 @@ export function setAzureApiKey(key: string): void {
 
 export function deleteAzureApiKey(): void {
   deleteSetting("azure_api_key");
+}
+
+export function getHiggsfieldCredentials(): string | null {
+  const dbCredentials = getSetting("higgsfield_credentials");
+  if (dbCredentials) return dbCredentials;
+
+  const combined = process.env.HF_CREDENTIALS?.trim();
+  if (combined) return combined;
+
+  const keyId = process.env.HF_API_KEY_ID?.trim();
+  const keySecret = process.env.HF_API_KEY_SECRET?.trim();
+  return keyId && keySecret ? `${keyId}:${keySecret}` : null;
+}
+
+export function setHiggsfieldCredentials(keyId: string, keySecret: string): void {
+  setSetting("higgsfield_credentials", `${keyId}:${keySecret}`);
+}
+
+export function deleteHiggsfieldCredentials(): void {
+  deleteSetting("higgsfield_credentials");
+}
+
+export interface GenerationSubmission {
+  submission_id: string;
+  user_id: string;
+  provider: string;
+  task_id: string | null;
+  state: "submitting" | "accepted" | "uncertain";
+}
+
+/**
+ * Claims a client-generated submission id before making a billable POST.
+ * This prevents a double click or a retried browser request from creating a
+ * second generation when the provider has no idempotency-key support.
+ */
+export function claimGenerationSubmission(
+  submissionId: string,
+  userId: string,
+  provider: string,
+): { claimed: true } | { claimed: false; existing: GenerationSubmission } {
+  const ts = now();
+  const result = db().prepare(`
+    INSERT INTO generation_submissions
+      (submission_id, user_id, provider, task_id, state, created_at, updated_at)
+    VALUES (?, ?, ?, NULL, 'submitting', ?, ?)
+    ON CONFLICT(submission_id) DO NOTHING
+  `).run(submissionId, userId, provider, ts, ts);
+
+  if (Number(result.changes) > 0) return { claimed: true };
+
+  const existing = db().prepare(`
+    SELECT submission_id, user_id, provider, task_id, state
+    FROM generation_submissions WHERE submission_id = ?
+  `).get(submissionId) as unknown as GenerationSubmission;
+  return { claimed: false, existing };
+}
+
+export function acceptGenerationSubmission(submissionId: string, taskId: string): void {
+  db().prepare(`
+    UPDATE generation_submissions
+    SET task_id = ?, state = 'accepted', updated_at = ?
+    WHERE submission_id = ?
+  `).run(taskId, now(), submissionId);
+}
+
+export function markGenerationSubmissionUncertain(submissionId: string): void {
+  db().prepare(`
+    UPDATE generation_submissions
+    SET state = 'uncertain', updated_at = ?
+    WHERE submission_id = ?
+  `).run(now(), submissionId);
+}
+
+export function releaseGenerationSubmission(submissionId: string): void {
+  db().prepare(`
+    DELETE FROM generation_submissions
+    WHERE submission_id = ? AND task_id IS NULL AND state = 'submitting'
+  `).run(submissionId);
 }
 
 // ── Folders ────────────────────────────────────────────────────────────────

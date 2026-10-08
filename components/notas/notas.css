@@ -1,0 +1,183 @@
+/* ============================================================
+   NOTAS PORTADAS — o orbe e o loop
+
+   Os dois componentes são isolados de propósito: ainda não entraram em tela
+   nenhuma, e onde entram é decisão do usuário.
+
+   As cores literais das notas NÃO estão neste arquivo: elas são conteúdo das
+   notas, vivem em `gyro.ts` junto dos outros valores e chegam por variável.
+   O que fica aqui é só a caixa.
+   ============================================================ */
+
+/* ── O orbe ───────────────────────────────────────────────────
+   A nota preenche a janela (`<Canvas style={{flex:1}}>` com `<Fill>`). Aqui a
+   caixa vem de fora; o padrão é ocupar o que o pai der. */
+.nota-orbe {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.nota-falha {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--app-v2-text-secondary);
+  background: var(--app-v2-bg-component);
+  border-radius: var(--ms-radius-lg);
+}
+
+/* ── O loop ───────────────────────────────────────────────────
+   Geometria literal do cabeçalho da nota: bola 46, vão 9, padding
+   7 / 22 / 7 / 8, fonte 14, opacidade do rótulo 0.74. */
+.nota-gyro {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.nota-gyro--pilula {
+  padding: 7px 22px 7px 8px;
+  border-radius: var(--ms-radius-full);
+  /* Os literais da nota vivem num lugar só, em `gyro.ts`; o componente os
+     injeta como variável. Repeti-los aqui seria uma segunda fonte de verdade. */
+  background: var(--nota-gyro-pilula);
+}
+
+.nota-gyro__bola {
+  display: block;
+  flex-shrink: 0;
+}
+
+.nota-gyro__rotulo {
+  font-size: 14px;
+  line-height: 20px;
+  white-space: nowrap;
+  opacity: .74;
+  color: var(--nota-gyro-rotulo);
+}
+
+/* ── A página de demonstração ─────────────────────────────────
+   Não é tela de produto: é a bancada onde as duas notas são olhadas. */
+.notas-demo {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1310px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.notas-demo__titulo {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--ms-text);
+}
+
+.notas-demo__cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: var(--app-v2-radius-lg);
+  border: 1px solid var(--app-v2-border-hairline);
+  background: var(--app-v2-bg-surface);
+}
+
+.notas-demo__cabecalho {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.notas-demo__nome {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  color: var(--app-v2-text-primary);
+}
+
+.notas-demo__origem {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--app-v2-text-tertiary);
+}
+
+.notas-demo__palco {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  overflow: hidden;
+  border-radius: var(--ms-radius-lg);
+  background: var(--app-v2-bg-component);
+}
+
+.notas-demo__linha {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+}
+
+.notas-demo__numeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 6px 18px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--app-v2-text-secondary);
+}
+
+.notas-demo__numeros div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--app-v2-border-hairline);
+}
+
+.notas-demo__numeros b {
+  font-weight: 600;
+  color: var(--app-v2-text-primary);
+}
+
+/* ── A caixa reservada, com o loop dentro ─────────────────────
+   Preenche o que o pai deu e centra. NUNCA define tamanho: quem reserva o
+   espaço é o placeholder do artefato, e é isso que impede o layout de pular
+   quando a imagem chega. */
+.nota-gyro-caixa {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+/* ── O orbe como fundo discreto ───────────────────────────────
+   A máscara radial descarta a moldura preta que o shader pinta fora do raio
+   0.86; sem ela, o estado vazio ganharia um retângulo preto. */
+.nota-fundo {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(closest-side circle at 50% 50%,
+    #000 0%, #000 58%, transparent 88%);
+          mask-image: radial-gradient(closest-side circle at 50% 50%,
+    #000 0%, #000 58%, transparent 88%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nota-fundo { display: none; }
+}

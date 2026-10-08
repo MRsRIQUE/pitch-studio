@@ -17,7 +17,7 @@ preservado em [`legacy/`](legacy/) para consulta.
 | Estado | Zustand |
 | Persistência local | SQLite via `node:sqlite` (sem build nativo) |
 | Imagens | `sharp` |
-| Provider de IA | kie.ai (imagem e vídeo) |
+| Providers de IA | kie.ai (imagem e vídeo), Higgsfield (Seedance 2.0 texto-para-vídeo) |
 
 ## Desenvolvimento
 
@@ -46,6 +46,10 @@ Apague esses caminhos para zerar o app.
 Em guest mode o app faz **polling** da kie.ai (`lib/kieJobPoller.ts`) em vez de
 receber webhook, por isso não precisa de URL pública.
 
+O Higgsfield também é acompanhado por polling (`lib/higgsfieldJobPoller.ts`).
+As submissões são registradas antes do POST para evitar duplicatas cobradas; se
+um timeout deixar o resultado da submissão incerto, o app não reenvia sozinho.
+
 ### Geração simulada
 
 Sem chave da kie.ai, a geração cai automaticamente no provider simulado
@@ -66,6 +70,30 @@ Defina `MOCK_GENERATION=false` no `.env.local` para desativar e voltar ao erro
 
 O caminho real assume sozinho assim que a chave existe — nenhuma outra mudança
 é necessária.
+
+#### Higgsfield / Seedance 2.0 e Genjutsu
+
+1. Crie um API key ID e secret no [Higgsfield Console](https://open.higgsfield.ai/api-keys).
+2. Em **Settings → Chaves de API → Higgsfield**, salve os dois valores. Como
+   alternativa de servidor, defina `HF_CREDENTIALS=KEY_ID:KEY_SECRET` em
+   `.env.local` (também são aceitos `HF_API_KEY_ID` e `HF_API_KEY_SECRET`).
+3. No seletor de vídeo, escolha **Higgsfield → Seedance 2.0** e gere a partir de
+   um prompt. O modelo aceita 4–15 segundos, 480p/720p/1080p/4k, áudio opcional
+   e proporções 16:9, 4:3, 1:1, 3:4, 9:16 ou 21:9.
+4. Para Genjutsu, escolha **Motion Transfer** ou **Object Swap**, conecte um
+   vídeo-fonte de 4–30 segundos ao handle `Source video` e conecte de 1 a 8
+   imagens ao handle `Reference images`. O prompt é opcional e a saída pode ser
+   480p ou 720p. Arquivos locais são enviados ao CDN da Higgsfield no servidor
+   antes da submissão.
+
+As credenciais permanecem no servidor/SQLite local e não são devolvidas pela
+API de configurações nem incluídas em logs.
+
+A integração usa o fluxo REST de URL pré-assinada para uploads (incluindo todos
+os `upload_headers` devolvidos pela API) e o SDK oficial para submissão. Ela
+salva o `request_id` com o usuário local, acompanha o `status_url` com backoff e
+espelha o resultado em `public/generated/`. Em caso de timeout ambíguo no POST,
+o app não reenvia a geração automaticamente.
 
 ## Validação
 

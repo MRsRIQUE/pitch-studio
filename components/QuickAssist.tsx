@@ -1,12 +1,17 @@
 "use client";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
+import { AvatarBot, type EstadoAvatar } from "@/components/assistente/AvatarBot";
+import { Foguinho } from "@/components/mascote/Foguinho";
 import { flushSync } from "react-dom";
 import { getToken } from "@/lib/galleryUtils";
-import { MODEL_GROUPS, MODELS, type ModelId } from "@/lib/models";
+import { CHAT_MODEL_GROUPS as MODEL_GROUPS, CHAT_MODELS as MODELS, type ModelId } from "@/lib/models";
 import { useChatSessionStore } from "@/lib/chatSessionStore";
 import { SYSTEM_PROMPT } from "@/lib/systemPrompt";
 import { useWorkflowStore } from "@/lib/store";
-import { loadAzureBaseUrl, loadAzureTextDeployment, loadAzureTextModelName } from "@/components/SettingsModal";
+import { loadAzureBaseUrl, loadAzureTextDeployment, loadAzureTextModelName } from "@/lib/azureSettings";
+import { ChatBorderBeam, MetalCommand } from "@/components/ui/ChatEffects";
+import "./superficies.css";
 
 interface Message {
   role: "user" | "assistant";
@@ -15,7 +20,18 @@ interface Message {
 }
 
 
+/* As telas de canvas: o editor de grafo e a página de projeto. Nas duas a
+   conversa já vive na própria tela — como nó, no grafo, e no painel de 368px,
+   no projeto —, então a pílula flutuante seria uma segunda porta para a mesma
+   coisa. `/workflow` sem barra é o painel de projetos, e ali ela fica. */
+function ehTelaDeCanvas(rota: string | null): boolean {
+  if (!rota) return false;
+  return rota.startsWith("/workflow/") || rota.startsWith("/projeto");
+}
+
 export function QuickAssist() {
+  const rota = usePathname();
+  const naTelaDeCanvas = ehTelaDeCanvas(rota);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -24,6 +40,8 @@ export function QuickAssist() {
   const [model, setModel] = useState<ModelId>(preferredModel as ModelId);
   const [modelOpen, setModelOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  /* Cada abertura (clique ou ⌘K) faz o Foguinho da pílula reagir. */
+  const [reacoes, setReacoes] = useState(0);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -44,8 +62,11 @@ export function QuickAssist() {
   }, [streaming, sessionId]);
 
   useEffect(() => {
+    /* Sem pílula, sem atalho: deixar o ⌘K vivo numa tela onde o botão não
+       existe é oferecer uma porta que ninguém vê. */
+    if (naTelaDeCanvas) return;
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setOpen(o => !o); }
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); if (!open) setReacoes(n => n + 1); setOpen(o => !o); }
       if (e.key === "Escape") { setOpen(false); setModelOpen(false); }
     }
     function onPointer(e: PointerEvent) {
@@ -56,7 +77,7 @@ export function QuickAssist() {
     window.addEventListener("keydown", onKey);
     window.addEventListener("pointerdown", onPointer);
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("pointerdown", onPointer); };
-  }, [open]);
+  }, [open, naTelaDeCanvas]);
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 60);
@@ -121,9 +142,9 @@ export function QuickAssist() {
       });
 
       if (!res.ok || !res.body) {
-        let errMsg = "Request failed";
+        let errMsg = "A requisição falhou.";
         try { const j = await res.json(); errMsg = j.error ?? errMsg; } catch { errMsg = await res.text().catch(() => errMsg); }
-        setMessages(prev => prev.map((m, i) => i === assistantIdx ? { ...m, content: `Error: ${errMsg}`, streaming: false } : m));
+        setMessages(prev => prev.map((m, i) => i === assistantIdx ? { ...m, content: `Erro: ${errMsg}`, streaming: false } : m));
         setStreaming(false);
         return;
       }
@@ -161,7 +182,7 @@ export function QuickAssist() {
       setMessages(prev => prev.map((m, i) => i === assistantIdx ? { ...m, streaming: false } : m));
     } catch (err: unknown) {
       if ((err as Error)?.name !== "AbortError") {
-        setMessages(prev => prev.map((m, i) => i === assistantIdx ? { ...m, content: "Request failed.", streaming: false } : m));
+        setMessages(prev => prev.map((m, i) => i === assistantIdx ? { ...m, content: "A requisição falhou.", streaming: false } : m));
       }
     } finally {
       setStreaming(false);
@@ -174,64 +195,55 @@ export function QuickAssist() {
   }
 
   const isEmpty = messages.length === 0;
+  const atalho = useAtalho();
+
+  /* O avatar nao inventa estado: le o que o assistente ja sabe de si. */
+  const estadoDoAvatar: EstadoAvatar = streaming ? "thinking" : open ? "listening" : "idle";
+
+  /* O corte fica aqui, depois de todos os hooks: a ordem deles não pode mudar
+     entre renders, e a rota muda sem desmontar o componente. */
+  if (naTelaDeCanvas) return null;
 
   return (
-    <div ref={containerRef}>
-      {/* Trigger pill */}
+    <div ref={containerRef} className="quick-assist-root">
+      {/* Pílula que abre o assistente — o botão Assistente do pacote do
+          Foguinho: violeta em degradê, o Foguinho num avatar lilás que ele
+          ultrapassa por cima, e o selo do atalho em vidro. */}
       <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          position: "fixed", bottom: "8px", right: "24px", zIndex: 1000,
-          display: "flex", alignItems: "center", gap: "8px",
-          padding: "0 16px 0 12px", height: "40px", borderRadius: "999px",
-          background: "rgba(22,24,27,0.95)", border: "1px solid rgba(255,255,255,0.12)",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.55), 0 1px 4px rgba(0,0,0,0.3)",
-          backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
-          color: "rgba(255,255,255,0.88)", fontSize: "13.5px", fontWeight: 500,
-          fontFamily: "inherit", letterSpacing: "-0.01em", cursor: "pointer",
-          transition: "background 150ms",
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(32,35,40,0.98)"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(22,24,27,0.95)"; }}
+        type="button"
+        onClick={() => { if (!open) setReacoes(n => n + 1); setOpen(o => !o); }}
+        className="qa-pilula"
+        aria-keyshortcuts="Meta+K Control+K"
+        aria-expanded={open}
       >
-        <SpinnerIcon />
-        <span>Assistant</span>
-        <span style={{ marginLeft: "2px", padding: "2px 6px", borderRadius: "6px", background: "rgba(255,255,255,0.08)", fontSize: "11px", color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>⌘K</span>
+        <span className="qa-pilula__avatar">
+          <Foguinho decorativo size={62} deadZone={16} reagir={reacoes} className="qa-pilula__foguinho" />
+        </span>
+        <span className="qa-pilula__rotulo">Assistente</span>
+        <kbd className="qa-pilula__atalho">{atalho}</kbd>
       </button>
 
       {/* Panel */}
       {open && (
-        <div style={{
-          position: "fixed", bottom: "56px", right: "24px", zIndex: 1001,
-          width: "380px", maxHeight: "600px",
-          display: "flex", flexDirection: "column",
-          borderRadius: "20px", background: "rgba(15, 15, 26,0.97)",
-          border: "1px solid rgba(255,255,255,0.09)",
-          boxShadow: "0 32px 80px rgba(0,0,0,0.8), 0 4px 24px rgba(0,0,0,0.5)",
-          backdropFilter: "blur(40px)", WebkitBackdropFilter: "blur(40px)",
-          overflow: "hidden", animation: "qaSlideUp 180ms cubic-bezier(0.16,1,0.3,1)",
-        }}>
+        <div className="ms-superficie-entrada-baixo fixed bottom-[76px] right-6 z-[1001] flex max-h-[600px] w-[380px] flex-col overflow-hidden rounded-ms-2xl border border-ms-border-subtle bg-ms-bg shadow-ms-lg">
           {/* Header */}
-          <div style={{ display: "flex", alignItems: "center", padding: "14px 16px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-            <SpinnerIcon color="rgba(134, 140, 255,0.85)" />
-            <span style={{ marginLeft: "8px", fontSize: "14px", fontWeight: 600, color: "#fff", letterSpacing: "-0.02em" }}>Assistant</span>
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="flex shrink-0 items-center border-b border-ms-border-subtle px-4 pb-3 pt-3.5">
+            <AvatarBot estado={estadoDoAvatar} size={20} />
+            <span className="ml-2 text-ms-lg font-semibold tracking-[-0.02em] text-ms-text">Assistente</span>
+            <div className="ml-auto flex items-center gap-2">
               {!isEmpty && (
                 <button
                   onClick={resetChat}
-                  title="New chat"
-                  style={{ width: "28px", height: "28px", borderRadius: "8px", border: "none", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, transition: "background 120ms, color 120ms" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.11)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.9)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.45)"; }}
+                  title="Nova conversa"
+                  className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-ms-md border-none bg-ms-bg-component p-0 text-ms-icon-tertiary transition-colors duration-150 hover:bg-ms-bg-component-active hover:text-ms-text"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5H9a7 7 0 1 0 6.928 8" /><path d="M15 2l4 3-4 3" /></svg>
                 </button>
               )}
               <button
                 onClick={() => setOpen(false)}
-                style={{ width: "28px", height: "28px", borderRadius: "8px", border: "none", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, transition: "background 120ms, color 120ms" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.11)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.9)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.45)"; }}
+                aria-label="Fechar"
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-ms-md border-none bg-ms-bg-component p-0 text-ms-icon-tertiary transition-colors duration-150 hover:bg-ms-bg-component-active hover:text-ms-text"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
               </button>
@@ -241,23 +253,39 @@ export function QuickAssist() {
           {/* ── Chat area ── */}
           <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: isEmpty ? "32px 24px 16px" : "16px", display: "flex", flexDirection: "column", gap: isEmpty ? "0" : "12px", minHeight: 0 }}>
             {isEmpty ? (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-                <div style={{ width: "52px", height: "52px", borderRadius: "14px", background: "rgba(134, 140, 255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
-                  <SpinnerIcon size={22} color="rgba(134, 140, 255,0.85)" />
+              <div className="flex flex-col items-center text-center">
+                <div className="mb-4 flex h-13 w-13 items-center justify-center rounded-ms-xl bg-ms-bg-brand">
+                  <SpinnerIcon size={22} color="var(--ms-solid-brand)" />
                 </div>
-                <p style={{ margin: "0 0 8px", fontSize: "16px", fontWeight: 700, color: "#fff", letterSpacing: "-0.02em" }}>How can I help you?</p>
-                <p style={{ margin: "0", fontSize: "13px", color: "rgba(255,255,255,0.4)", lineHeight: 1.5, letterSpacing: "-0.01em" }}>Give me a prompt, I will make it better.</p>
+                <p className="mb-2 mt-0 text-ms-xl font-bold tracking-[-0.02em] text-ms-text">Como posso ajudar?</p>
+                <p className="m-0 text-ms-md leading-normal tracking-[-0.01em] text-ms-text-tertiary">Me dê um prompt, eu deixo melhor.</p>
               </div>
             ) : (
               messages.map((m, i) => (
                 <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start" }}>
-                  <div style={{ maxWidth: "85%", padding: "9px 13px", borderRadius: m.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px", background: m.role === "user" ? "rgba(134, 140, 255,0.15)" : "rgba(255,255,255,0.06)", border: m.role === "user" ? "1px solid rgba(134, 140, 255,0.25)" : "1px solid rgba(255,255,255,0.07)", fontSize: "13px", color: m.role === "user" ? "#FFFFFF" : "rgba(255,255,255,0.85)", lineHeight: 1.55, letterSpacing: "-0.01em", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                  <div
+                    className={
+                      "max-w-[85%] whitespace-pre-wrap break-words border px-3.5 py-2.5 text-ms-md leading-relaxed tracking-[-0.01em] text-ms-text " +
+                      (m.role === "user"
+                        ? "rounded-[14px_14px_4px_14px] border-transparent bg-ms-bg-brand"
+                        : "rounded-[14px_14px_14px_4px] border-ms-border-subtle bg-ms-bg-component")
+                    }
+                  >
                     {m.content}
                     {m.streaming && (
                       m.content
-                        ? <span style={{ display: "inline-block", width: "2px", height: "13px", background: "rgba(255,255,255,0.6)", borderRadius: "1px", marginLeft: "2px", verticalAlign: "text-bottom", animation: "qaCursorBlink 0.8s ease-in-out infinite" }} />
-                        : <span style={{ display: "inline-flex", gap: "3px", alignItems: "center" }}>
-                            {[0,1,2].map(d => <span key={d} style={{ width: "4px", height: "4px", borderRadius: "50%", background: "rgba(255,255,255,0.4)", animation: `qaDot 1s ${d * 0.2}s infinite` }} />)}
+                        ? <span
+                            className="ml-0.5 inline-block h-[13px] w-0.5 rounded-ms-sm bg-ms-text-tertiary align-text-bottom"
+                            style={{ animation: "qa-cursor .8s ease-in-out infinite" }}
+                          />
+                        : <span className="inline-flex items-center gap-[3px]">
+                            {[0,1,2].map(d => (
+                              <span
+                                key={d}
+                                className="h-1 w-1 rounded-ms-full bg-ms-text-tertiary"
+                                style={{ animation: `qa-ponto 1s ${d * 0.2}s infinite` }}
+                              />
+                            ))}
                           </span>
                     )}
                   </div>
@@ -267,41 +295,72 @@ export function QuickAssist() {
           </div>
 
           {/* ── Input ── */}
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "12px", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "12px", padding: "8px 8px 8px 12px" }}>
-              <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey} placeholder="Describe your idea…" rows={1} disabled={streaming} style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", color: "rgba(255,255,255,0.88)", fontSize: "13.5px", fontFamily: "inherit", letterSpacing: "-0.01em", lineHeight: "22px", maxHeight: "96px", overflowY: "auto", padding: 0, cursor: streaming ? "not-allowed" : "text" }}
-                onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 96) + "px"; }} />
-              <button onClick={() => send(input)} disabled={!input.trim() || streaming || disabledIds.includes(model)} style={{ width: "32px", height: "32px", borderRadius: "8px", border: "none", background: input.trim() && !streaming && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.25)" : "rgba(255,255,255,0.07)", color: input.trim() && !streaming && !disabledIds.includes(model) ? "rgba(134, 140, 255,0.9)" : "rgba(255,255,255,0.25)", cursor: input.trim() && !streaming && !disabledIds.includes(model) ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, flexShrink: 0, transition: "background 150ms, color 150ms" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-              </button>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", padding: "0 2px" }}>
-              {/* Model picker */}
-              <div data-model-picker="" style={{ position: "relative" }}>
-                <button onClick={() => setModelOpen(o => !o)} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "2px 7px 2px 8px", borderRadius: "6px", background: modelOpen ? "rgba(255,255,255,0.09)" : "transparent", border: "1px solid transparent", fontSize: "10px", color: "rgba(255,255,255,0.35)", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit", transition: "background 120ms, color 120ms" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.09)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.65)"; }}
-                  onMouseLeave={e => { if (!modelOpen) { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.35)"; } }}>
+          <div className="shrink-0 border-t border-ms-border-subtle p-3">
+            <ChatBorderBeam className="qa-input-beam" size="sm" strength={0.62} borderRadius={10}>
+              <div className="flex items-center gap-2 rounded-ms-lg border border-ms-border-subtle bg-ms-bg-component py-2 pl-3 pr-2 transition-colors duration-150 focus-within:border-ms-border-brand">
+                <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey} placeholder="Descreva sua ideia…" rows={1} disabled={streaming}
+                  className="max-h-24 flex-1 resize-none overflow-y-auto border-none bg-transparent p-0 tracking-[-0.01em] text-ms-text outline-none placeholder:text-ms-text-placeholder"
+                  style={{ fontSize: "13.5px", fontFamily: "inherit", lineHeight: "22px", cursor: streaming ? "not-allowed" : "text" }}
+                  onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 96) + "px"; }} />
+                <MetalCommand
+                  className="qa-send-metal"
+                  active={Boolean(input.trim()) && !streaming && !disabledIds.includes(model)}
+                  surface={input.trim() && !streaming && !disabledIds.includes(model)
+                    ? "var(--ms-solid-brand)"
+                    : "var(--ms-bg-component-active)"}
+                >
+                  <button onClick={() => send(input)} disabled={!input.trim() || streaming || disabledIds.includes(model)}
+                    aria-label="Enviar"
+                    className={
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-ms-full border-none p-0 transition-colors duration-150 " +
+                      (input.trim() && !streaming && !disabledIds.includes(model)
+                        ? "ms-botao-marca cursor-pointer"
+                        : "cursor-not-allowed bg-ms-bg-component-active text-ms-text-disabled")
+                    }>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                  </button>
+                </MetalCommand>
+              </div>
+            </ChatBorderBeam>
+            <div className="mt-2 flex items-center justify-between px-0.5">
+              {/* Seletor de modelo */}
+              <div data-model-picker="" className="relative">
+                <button onClick={() => setModelOpen(o => !o)}
+                  className={
+                    "flex cursor-pointer items-center gap-[5px] rounded-ms border border-transparent py-0.5 pl-2 pr-[7px] text-ms-xs font-medium uppercase tracking-[0.04em] transition-colors duration-150 hover:bg-ms-bg-hover hover:text-ms-text-secondary " +
+                    (modelOpen ? "bg-ms-bg-hover text-ms-text-secondary" : "bg-transparent text-ms-text-tertiary")
+                  }
+                  style={{ fontFamily: "inherit" }}>
                   {MODELS.find(m => m.id === model)?.label}
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ opacity: 0.6 }}><path d="m6 15 6-6 6 6" /></svg>
                 </button>
                 {modelOpen && (
-                  <div style={{ position: "absolute", bottom: "calc(100% + 6px)", left: 0, minWidth: "180px", background: "rgba(18,20,23,0.98)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", boxShadow: "0 -8px 32px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4)", overflow: "hidden", zIndex: 10, animation: "qaSlideDown 120ms cubic-bezier(0.16,1,0.3,1)" }}>
-                    <div style={{ padding: "4px" }}>
+                  <div
+                    className="ms-superficie-entrada absolute left-0 z-10 min-w-45 overflow-hidden rounded-ms-lg border border-ms-border-subtle bg-ms-bg shadow-ms-md"
+                    style={{ bottom: "calc(100% + 6px)" }}
+                  >
+                    <div className="p-1">
                       {MODEL_GROUPS.map((group, gi) => (
                         <div key={group.label}>
-                          {gi > 0 && <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />}
-                          <div style={{ padding: "4px 8px 2px", fontSize: "10px", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)" }}>{group.label}</div>
+                          {gi > 0 && <div className="my-1 h-px bg-ms-border-subtle" />}
+                          <div className="px-2 pb-0.5 pt-1 text-ms-xs font-semibold uppercase tracking-[0.06em] text-ms-text-tertiary">{group.label}</div>
                           {group.models.map(m => {
                             const isDisabled = disabledIds.includes(m.id);
                             return (
                             <button key={m.id}
                               onClick={() => { if (!isDisabled) { setModel(m.id); setPreferredModel(m.id); setModelOpen(false); } }}
-                              title={isDisabled ? "Configure Azure in Settings → API Keys" : undefined}
-                              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "7px 8px", borderRadius: "7px", border: "none", background: model === m.id ? "rgba(134, 140, 255,0.12)" : "transparent", color: isDisabled ? "rgba(255,255,255,0.25)" : model === m.id ? "rgba(169, 173, 255,0.95)" : "rgba(255,255,255,0.7)", fontSize: "13px", fontFamily: "inherit", cursor: isDisabled ? "not-allowed" : "pointer", textAlign: "left", transition: "background 100ms", opacity: isDisabled ? 0.5 : 1 }}
-                              onMouseEnter={e => { if (!isDisabled && model !== m.id) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
-                              onMouseLeave={e => { if (!isDisabled && model !== m.id) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}>
+                              title={isDisabled ? "Configure o Azure em Ajustes → Chaves de API" : undefined}
+                              className={
+                                "flex w-full items-center justify-between rounded-ms-md border-none px-2 py-[7px] text-left text-ms-md transition-colors duration-100 " +
+                                (isDisabled
+                                  ? "cursor-not-allowed bg-transparent text-ms-text-disabled"
+                                  : model === m.id
+                                    ? "cursor-pointer bg-ms-bg-brand font-medium text-ms-text-brand"
+                                    : "cursor-pointer bg-transparent text-ms-text-secondary hover:bg-ms-bg-hover")
+                              }
+                              style={{ fontFamily: "inherit" }}>
                               <span>{m.label}</span>
-                              <span style={{ fontSize: "10px", color: isDisabled ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.28)", marginLeft: "8px" }}>{isDisabled ? "needs Azure key" : m.desc}</span>
+                              <span className={"ml-2 text-ms-xs " + (isDisabled ? "text-ms-text-disabled" : "text-ms-text-tertiary")}>{isDisabled ? "precisa da chave Azure" : m.desc}</span>
                             </button>
                             );
                           })}
@@ -311,15 +370,15 @@ export function QuickAssist() {
                   </div>
                 )}
               </div>
-              <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.2)", letterSpacing: "0.03em", display: "flex", gap: "8px", alignItems: "center" }}>
-                <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                  <kbd style={{ padding: "1px 4px", borderRadius: "4px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", fontSize: "10px", color: "rgba(255,255,255,0.35)" }}>↵</kbd>
-                  SEND
+              <span className="flex items-center gap-2 text-ms-xs tracking-[0.03em] text-ms-text-tertiary">
+                <span className="flex items-center gap-1">
+                  <kbd className="rounded-ms-sm border border-ms-border-subtle bg-ms-bg-component px-1 py-px text-ms-xs text-ms-text-tertiary">↵</kbd>
+                  ENVIAR
                 </span>
                 <span>·</span>
-                <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                  <kbd style={{ padding: "1px 4px", borderRadius: "4px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", fontSize: "10px", color: "rgba(255,255,255,0.35)" }}>ESC</kbd>
-                  CLOSE
+                <span className="flex items-center gap-1">
+                  <kbd className="rounded-ms-sm border border-ms-border-subtle bg-ms-bg-component px-1 py-px text-ms-xs text-ms-text-tertiary">ESC</kbd>
+                  FECHAR
                 </span>
               </span>
             </div>
@@ -328,32 +387,25 @@ export function QuickAssist() {
         </div>
       )}
 
-      <style>{`
-        @keyframes qaSlideUp {
-          from { opacity: 0; transform: translateY(12px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes qaSlideDown {
-          from { opacity: 0; transform: translateY(6px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes qaDot {
-          0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-          40% { opacity: 1; transform: scale(1); }
-        }
-        @keyframes qaCursorBlink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-      `}</style>
     </div>
   );
 }
 
-function SpinnerIcon({ size = 14, color = "rgba(255,255,255,0.7)" }: { size?: number; color?: string }) {
+function SpinnerIcon({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round">
       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
     </svg>
+  );
+}
+
+/* ⌘K no Mac, Ctrl K no resto. O servidor não sabe a plataforma e responde
+   ⌘K; o cliente corrige na hidratação sem aviso de divergência. */
+const semAssinatura = () => () => {};
+function useAtalho(): string {
+  return useSyncExternalStore(
+    semAssinatura,
+    () => (/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : "Ctrl K"),
+    () => "⌘K",
   );
 }

@@ -7,6 +7,18 @@ import { VIDEO_MODELS } from "@/lib/modelConfig";
 import { getKieTokenForUser } from "@/lib/getKieToken";
 import { GUEST_USER_ID } from "@/lib/guestMode";
 import { shouldMock, startMockJob } from "@/lib/mockProvider";
+import {
+  HIGGSFIELD_GENJUTSU_MOTION_ENDPOINT,
+  HIGGSFIELD_GENJUTSU_OBJECT_ENDPOINT,
+  HIGGSFIELD_SEEDANCE_2_ENDPOINT,
+  ensureHiggsfieldReachableMedia,
+  normalizeHiggsfieldSubmissionError,
+  submitHiggsfieldGeneration,
+  type HiggsfieldEndpoint,
+  type HiggsfieldGenjutsuInput,
+  type HiggsfieldTextToVideoInput,
+} from "@/lib/higgsfieldProvider";
+import { pollHiggsfieldJob } from "@/lib/higgsfieldJobPoller";
 import * as guestDb from "@/lib/guest/db";
 
 const KIE_BASE = "https://api.kie.ai";
@@ -47,9 +59,184 @@ export async function POST(req: NextRequest) {
     generationType: rawGenerationType,
     callBackUrl:    rawCallBackUrl,
     debugOnly       = false,
+    submissionId,
   } = body;
 
   const userId = GUEST_USER_ID;
+
+  const cfg = VIDEO_MODELS.find((m) => m.id === videoModel);
+  if (!cfg) return NextResponse.json({ error: `Unknown video model: ${videoModel}` }, { status: 400 });
+
+  const resolution = rawResolution || cfg.defaultResolution || "480p";
+  const { apiInput } = cfg;
+  const isSeedance25EditModel = cfg.id === "seedance-2-5-edit";
+  const effectiveAspectRatio = isSeedance25EditModel ? "adaptive" : aspectRatio;
+
+  // Clamp duration to model limits (motion-control has no duration field)
+  const clampedDuration = isSeedance25EditModel
+    ? -1
+    : apiInput.durationMax > 0
+    ? Math.max(apiInput.durationMin, Math.min(apiInput.durationMax, Number(duration)))
+    : 0;
+
+  if (apiInput.useHiggsfield) {
+    const cleanPrompt = typeof prompt === "string" ? prompt.trim() : "";
+    if (cleanPrompt.length > (apiInput.promptMaxLength ?? 10_000)) {
+      return NextResponse.json({ error: "The prompt is too long." }, { status: 400 });
+    }
+
+    const isGenjutsu = Boolean(apiInput.useHiggsfieldGenjutsu);
+    const rawGenjutsuImages = Array.isArray(rawRefImages)
+      ? rawRefImages.filter((value): value is string => typeof value === "string" && value.length > 0).slice(0, 9)
+      : [];
+    let endpointId: HiggsfieldEndpoint = HIGGSFIELD_SEEDANCE_2_ENDPOINT;
+    let debugInput: HiggsfieldTextToVideoInput | HiggsfieldGenjutsuInput;
+    let numericDuration = Number(duration);
+
+    if (isGenjutsu) {
+      if (typeof rawVideoRef !== "string" || rawVideoRef.length === 0) {
+        return NextResponse.json({ error: "Genjutsu requires a source video." }, { status: 400 });
+      }
+      if (rawGenjutsuImages.length < 1 || rawGenjutsuImages.length > 8) {
+        return NextResponse.json({ error: "Genjutsu requires from 1 to 8 reference images." }, { status: 400 });
+      }
+      if (resolution !== "480p" && resolution !== "720p") {
+        return NextResponse.json({ error: "Genjutsu resolution must be 480p or 720p." }, { status: 400 });
+      }
+      endpointId = cfg.id === "higgsfield-genjutsu-object-swap"
+        ? HIGGSFIELD_GENJUTSU_OBJECT_ENDPOINT
+        : HIGGSFIELD_GENJUTSU_MOTION_ENDPOINT;
+      debugInput = {
+        prompt: cleanPrompt,
+        video_url: rawVideoRef,
+        image_urls: rawGenjutsuImages,
+        resolution,
+      };
+      numericDuration = 0;
+    } else {
+      const allowedResolutions = new Set(["480p", "720p", "1080p", "4k"]);
+      const allowedRatios = new Set(["16:9", "4:3", "1:1", "3:4", "9:16", "21:9"]);
+      if (!cleanPrompt) {
+        return NextResponse.json({ error: "A prompt is required for Higgsfield Seedance 2.0." }, { status: 400 });
+      }
+      if (!Number.isInteger(numericDuration) || numericDuration < 4 || numericDuration > 15) {
+        return NextResponse.json({ error: "Higgsfield duration must be an integer from 4 to 15 seconds." }, { status: 400 });
+      }
+      if (!allowedResolutions.has(resolution)) {
+        return NextResponse.json({ error: "Unsupported Higgsfield resolution." }, { status: 400 });
+      }
+      if (!allowedRatios.has(aspectRatio)) {
+        return NextResponse.json({ error: "Unsupported Higgsfield aspect ratio." }, { status: 400 });
+      }
+      debugInput = {
+        prompt: cleanPrompt,
+        resolution: resolution as HiggsfieldTextToVideoInput["resolution"],
+        generate_audio: Boolean(sound),
+        duration: numericDuration,
+        aspect_ratio: aspectRatio as HiggsfieldTextToVideoInput["aspect_ratio"],
+      };
+    }
+
+    const endpoint = `https://api.higgsfield.ai/${endpointId}`;
+
+    if (debugOnly) {
+      return NextResponse.json({
+        debugPayload: debugInput,
+        debugEndpoint: endpoint,
+        transport: "@higgsfield/client (polling disabled for initial submission)",
+      });
+    }
+
+    if (typeof submissionId !== "string" || !/^[a-zA-Z0-9_-]{8,100}$/.test(submissionId)) {
+      return NextResponse.json({ error: "A valid submissionId is required." }, { status: 400 });
+    }
+
+    const credentials = guestDb.getHiggsfieldCredentials();
+    if (!credentials) {
+      return NextResponse.json(
+        { error: "No Higgsfield credentials configured. Add them in Settings." },
+        { status: 401 },
+      );
+    }
+
+    const claim = guestDb.claimGenerationSubmission(submissionId, userId, "higgsfield");
+    if (!claim.claimed) {
+      if (claim.existing.user_id !== userId || claim.existing.provider !== "higgsfield") {
+        return NextResponse.json({ error: "Submission not found." }, { status: 404 });
+      }
+      if (claim.existing.state === "accepted" && claim.existing.task_id) {
+        return NextResponse.json({ taskId: claim.existing.task_id, deduplicated: true });
+      }
+      const message = claim.existing.state === "uncertain"
+        ? "The prior submission outcome is unknown. Check the Higgsfield console before submitting again."
+        : "This generation is already being submitted.";
+      return NextResponse.json({ error: message }, { status: 409 });
+    }
+
+    let input = debugInput;
+    if (isGenjutsu) {
+      try {
+        const [videoUrl, imageUrls] = await Promise.all([
+          ensureHiggsfieldReachableMedia(rawVideoRef as string, credentials),
+          Promise.all(rawGenjutsuImages.map((url) => ensureHiggsfieldReachableMedia(url, credentials))),
+        ]);
+        if (videoUrl.length > 2083 || imageUrls.some((url) => url.length > 2083)) {
+          guestDb.releaseGenerationSubmission(submissionId);
+          return NextResponse.json({ error: "A Higgsfield media URL is too long." }, { status: 400 });
+        }
+        input = { ...debugInput, video_url: videoUrl, image_urls: imageUrls } as HiggsfieldGenjutsuInput;
+      } catch (error) {
+        guestDb.releaseGenerationSubmission(submissionId);
+        const normalized = normalizeHiggsfieldSubmissionError(error);
+        console.error("[generate-video] Higgsfield media upload failed:", normalized.message);
+        return NextResponse.json(
+          { error: `Higgsfield media upload failed: ${normalized.message}` },
+          { status: normalized.httpStatus },
+        );
+      }
+    }
+
+    try {
+      const created = await submitHiggsfieldGeneration(credentials, endpointId, input);
+      const taskId = created.request_id;
+      if (!taskId) {
+        guestDb.markGenerationSubmissionUncertain(submissionId);
+        return NextResponse.json(
+          { error: "Higgsfield accepted the request but did not return a request ID. Check the console before trying again." },
+          { status: 502 },
+        );
+      }
+
+      guestDb.acceptGenerationSubmission(submissionId, taskId);
+      jobStore.set(taskId, {
+        status: "pending",
+        type: "video",
+        userId,
+        provider: "higgsfield",
+        statusUrl: created.status_url,
+      });
+      guestDb.insertGeneration({
+        task_id: taskId,
+        user_id: userId,
+        generation_type: "video",
+        status: "pending",
+        model: videoModel,
+        prompt: cleanPrompt,
+        aspect_ratio: isGenjutsu ? undefined : aspectRatio,
+        duration: isGenjutsu ? undefined : numericDuration,
+        sound: Boolean(sound),
+        reference_image_urls: isGenjutsu ? rawGenjutsuImages : [],
+      });
+      pollHiggsfieldJob(taskId, credentials, created.status_url, userId, created);
+      return NextResponse.json({ taskId });
+    } catch (error) {
+      const normalized = normalizeHiggsfieldSubmissionError(error);
+      if (normalized.ambiguous) guestDb.markGenerationSubmissionUncertain(submissionId);
+      else guestDb.releaseGenerationSubmission(submissionId);
+      console.error("[generate-video] Higgsfield submission failed:", normalized.message);
+      return NextResponse.json({ error: normalized.message }, { status: normalized.httpStatus });
+    }
+  }
 
   const apiKey = (await getKieTokenForUser()) ?? process.env.KIE_API_TOKEN ?? null;
 
@@ -71,21 +258,6 @@ export async function POST(req: NextRequest) {
 
   // The app polls kie.ai directly (lib/kieJobPoller) — no callback URL needed.
   const callBackUrl = rawCallBackUrl || undefined;
-
-  const cfg = VIDEO_MODELS.find((m) => m.id === videoModel);
-  if (!cfg) return NextResponse.json({ error: `Unknown video model: ${videoModel}` }, { status: 400 });
-
-  const resolution = rawResolution || cfg.defaultResolution || "480p";
-  const { apiInput } = cfg;
-  const isSeedance25EditModel = cfg.id === "seedance-2-5-edit";
-  const effectiveAspectRatio = isSeedance25EditModel ? "adaptive" : aspectRatio;
-
-  // Clamp duration to model limits (motion-control has no duration field)
-  const clampedDuration = isSeedance25EditModel
-    ? -1
-    : apiInput.durationMax > 0
-    ? Math.max(apiInput.durationMin, Math.min(apiInput.durationMax, Number(duration)))
-    : 0;
 
   let input: Record<string, unknown>;
   let effectiveApiId = cfg.apiId;

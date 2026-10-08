@@ -58,6 +58,18 @@ function createSchema(d: DatabaseSync): void {
 
     CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
 
+    CREATE TABLE IF NOT EXISTS generation_submissions (
+      submission_id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      task_id TEXT,
+      state TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_generation_submissions_user
+      ON generation_submissions (user_id, created_at DESC);
+
     CREATE TABLE IF NOT EXISTS folders (
       id TEXT PRIMARY KEY, user_id TEXT, name TEXT, parent_id TEXT,
       order_index INTEGER DEFAULT 0, created_at TEXT, updated_at TEXT, color TEXT

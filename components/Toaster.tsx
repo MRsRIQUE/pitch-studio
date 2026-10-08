@@ -3,11 +3,27 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { PitchMark } from "@/components/PitchLogo";
 import { useWorkflowStore, Toast } from "@/lib/store";
+import "./superficies.css";
 
-const COLORS: Record<Toast["type"], { bg: string; border: string; icon: string }> = {
-  error:   { bg: "rgba(227, 26, 26,0.12)",  border: "rgba(227, 26, 26,0.3)",  icon: "rgba(227, 26, 26,0.9)"  },
-  success: { bg: "rgba(1, 181, 116,0.10)", border: "rgba(1, 181, 116,0.3)", icon: "rgba(1, 181, 116,0.9)" },
-  info:    { bg: "rgba(27, 132, 255,0.10)", border: "rgba(27, 132, 255,0.3)", icon: "rgba(27, 132, 255,0.9)" },
+/* ============================================================
+   TOASTS
+
+   Portado do tema escuro do HeliosGen para a linguagem clara do
+   Miora. A superfície virou branca (`--ms-bg`) com sombra e borda
+   fina; o que continua colorido é só o sinal.
+
+   Regra do kit de marca: cor de sinal só em texto, ícone e tinta
+   a 14–18% — nunca em área grande. Por isso o toast simples é uma
+   tinta do sinal a 14% sobre o branco, com o ícone no sinal cheio
+   e o texto no cinza padrão. Nada de bloco chapado colorido.
+   ============================================================ */
+
+/* `color-mix` sobre o token do sinal em vez do hex cravado: se a
+   escala de sinais mudar em `app/tokens/pitch.css`, o toast segue. */
+const SINAIS: Record<Toast["type"], string> = {
+  error: "var(--signal-critical)",
+  success: "var(--signal-success)",
+  info: "var(--signal-info)",
 };
 
 const ICONS: Record<Toast["type"], string> = {
@@ -20,10 +36,8 @@ function DismissButton({ onDismiss }: { onDismiss: (e: React.MouseEvent) => void
   return (
     <button
       onClick={onDismiss}
-      style={{
-        background: "none", border: "none", cursor: "pointer",
-        color: "rgba(255,255,255,0.3)", padding: "0", flexShrink: 0, lineHeight: 1,
-      }}
+      aria-label="Dispensar"
+      className="shrink-0 cursor-pointer border-none bg-transparent p-0 leading-none text-ms-icon-tertiary transition-colors duration-150 hover:text-ms-icon"
     >
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
         <path d="M18 6 6 18M6 6l12 12" />
@@ -32,71 +46,35 @@ function DismissButton({ onDismiss }: { onDismiss: (e: React.MouseEvent) => void
   );
 }
 
-// macOS-style rich notification — used when toast has title + preview
+// Notificação rica no estilo macOS — usada quando o toast tem título + prévia
 function RichToastItem({ toast, onDismiss, onClick }: { toast: Toast; onDismiss: (e: React.MouseEvent) => void; onClick: () => void }) {
   return (
     <div
       onClick={onClick}
-      style={{
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        padding: "14px 14px",
-        borderRadius: "14px",
-        background: "rgba(28,28,30,0.96)",
-        border: "1px solid rgba(255,255,255,0.1)",
-        boxShadow: "0 12px 36px rgba(0,0,0,0.6)",
-        backdropFilter: "blur(20px)",
-        width: "340px",
-        animation: "toastIn 220ms cubic-bezier(0.22,1,0.36,1) both",
-        cursor: "pointer",
-      }}
+      className="ms-superficie-entrada relative flex w-[340px] cursor-pointer items-center gap-3 rounded-ms-lg border border-ms-border-subtle bg-ms-bg p-3.5 shadow-ms-lg"
     >
-      {/* Close button — top right */}
+      {/* Fechar — canto superior direito */}
       <button
         onClick={onDismiss}
-        style={{
-          position: "absolute", top: "8px", right: "8px",
-          width: "18px", height: "18px", borderRadius: "50%",
-          background: "rgba(255,255,255,0.1)",
-          border: "none", cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: "rgba(255,255,255,0.5)",
-          transition: "background 120ms",
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.18)"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)"; }}
+        aria-label="Fechar notificação"
+        className="absolute right-2 top-2 flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-ms-full border-none bg-ms-bg-component text-ms-icon-tertiary transition-colors duration-150 hover:bg-ms-bg-component-active hover:text-ms-icon"
       >
         <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
           <path d="M18 6 6 18M6 6l12 12" />
         </svg>
       </button>
 
-      {/* App icon */}
-      <div style={{
-        width: "44px", height: "44px", borderRadius: "10px",
-        background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.08)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0, overflow: "hidden",
-      }}>
+      {/* Ícone do app */}
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-ms-md border border-ms-border-subtle bg-ms-bg-component">
         <PitchMark size={32} />
       </div>
 
-      {/* Text */}
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "2px", paddingRight: "12px" }}>
-        <span style={{
-          fontSize: "13px", fontWeight: 600, color: "#fff",
-          letterSpacing: "-0.01em", lineHeight: 1.3,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>
+      {/* Texto */}
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 pr-3">
+        <span className="truncate text-ms-md font-semibold leading-tight tracking-[-0.01em] text-ms-text">
           {toast.title}
         </span>
-        <span style={{
-          fontSize: "12px", color: "rgba(255,255,255,0.45)", lineHeight: 1.4,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>
+        <span className="truncate text-ms-base leading-snug text-ms-text-tertiary">
           {toast.preview}
         </span>
       </div>
@@ -104,24 +82,18 @@ function RichToastItem({ toast, onDismiss, onClick }: { toast: Toast; onDismiss:
   );
 }
 
-// Simple toast — errors, info, generic success
+// Toast simples — erros, informações, sucesso genérico
 function SimpleToastItem({ toast, onDismiss, onClick }: { toast: Toast; onDismiss: (e: React.MouseEvent) => void; onClick: () => void }) {
-  const c = COLORS[toast.type];
+  const sinal = SINAIS[toast.type];
   return (
     <div
       onClick={onClick}
+      className="ms-superficie-entrada flex max-w-[360px] items-start gap-2.5 rounded-ms-md border p-3 shadow-ms-md"
       style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: "10px",
-        padding: "12px 14px",
-        borderRadius: "10px",
-        background: c.bg,
-        border: `1px solid ${c.border}`,
-        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-        backdropFilter: "blur(8px)",
-        maxWidth: "360px",
-        animation: "toastIn 200ms cubic-bezier(0.22,1,0.36,1) both",
+        // Tinta do sinal a 14% sobre o branco, borda do mesmo sinal a 32%:
+        // dentro da faixa que o kit permite para superfície de sinal.
+        background: `color-mix(in srgb, ${sinal} 14%, var(--ms-bg))`,
+        borderColor: `color-mix(in srgb, ${sinal} 32%, transparent)`,
         cursor: toast.href ? "pointer" : "default",
       }}
     >
@@ -129,15 +101,15 @@ function SimpleToastItem({ toast, onDismiss, onClick }: { toast: Toast; onDismis
         width="16" height="16"
         viewBox="0 0 24 24"
         fill="none"
-        stroke={c.icon}
+        stroke={sinal}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        style={{ flexShrink: 0, marginTop: "1px" }}
+        className="mt-px shrink-0"
       >
         <path d={ICONS[toast.type]} />
       </svg>
-      <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.85)", lineHeight: 1.45, flex: 1 }}>
+      <span className="flex-1 text-ms-md leading-relaxed text-ms-text">
         {toast.message}
       </span>
       <DismissButton onDismiss={onDismiss} />
@@ -180,27 +152,11 @@ export default function Toaster() {
   const toasts = useWorkflowStore((s) => s.toasts);
 
   return (
-    <>
-      <style>{`
-        @keyframes toastIn {
-          from { opacity: 0; transform: translateY(-10px) scale(0.96); }
-          to   { opacity: 1; transform: translateY(0)     scale(1); }
-        }
-      `}</style>
-      <div
-        style={{
-          position: "fixed",
-          top: "24px",
-          right: "24px",
-          zIndex: 99999,
-          display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-          pointerEvents: toasts.length ? "auto" : "none",
-        }}
-      >
-        {toasts.map((t) => <ToastItem key={t.id} toast={t} />)}
-      </div>
-    </>
+    <div
+      className="fixed right-6 top-6 z-[99999] flex flex-col gap-2"
+      style={{ pointerEvents: toasts.length ? "auto" : "none" }}
+    >
+      {toasts.map((t) => <ToastItem key={t.id} toast={t} />)}
+    </div>
   );
 }

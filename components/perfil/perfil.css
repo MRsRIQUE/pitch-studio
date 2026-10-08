@@ -1,0 +1,677 @@
+/* ============================================================
+   PERFIL — geometria e animações
+
+   Réplica do template `ai-profile` do BoardUI (www.boardui.com,
+   /templates/ai-profile). Todo número aqui foi medido no DOM da
+   referência com `getBoundingClientRect` e `getComputedStyle`, no
+   viewport de 1900×1192 — nunca lido do `className`, que no Tailwind
+   4 esconde o valor atrás de um token.
+
+   O que NÃO veio de lá: as cores. Cada uma foi trocada pelo token
+   nosso de mesmo PAPEL, não de mesmo valor. A referência é roxa
+   (violet-200…700 do Tailwind); a nossa marca é o violeta Pitch, e a
+   escala `--ms-brand-*` já cobre os mesmos cinco degraus.
+
+   A única adaptação de superfície: lá a página é branca e o cartão é
+   transparente — logo, branco — com as caixas internas num cinza
+   levemente mais escuro. A nossa página já é levemente cinza, então o
+   cartão é branco de verdade (`--ms-bg`) e as caixas internas descem
+   um degrau (`--ms-bg-component`). Os três níveis de separação da
+   referência continuam existindo; o que muda é o valor absoluto,
+   que sai dos nossos tokens.
+   ============================================================ */
+
+/* ── A escala tipográfica da referência ────────────────────
+   Seis degraus, medidos um a um. Ficam como variáveis porque
+   quinze regras abaixo repetem os mesmos pares. */
+.pf-pagina {
+  --pf-title-1: 500 24px/34px var(--font-ui);
+  --pf-title-2: 500 20px/26px var(--font-ui);
+  --pf-headline: 500 16px/22px var(--font-ui);
+  --pf-body: 500 14px/20px var(--font-ui);
+  --pf-body-regular: 400 14px/20px var(--font-ui);
+  --pf-body-2: 500 13px/18px var(--font-ui);
+  --pf-caption: 600 12px/16px var(--font-ui);
+}
+
+/* ── A coluna ──────────────────────────────────────────────
+   `main` centraliza e rola; a coluna tem 680 de largura máxima e
+   16px de vão entre as três seções. Medido: coluna em y=24, altura
+   1208, página 1256 — 24 de respiro em cima e embaixo. */
+.pf-pagina {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--app-v2-bg-page);
+}
+
+.pf-coluna {
+  display: flex;
+  width: 100%;
+  max-width: 680px;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 0;
+  /* A coluna é item de um flex EM LINHA. Sem estes dois, ela era
+     esticada até a altura do viewport e as três seções encolhiam para
+     caber: o cartão media 528 em vez de 592 e o `overflow: hidden`
+     dele comia as últimas linhas do mapa de atividade. */
+  align-self: flex-start;
+}
+
+.pf-coluna > * { flex-shrink: 0 }
+
+/* ============================================================
+   SEÇÃO 1 — O CARTÃO DE PERFIL (680×592)
+   ============================================================ */
+
+.pf-cartao {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid hsl(var(--ms-gray-4));
+  background: var(--ms-bg);
+}
+
+/* A capa é `absolute` e o corpo passa por cima dela com `pt-[124px]`:
+   é isso que faz o avatar de 80 morder os últimos 40px da faixa. */
+.pf-capa {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 165px;
+  overflow: hidden;
+  border-radius: 23px 23px 0 0;
+  background: var(--ms-bg-component-hover);
+}
+
+.pf-capa__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* 50% 45% — a referência sobe o recorte um pouco acima do centro,
+     para a linha do horizonte não cair atrás do avatar. */
+  object-position: 50% 45%;
+  display: block;
+}
+
+.pf-corpo {
+  position: relative;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 15px;
+  padding: 124px 16px 16px;
+}
+
+.pf-avatar {
+  display: flex;
+  width: 80px;
+  height: 80px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: var(--ms-bg-component-hover);
+  font: 500 30px/42.5px var(--font-ui);
+  color: var(--ms-text-secondary);
+}
+
+.pf-identidade {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.pf-identidade__texto {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pf-nome {
+  margin: 0;
+  font: var(--pf-title-2);
+  color: var(--ms-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pf-subtitulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pf-subtitulo__texto {
+  margin: 0;
+  font: var(--pf-headline);
+  color: var(--ms-text-secondary);
+  white-space: nowrap;
+}
+
+/* Os dois botões sobem 34px: eles moram na faixa da capa, não na
+   linha do nome. É por isso que a linha é `relative` e eles
+   `absolute -top-[34px] right-1`. */
+.pf-acoes {
+  position: absolute;
+  top: -34px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ── Selos ────────────────────────────────────────────────── */
+.pf-selo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  padding: 1px 4px;
+  font: var(--pf-caption);
+  letter-spacing: normal;
+  white-space: nowrap;
+  background: var(--ms-bg-component-hover);
+  color: var(--ms-text-secondary);
+}
+
+.pf-selo--marca {
+  border-radius: 6px;
+  padding: 2px 6px;
+  font: var(--pf-body);
+  background: var(--ms-bg-brand);
+  color: var(--ms-text-brand);
+  /* A referência transiciona padding e font-size: o selo cresce ao
+     trocar de período sem pular de linha. */
+  transition:
+    padding .2s cubic-bezier(.4, 0, .2, 1),
+    font-size .2s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* ── Botão secundário ─────────────────────────────────────── */
+.pf-botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 32px;
+  padding: 6px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  border: none;
+  border-radius: var(--ms-radius-md);
+  cursor: pointer;
+  font: var(--pf-body);
+  background: var(--ms-button-secondary-bg);
+  color: var(--ms-button-secondary-fg);
+  box-shadow: var(--ms-button-secondary-shadow);
+}
+
+.pf-botao:hover { background: var(--ms-bg-hover); box-shadow: var(--ms-button-secondary-shadow-hover) }
+
+.pf-botao__rotulo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 2px;
+  flex-shrink: 0;
+}
+
+/* O gesto de aperto da referência: a transição de repouso é lenta
+   (.42s), e só o `:active` encurta para .22s. É o que dá a impressão
+   de que o botão volta sozinho, devagar. */
+.pf-press {
+  transition:
+    background-color .15s ease,
+    border-color .15s ease,
+    box-shadow .15s ease,
+    color .15s ease,
+    transform .42s cubic-bezier(.4, 0, .2, 1);
+}
+
+.pf-press:active:not(:disabled):not([aria-disabled="true"]) {
+  transition-duration: .15s, .15s, .15s, .15s, .22s;
+  transform: scale(.98);
+}
+
+.pf-press:disabled,
+.pf-press[aria-disabled="true"] { transform: none }
+
+/* ── O bloco de números ───────────────────────────────────── */
+.pf-bloco {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pf-destaque {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pf-rotulo {
+  margin: 0;
+  font: var(--pf-body);
+  color: var(--ms-text-secondary);
+}
+
+.pf-destaque__linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pf-destaque__valor {
+  margin: 0;
+  font: var(--pf-title-1);
+  color: var(--ms-text);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Quatro caixas de 156×58: duas colunas no celular, uma fila de
+   quatro a partir de 640px. */
+.pf-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .pf-tiles { display: flex; align-items: stretch }
+  .pf-tile { flex: 1 }
+}
+
+.pf-tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  border-radius: 10px;
+  background: var(--ms-bg-component);
+  padding: 10px;
+}
+
+.pf-tile__valor {
+  margin: 0;
+  width: 100%;
+  font: var(--pf-body);
+  color: var(--ms-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.pf-tile__rotulo {
+  margin: 0;
+  width: 100%;
+  font: var(--pf-body-2);
+  color: var(--ms-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── A linha "Atividade" + o segmentado ───────────────────── */
+.pf-atividade {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6px;
+  padding-left: 2px;
+}
+
+.pf-atividade__rotulo {
+  margin: 0;
+  font: var(--pf-body-2);
+  color: var(--ms-text-secondary);
+}
+
+/* Não há pílula deslizante: o selecionado é só peso 500 + cor
+   primária, e a troca é uma `transition-colors` de 200ms. */
+.pf-segmentado {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 2px;
+  border-radius: 10px;
+}
+
+.pf-segmentado__opcao {
+  position: relative;
+  z-index: 10;
+  display: inline-flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  padding: 4px 10px;
+  text-align: center;
+  white-space: nowrap;
+  font: var(--pf-body-regular);
+  color: var(--ms-text-secondary);
+  transition: color .2s ease;
+}
+
+.pf-segmentado__opcao:hover { color: var(--ms-text) }
+
+.pf-segmentado__opcao[aria-checked="true"] {
+  font: var(--pf-body);
+  color: var(--ms-text);
+}
+
+/* ── O mapa de atividade ──────────────────────────────────── */
+.pf-mapa-rolagem {
+  display: flex;
+  width: 100%;
+  overflow-x: auto;
+}
+
+@media (min-width: 640px) {
+  .pf-mapa-rolagem { overflow-x: visible }
+}
+
+/* 38 colunas de 13px com 4 de vão: 38×13 + 37×4 = 642 no celular;
+   a partir de 640px as colunas viram fração e a grade preenche os
+   646 disponíveis (a célula fica em 13,09). */
+.pf-mapa {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(38, 13px);
+  width: max-content;
+}
+
+@media (min-width: 640px) {
+  .pf-mapa {
+    grid-template-columns: repeat(38, minmax(0, 1fr));
+    width: 100%;
+  }
+}
+
+.pf-celula {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  cursor: default;
+  border: none;
+  padding: 0;
+  border-radius: 3px;
+  outline: none;
+  background: hsl(var(--ms-gray-6));
+}
+
+.pf-celula:focus-visible { box-shadow: 0 0 0 2px var(--ms-ring) }
+
+/* Os cinco degraus de intensidade. Lá são violet-200/400/500/600/700
+   do Tailwind; aqui são os cinco degraus equivalentes da nossa marca. */
+.pf-celula[data-nivel="1"] { background: hsl(var(--ms-brand-5)) }
+.pf-celula[data-nivel="2"] { background: hsl(var(--ms-brand-7)) }
+.pf-celula[data-nivel="3"] { background: hsl(var(--ms-brand-8)) }
+.pf-celula[data-nivel="4"] { background: hsl(var(--ms-brand-9)) }
+.pf-celula[data-nivel="5"] { background: hsl(var(--ms-brand-10)) }
+
+/* ============================================================
+   SEÇÃO 2 — BARRAS POR DIA (680×317)
+   ============================================================ */
+
+.pf-secao {
+  position: relative;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 20px;
+  background: var(--ms-bg-component);
+  padding: 12px 10px;
+}
+
+.pf-secao__cabecalho {
+  display: flex;
+  width: 100%;
+  padding: 4px 6px 0;
+}
+
+.pf-secao__titulo {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pf-secao__valor {
+  margin: 0;
+  font: var(--pf-title-2);
+  color: var(--ms-text);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── O passador de mês ────────────────────────────────────── */
+.pf-passador {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  width: 128px;
+  height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--ms-border-subtle);
+  background: var(--ms-bg);
+  padding: 4px;
+  /* Lá é `shadow-xs`; o nosso degrau equivalente é o `--ms-shadow-sm`,
+     que é o token com esse papel na nossa escala. */
+  box-shadow: var(--ms-shadow-sm);
+}
+
+.pf-passador__seta {
+  display: flex;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 3px;
+  color: var(--ms-text-secondary);
+  outline: none;
+  transition: color .15s ease, background-color .15s ease;
+}
+
+.pf-passador__seta:hover:not(:disabled) { background: var(--ms-bg-component-hover) }
+.pf-passador__seta:disabled { opacity: .35; cursor: default }
+
+/* O rótulo é uma pilha: um clone invisível segura a largura do texto
+   NOVO enquanto os dois visíveis, absolutos, cruzam. Sem o clone, a
+   caixa saltaria de "Setembro" para "Maio" no meio da animação. */
+.pf-passador__rotulo {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  text-align: center;
+  font: var(--pf-body);
+  white-space: nowrap;
+  color: var(--ms-text);
+}
+
+.pf-passador__fantasma { visibility: hidden }
+
+.pf-passador__camada {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── As barras ────────────────────────────────────────────── */
+.pf-barras {
+  display: flex;
+  width: 100%;
+  align-items: flex-end;
+  gap: 7px;
+  height: 206px;
+}
+
+.pf-barras__coluna {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  flex: 1;
+  align-items: flex-end;
+  border-radius: 4px;
+}
+
+.pf-barra {
+  width: 100%;
+  border-radius: 4px;
+  background: hsl(var(--ms-brand-6));
+  transition: height .3s ease, background-color .3s ease;
+}
+
+.pf-barra--vazia { background: hsl(var(--ms-gray-4)) }
+
+.pf-eixo {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  font: 500 11px/15px var(--font-ui);
+  letter-spacing: .2px;
+  white-space: nowrap;
+  color: var(--ms-text-tertiary);
+}
+
+.pf-eixo p { margin: 0 }
+
+/* ============================================================
+   SEÇÃO 3 — A ÁREA DO ACERVO (680×267)
+   ============================================================ */
+
+.pf-secao--area {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  border-radius: 20px;
+  background: var(--ms-bg-component);
+  padding: 12px 0;
+  gap: 0;
+}
+
+/* O `-32px` puxa o gráfico para debaixo do cabeçalho: a curva passa
+   por trás do número, e é o `z-index: 10` do cabeçalho que o mantém
+   legível. */
+.pf-secao--area .pf-secao__cabecalho {
+  position: relative;
+  z-index: 10;
+  margin-bottom: -32px;
+  padding: 4px 16px 0;
+}
+
+.pf-area {
+  width: 100%;
+  height: 200px;
+}
+
+.pf-area svg { display: block; width: 100%; height: 100% }
+
+.pf-secao--area .pf-eixo {
+  margin-top: 8px;
+  padding-inline: 16px;
+}
+
+/* ============================================================
+   AS ANIMAÇÕES — os quatro `@keyframes` da referência, copiados
+   com a duração, o easing e o modo de preenchimento medidos.
+   ============================================================ */
+
+/* O número não desliza nem conta: ele reacende de 35% para 100%.
+   Basta trocar a `key` do elemento para a animação rodar de novo. */
+@keyframes pf-numero {
+  0%   { opacity: .35 }
+  100% { opacity: 1 }
+}
+
+.pf-anima-numero { animation: pf-numero .22s ease-out both }
+
+/* Cada célula com atividade nasce em escala 0,5 com um atraso
+   SORTEADO entre ~10 e ~800ms — não é uma varredura, é pipoca.
+   As células vazias não animam: entram já prontas. */
+@keyframes pf-celula {
+  0%   { opacity: 0; transform: scale(.5) }
+  100% { opacity: 1; transform: scale(1) }
+}
+
+.pf-anima-celula { animation: pf-celula .38s ease-out both }
+
+/* As barras sobem do chão, 22ms de defasagem entre vizinhas. */
+@keyframes pf-barra {
+  0%   { transform: scaleY(0) }
+  100% { transform: scaleY(1) }
+}
+
+.pf-anima-barra {
+  transform-origin: center bottom;
+  animation: pf-barra .36s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+/* A curva é revelada da esquerda para a direita por um recorte —
+   1,8s, o gesto mais longo da tela. */
+@keyframes pf-revelar {
+  0%   { clip-path: inset(0 100% 0 0) }
+  100% { clip-path: inset(0) }
+}
+
+.pf-anima-revelar { animation: pf-revelar 1.8s cubic-bezier(.33, 0, .15, 1) both }
+
+/* O rótulo do mês: o antigo sobe e some, o novo entra por baixo. */
+@keyframes pf-rotulo-sai {
+  0%   { opacity: 1; transform: translateY(0) }
+  100% { opacity: 0; transform: translateY(-10px) }
+}
+
+@keyframes pf-rotulo-entra {
+  0%   { opacity: 0; transform: translateY(10px) }
+  100% { opacity: 1; transform: translateY(0) }
+}
+
+.pf-anima-rotulo-sai   { animation: pf-rotulo-sai .22s ease-out forwards }
+.pf-anima-rotulo-entra { animation: pf-rotulo-entra .22s ease-out both }
+
+/* A referência desliga exatamente estas: as cinco animações e o
+   aperto do botão. As transições de cor continuam. */
+@media (prefers-reduced-motion: reduce) {
+  .pf-anima-numero,
+  .pf-anima-celula,
+  .pf-anima-barra,
+  .pf-anima-revelar,
+  .pf-anima-rotulo-sai,
+  .pf-anima-rotulo-entra { animation: none }
+
+  .pf-press { transition: none; transform: none }
+  .pf-barra { transition: none }
+}

@@ -41,7 +41,7 @@ export default function CuttableEdge({
     (sourceHandleId === "startFrameOut" || sourceHandleId === "endFrameOut" || sourceHandleId === "imagePickOut");
 
   const tgtStyle   = edgeStyle(colorKey ?? targetHandleId);
-  const tgtColor   = (tgtStyle.stroke as string) ?? "#555";
+  const tgtColor   = (tgtStyle.stroke as string) ?? "var(--ms-text-tertiary)";
   const srcColor   = getSourceHandleColor(srcNode?.type, sourceHandleId);
   const strokeWidth = (tgtStyle.strokeWidth as number) ?? 2;
 
@@ -178,7 +178,7 @@ export default function CuttableEdge({
             width: 28,
             height: 28,
             borderRadius: "50%",
-            background: "#0F0F1A",
+            background: "var(--ms-bg-component)",
             border: `2px solid ${badgeColor}`,
             display: "flex",
             alignItems: "center",

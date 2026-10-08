@@ -14,6 +14,20 @@ assets exigidos) e a UI só coleta o delta do usuário.
 Quatro decisões de arquitetura confirmadas (ver seção própria). **Passo 4.1 (importar)
 implementado e validado** — ver "4.1 — o que foi construído". Próximo: 4.2 (fatiar).
 
+**PAUSA (2026-09-21, a pedido do usuário) — ponto exato de parada:**
+- Decididos: LLM (Gemini via Kie), Persistência (SQLite: `trends`, `trend_insights`, `brands`,
+  `trend_brand_fit`), Marca (formulário manual, uma marca), Importar (upload mp4 + yt-dlp
+  opcional). Detalhe em "Decisões já confirmadas com o usuário".
+- Último commit da frente: `efd1ffc` (passo 4.1 inteiro). Sem push. **Nada desta frente está
+  escrito e não commitado**, exceto esta própria nota de pausa neste arquivo.
+- Passo 4.2 **não começou**: nenhum arquivo criado ou tocado para ele. Ao retomar: começar em
+  `lib/tendencias/` (fatiar reaproveitando a operação `analyze` de `lib/productionMedia.ts` e o
+  `transcribe` de `app/api/production/audio/route.ts`, sem mudar o comportamento deles), e
+  estender a tabela `trends` em `lib/tendencias/db.ts` com `first_frame_url`, `slides` e
+  `transcript`.
+- Em aberto ao retomar: entrada na sidebar (esperando a barra nova ser commitada), teste de link
+  real com yt-dlp instalado, pergunta P5 (fonte de vídeos no Pitch AI).
+
 Pendências conhecidas:
 - **Entrada na sidebar**: `/tendencias` só abre pela URL por enquanto. `components/AppSidebar.tsx`
   tem ~950 linhas de mudança não commitada de outra frente (a barra nova, com Quentes/Séries,

@@ -7,16 +7,36 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 
-const ALLOWED_ORIGINS = [
-  "https://cdn.kie.ai",
-  "https://api.kie.ai",
-  "https://replicate.delivery",
-  "https://pbxt.replicate.delivery",
-].map((o) => o.replace(/\/$/, ""));
+const ALLOWED_HOSTS = new Set([
+  "cdn.kie.ai",
+  "api.kie.ai",
+  "replicate.delivery",
+  "pbxt.replicate.delivery",
+]);
 
 function isAllowed(url: string): boolean {
   if (url.startsWith("/generated/")) return true; // local disk, served same-origin
-  return ALLOWED_ORIGINS.some((origin) => url.startsWith(origin));
+
+  // Parse the hostname instead of a `startsWith` string check on the whole URL:
+  // "https://cdn.kie.ai.evil.com/..." starts with "https://cdn.kie.ai" as a
+  // string, so a naive prefix check would let it through.
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    return false;
+  }
+  if (ALLOWED_HOSTS.has(hostname)) return true;
+  // Cloudflare R2 public buckets — workflow templates and character avatars
+  // are hosted here (see `lib/templates.ts`), same allowlist `next.config.ts`
+  // already trusts for <Image>.
+  if (hostname.endsWith(".r2.dev")) return true;
+  // kie.ai's temporary result CDN (e.g. tempfile.aiquickdraw.com) — the normal
+  // path mirrors these to local disk right after generation (see
+  // `settleSuccess` in lib/kieJobPoller.ts), but a transient network error
+  // during that mirror falls back to the source URL, which then needs to
+  // stay downloadable until a later retry succeeds.
+  return hostname.endsWith(".aiquickdraw.com");
 }
 
 export const runtime = "edge";

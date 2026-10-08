@@ -5,6 +5,7 @@ import { useWorkflowStore, NodeData } from "@/lib/store";
 import { edgeStyle, EDGE_COLORS } from "@/lib/edgeStyles";
 import { NODES, NODE_SIZE, FALLBACK_SIZE, NODE_META, getLastNodeSettings, getDefaultNodeSize } from "@/lib/nodeTypes";
 import { VIDEO_MODELS, IMAGE_MODELS } from "@/lib/modelConfig";
+import { PRODUCTION_NODES, TEXT_PRODUCTION_TYPES } from "@/lib/production";
 
 // Extract the aspect ratio as a float from any source node type
 function nodeAspectRatioFloat(data: Record<string, unknown> | undefined): number | null {
@@ -34,7 +35,8 @@ function closestRatio(ratioFloat: number, candidates: string[]): string | null {
 // Node types whose OUTPUT can feed a given input handle
 function sourceNodeTypesFor(targetHandle: string | null): string[] {
   switch (targetHandle) {
-    case "prompt":                         return ["promptNode", "assistantNode"];
+    case "prompt":                         return ["promptNode", "assistantNode", ...TEXT_PRODUCTION_TYPES];
+    case "audioRef":                       return ["audioNode"];
     case "image":
     case "startFrame":
     case "endFrame":
@@ -47,6 +49,8 @@ function sourceNodeTypesFor(targetHandle: string | null): string[] {
 
 // The output handle ID to use on a newly-created source node for a given target handle
 function outputHandleForNewNode(newNodeType: string, targetHandle: string): string | undefined {
+  if (newNodeType === "audioNode") return "audioRefOut";
+  if (TEXT_PRODUCTION_TYPES.has(newNodeType)) return "textOut";
   if (newNodeType === "videoInputNode") {
     if (targetHandle === "videoRef" || targetHandle === "referenceVideo") return "videoRefOut";
     if (targetHandle === "startFrame") return "startFrameOut";
@@ -101,6 +105,11 @@ function targetHandleFor(
   targetNodeType: string,
   sourceHandleId: string | null,
 ): string | null {
+  if (PRODUCTION_NODES.some(n => n.type === targetNodeType)) {
+    if (sourceHandleId === "textOut" || sourceNodeType === "promptNode" || sourceNodeType === "assistantNode") return "prompt";
+    if (["smartEditNode", "smartBreakdownNode"].includes(targetNodeType) && (sourceHandleId === "videoRefOut" || sourceNodeType === "videoGeneratorNode")) return "videoRef";
+    return null;
+  }
   // Typed output handles take priority
   if (sourceHandleId) {
     switch (sourceHandleId) {
@@ -283,9 +292,9 @@ export default function NodePickerMenu({ dropState, onClose }: Props) {
         return NODES.filter((n) => allowed.has(n.type));
       })()
     : NODES.filter((n) => {
-        if (!n.canReceiveConnection) return false;
+        if (!n.canReceiveConnection || !targetHandleFor(dropState.sourceNodeType, n.type, dropState.sourceHandleId)) return false;
         if (dropState.sourceHandleId && HANDLE_ONLY_VIDEO_GEN.has(dropState.sourceHandleId)) {
-          return n.type === "videoGeneratorNode";
+          return n.type === "videoGeneratorNode" || (dropState.sourceHandleId === "videoRefOut" && ["smartEditNode", "smartBreakdownNode"].includes(n.type));
         }
         return true;
       });
@@ -333,11 +342,11 @@ export default function NodePickerMenu({ dropState, onClose }: Props) {
       <div
         ref={menuRef}
         style={{ position: "fixed", left, top, zIndex: 1000 }}
-        className="w-56 bg-[#0F1214] border border-[#2A2A2A] rounded-lg shadow-2xl overflow-hidden"
+        className="workflow-node-picker w-64 bg-ms-bg border border-ms-border rounded-xl overflow-hidden"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="px-3 py-2 border-b border-[#171728]">
-          <p className="text-[10px] text-[#33334F] uppercase tracking-widest font-medium">
+        <div className="px-3.5 py-2.5 border-b border-ms-border-subtle bg-ms-bg-subtle">
+          <p className="text-[10px] text-ms-text-tertiary uppercase tracking-widest font-bold">
             Connect to
           </p>
         </div>
@@ -349,7 +358,7 @@ export default function NodePickerMenu({ dropState, onClose }: Props) {
               key={n.type}
               onClick={() => handleSelect(n.type)}
               onMouseDown={(e) => e.stopPropagation()}
-              className="w-full text-left px-3 py-2.5 hover:bg-[#161A1E] transition-colors"
+              className="workflow-node-picker-item w-full text-left px-3 py-2.5 hover:bg-ms-bg-brand-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ms-ring"
             >
               <div className="flex items-center gap-2.5">
                 <span
@@ -361,18 +370,18 @@ export default function NodePickerMenu({ dropState, onClose }: Props) {
                     width: "30px",
                     height: "30px",
                     borderRadius: "8px",
-                    background: meta?.bg ?? "rgba(255,255,255,0.06)",
-                    color: meta?.accent ?? "#aaa",
-                    border: `1px solid ${meta?.accent ?? "#333"}28`,
+                    background: `${meta?.accent ?? "#6b7280"}14`,
+                    color: meta?.accent ?? "var(--ms-icon-secondary)",
+                    border: `1px solid ${meta?.accent ?? "#6b7280"}30`,
                   }}
                 >
                   {meta?.bigIcon ?? n.icon}
                 </span>
                 <span className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-[13px] text-white font-medium leading-none">
+                  <span className="text-[13px] text-ms-text font-semibold leading-none">
                     {n.label}
                   </span>
-                  <span className="text-[10px] text-[#33334F] leading-none">
+                  <span className="text-[10px] text-ms-text-secondary leading-snug truncate">
                     {n.description}
                   </span>
                 </span>

@@ -15,6 +15,15 @@ import { MEDIA_DIR } from "@/lib/guest/paths";
 export const runtime = "nodejs";
 
 const CONTENT_TYPES: Record<string, string> = {
+  ".glb": "model/gltf-binary",
+  ".weba": "audio/webm",
+  ".opus": "audio/opus",
+  ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
+  ".ogg": "audio/ogg",
+  ".m4a": "audio/mp4",
+  ".flac": "audio/flac",
+  ".aac": "audio/aac",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".png": "image/png",

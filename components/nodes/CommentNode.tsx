@@ -6,7 +6,7 @@ import { useReadOnly } from "@/lib/readOnlyContext";
 
 type CommentNodeType = Node<NodeData, "commentNode">;
 
-const ACCENT = "#FACC15"; // amber-400
+const ACCENT = "var(--ms-solid-warning)"; // amber-400
 
 export default function CommentNode({ id, data, selected }: NodeProps<CommentNodeType>) {
   const readOnly = useReadOnly();
@@ -57,7 +57,7 @@ export default function CommentNode({ id, data, selected }: NodeProps<CommentNod
             title="Delete comment"
             className="nodrag flex items-center justify-center w-5 h-5 rounded transition-colors"
             style={{ color: `${ACCENT}99` }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "#f87171"; e.currentTarget.style.background = "rgba(248,113,113,0.12)"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--ms-text-danger)"; e.currentTarget.style.background = "rgba(248,113,113,0.12)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = `${ACCENT}99`; e.currentTarget.style.background = "transparent"; }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -75,7 +75,7 @@ export default function CommentNode({ id, data, selected }: NodeProps<CommentNod
       <textarea
         className="nodrag nowheel flex-1 w-full bg-transparent text-[13px] leading-relaxed p-2.5 resize-none focus:outline-none placeholder:text-yellow-200/35"
         style={{
-          color: "#FEF9C3",
+          color: "var(--ms-text-warning)",
           pointerEvents: editable ? "auto" : "none",
         }}
         placeholder="Write a comment…"

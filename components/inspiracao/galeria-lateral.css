@@ -1,0 +1,450 @@
+/* ============================================================
+   GALERIA LATERAL — porte do painel do BoardUI
+
+   Origem: `www.boardui.com/templates/ai-image-generation`, o `<aside>` da
+   direita. Todo valor abaixo foi lido com `getComputedStyle` no site rodando —
+   nunca do `className`, que no Tailwind v4 esconde o valor atrás de token e de
+   `oklab()`. As cores foram convertidas para sRGB por canvas antes de virarem
+   token nosso; a tabela da conversão está em `.migracao/relatos/lanterna-leva8.md`.
+
+   O que muda em relação à referência é o que o briefing v2 licencia: o azul de
+   acento deles (`#2B7FFF`) é o nosso violeta, e o `#EFF6FF` do indicador de aba
+   é o nosso `--ms-bg-brand` (o passo 3 da escala da marca, mesmo papel); os
+   rótulos são em português; e o conteúdo é o nosso — as gerações da conta.
+   ============================================================ */
+
+.gal {
+  position: relative;
+
+  /* Único valor da referência que a nossa escala não tem: o raio de 10px, que
+     lá é o token `--radius-2lg`. A nossa escala vai 8 → 12, sem passo no meio.
+     Fica declarado num lugar só; se virar token, troca-se esta linha. */
+  --gal-radius: 10px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  padding-top: 8px;
+  /* O BoardUI põe `overflow:hidden` aqui, mas lá a divisa de arrasto é filha
+     da coluna da conversa, não do painel. A nossa mora dentro do painel, e o
+     `hidden` cortaria o punho, que fica 10px para fora. O recorte que importa
+     — o das colunas — já é feito pelo `.gal__rolagem`. */
+  overflow: visible;
+}
+
+/* ── Cabeçalho ────────────────────────────────────────────── */
+
+.gal__cabecalho {
+  display: flex;
+  width: 100%;
+  height: 30px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gal__abas {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* A assinatura do bloco: o indicador não pisca de uma aba para a outra, ele
+   desliza E muda de largura ao mesmo tempo, com uma curva que passa do alvo e
+   volta (o 1.2 no segundo ponto de controle). Os três valores são literais. */
+.gal__indicador {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 30px;
+  border-radius: var(--ms-radius-full);
+  background: var(--ms-bg-brand);
+  pointer-events: none;
+  transition: transform .3s cubic-bezier(.34, 1.2, .64, 1),
+              width .3s cubic-bezier(.34, 1.2, .64, 1),
+              height .3s cubic-bezier(.34, 1.2, .64, 1);
+}
+
+.gal__aba {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 5px 8px;
+  border: none;
+  background: transparent;
+  border-radius: var(--ms-radius-full);
+  font: inherit;
+  font-size: var(--ms-text-lg);
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--ms-text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .15s cubic-bezier(.4, 0, .2, 1);
+}
+
+.gal__aba[aria-selected="true"] {
+  color: var(--ms-text-brand);
+}
+
+/* O realce de hover é uma camada própria, não um `background` na aba: ela tem
+   que aparecer POR BAIXO do texto e do ícone sem competir com o indicador. */
+.gal__aba-realce {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: var(--ms-radius-full);
+  background: var(--ms-bg-subtle);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s cubic-bezier(0, 0, .2, 1);
+}
+
+.gal__aba:hover .gal__aba-realce {
+  opacity: 1;
+}
+
+.gal__aba:focus-visible {
+  outline: 2px solid var(--ms-ring);
+  outline-offset: 2px;
+}
+
+.gal__acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 1px;
+}
+
+.gal__acao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 2px;
+  border: none;
+  border-radius: var(--ms-radius);
+  background: transparent;
+  color: var(--ms-icon-secondary);
+  cursor: pointer;
+  transition: background-color .15s cubic-bezier(.4, 0, .2, 1);
+}
+
+.gal__acao:hover {
+  background: var(--ms-bg-subtle);
+}
+
+.gal__acao:focus-visible {
+  outline: 2px solid var(--ms-ring);
+  outline-offset: 2px;
+}
+
+/* ── Rolagem e colunas ────────────────────────────────────── */
+
+.gal__rolagem {
+  min-height: 0;
+  width: 100%;
+  flex: 1 1 0%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.gal__colunas {
+  display: flex;
+  gap: 8px;
+}
+
+/* `flex:1` + `min-width:0` é o que faz a coluna sair em 128px num painel de
+   410: 410 − 10 da barra de rolagem fina = 400, menos os dois vãos de 8. */
+.gal__coluna {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Card ─────────────────────────────────────────────────── */
+
+.gal__card {
+  position: relative;
+  display: block;
+  margin: 0;
+  border-radius: var(--gal-radius);
+  overflow: hidden;
+}
+
+.gal__quadro {
+  position: relative;
+  width: 100%;
+  background: var(--ms-bg-subtle);
+}
+
+.gal__midia {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* A propriedade é `scale`, não `transform`: no Tailwind v4 o
+     `group-hover:scale-[1.03]` compila para a propriedade independente, e o
+     `transform` computado do site continua `none`. */
+  transition: scale .3s cubic-bezier(0, 0, .2, 1);
+}
+
+.gal__card:hover .gal__midia {
+  scale: 1.03;
+}
+
+/* A capa inteira é o botão de ampliar — daí o `zoom-in`. */
+.gal__ampliar {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: transparent;
+  cursor: zoom-in;
+  outline: none;
+}
+
+.gal__ampliar:focus-visible {
+  outline: 2px solid var(--ms-ring);
+  outline-offset: -2px;
+}
+
+/* Duas bocas de sombra, uma em cada ponta, e o meio limpo: é o que deixa os
+   botões legíveis em cima e a legenda legível embaixo sem escurecer a peça. */
+.gal__sobreposicao {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 6px;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--ms-blackA-6-hex) 0%,
+    transparent 50%,
+    var(--ms-blackA-8-hex) 100%
+  );
+  transition: opacity .2s cubic-bezier(0, 0, .2, 1);
+}
+
+.gal__card:hover .gal__sobreposicao,
+.gal__card:focus-within .gal__sobreposicao {
+  opacity: 1;
+}
+
+.gal__sobreposicao-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  pointer-events: auto;
+}
+
+.gal__botao-flutuante {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 4px;
+  border: none;
+  border-radius: var(--ms-radius);
+  background: var(--ms-blackA-7-hex);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: var(--ms-icon-on-solid);
+  cursor: pointer;
+  transition: background-color .15s cubic-bezier(.4, 0, .2, 1);
+}
+
+.gal__botao-flutuante:hover {
+  background: var(--ms-blackA-8-hex);
+}
+
+.gal__botao-flutuante:focus-visible {
+  outline: 2px solid var(--ms-ring);
+  outline-offset: 1px;
+}
+
+.gal__legenda {
+  margin: 0;
+  padding: 0 2px;
+  color: var(--ms-text-on-solid);
+  font-size: var(--ms-text-md);
+  font-weight: 400;
+  line-height: 18px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+/* ── Menu de mais ações ───────────────────────────────────── */
+
+/* O menu vive fora do card, em coordenadas de viewport: o card tem
+   `overflow:hidden` por causa do raio, e uma caixa de 132px seria cortada
+   dentro de uma coluna de 128. */
+.gal__menu {
+  position: fixed;
+  z-index: 30;
+  min-width: 132px;
+  padding: 4px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--gal-radius);
+  background: var(--ms-bg);
+  box-shadow: var(--ms-shadow-sm);
+  pointer-events: auto;
+}
+
+.gal__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--ms-radius);
+  background: transparent;
+  color: var(--ms-text);
+  font: inherit;
+  font-size: var(--ms-text-base);
+  line-height: 20px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color .15s cubic-bezier(.4, 0, .2, 1);
+}
+
+.gal__menu-item:hover {
+  background: var(--ms-bg-subtle);
+}
+
+/* ── Separador de redimensionamento ───────────────────────── */
+
+.gal__separador {
+  position: absolute;
+  inset-block: 0;
+  left: -10px;
+  z-index: 10;
+  display: flex;
+  width: 20px;
+  justify-content: center;
+  cursor: col-resize;
+  touch-action: none;
+  border: none;
+  padding: 0;
+  background: transparent;
+}
+
+/* O punho só aparece quando a mão chega perto — em repouso a divisa é
+   invisível, e é isso que mantém o painel limpo. */
+.gal__punho {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  width: 15px;
+  height: 25px;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-sm);
+  background: var(--ms-bg);
+  box-shadow: var(--ms-shadow-sm);
+  opacity: 0;
+  transition: opacity .15s cubic-bezier(.4, 0, .2, 1);
+}
+
+.gal__separador:hover .gal__punho,
+.gal__separador:focus-visible .gal__punho,
+.gal__separador[data-arrastando="true"] .gal__punho {
+  opacity: 1;
+}
+
+.gal__punho span {
+  display: block;
+  width: 1px;
+  height: 13px;
+  background: var(--ms-border);
+}
+
+/* ── Painel vazio ─────────────────────────────────────────── */
+
+/* Mesma caixa que o BoardUI usa na aba `Styles`: ocupa a altura toda, com o
+   rótulo centralizado. */
+.gal__vazio {
+  display: flex;
+  width: 100%;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border-radius: var(--gal-radius);
+  background: var(--ms-bg-subtle);
+  text-align: center;
+}
+
+.gal__vazio p {
+  margin: 0;
+  font-size: var(--ms-text-lg);
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--ms-text-tertiary);
+}
+
+.gal__vazio a {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--ms-radius-full);
+  background: var(--app-v2-brand-solid);
+  color: var(--ms-text-on-brand);
+  font-size: var(--ms-text-base);
+  font-weight: 500;
+}
+
+/* ── Esqueleto ────────────────────────────────────────────── */
+
+.gal__esqueleto {
+  width: 100%;
+  border-radius: var(--gal-radius);
+  background: var(--ms-bg-subtle);
+  animation: gal-pulso 1.4s ease-in-out infinite;
+}
+
+@keyframes gal-pulso {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gal__indicador,
+  .gal__aba,
+  .gal__aba-realce,
+  .gal__acao,
+  .gal__midia,
+  .gal__sobreposicao,
+  .gal__botao-flutuante,
+  .gal__menu-item,
+  .gal__punho,
+  .gal__esqueleto {
+    transition: none;
+    animation: none;
+  }
+}

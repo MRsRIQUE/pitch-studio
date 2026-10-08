@@ -36,6 +36,8 @@ import VideoGeneratorNode from "./nodes/VideoGeneratorNode";
 import AssistantNode from "./nodes/AssistantNode";
 import GroupNode from "./nodes/GroupNode";
 import CommentNode from "./nodes/CommentNode";
+import ProductionNode from "./nodes/ProductionNode";
+import { PRODUCTION_NODES, TEXT_PRODUCTION_TYPES } from "@/lib/production";
 import NodePickerMenu, { DropState } from "./NodePickerMenu";
 import SelectionToolbar from "./SelectionToolbar";
 import CanvasToolbar from "./CanvasToolbar";
@@ -52,6 +54,7 @@ function authHeaders(_token?: string | undefined): HeadersInit {
 }
 
 const nodeTypes = {
+  ...Object.fromEntries(PRODUCTION_NODES.map(n => [n.type, ProductionNode])),
   promptNode: PromptNode,
   imageInputNode: ImageInputNode,
   videoInputNode: VideoInputNode,
@@ -699,9 +702,13 @@ export default function WorkflowCanvas() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Ignore when typing in an input / textarea
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      // Ignore when typing in an input / textarea, or anywhere editable.
+      const alvo = e.target as HTMLElement;
+      const tag = alvo.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || alvo.isContentEditable) return;
+      // O painel de chat sobre o grafo tem a própria seleção de texto e os
+      // próprios botões; os atalhos do canvas não valem com o foco lá.
+      if (alvo.closest?.(".pj-raiz")) return;
 
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
         if (e.key === "v" || e.key === "V") setActiveTool("select");
@@ -714,7 +721,11 @@ export default function WorkflowCanvas() {
         if (e.shiftKey) handleRedo(); else handleUndo();
       }
       if (mod && (e.key === "y" || e.key === "Y")) { e.preventDefault(); handleRedo(); }
-      if (mod && e.key === "c") { e.preventDefault(); handleCopy(); }
+      // Com texto selecionado na página (uma resposta do chat, por exemplo)
+      // o Ctrl+C é do navegador: cancelá-lo aqui era o que impedia copiar
+      // qualquer texto do painel. Só vira "copiar nós" sem seleção de texto.
+      const temTextoSelecionado = (window.getSelection()?.toString() ?? "").length > 0;
+      if (mod && e.key === "c" && !temTextoSelecionado) { e.preventDefault(); handleCopy(); }
       if (mod && e.key === "v") {
         e.preventDefault();
         // OS clipboard text takes priority — if it has content, create a prompt node.
@@ -976,8 +987,12 @@ export default function WorkflowCanvas() {
       if (
         connection.targetHandle === "prompt" &&
         source?.type !== "promptNode" &&
-        source?.type !== "assistantNode"
+        source?.type !== "assistantNode" &&
+        !TEXT_PRODUCTION_TYPES.has(source?.type ?? "")
       ) return false;
+
+      if (source?.type === "audioNode" && connection.targetHandle !== "audioRef") return false;
+      if (TEXT_PRODUCTION_TYPES.has(source?.type ?? "") && connection.targetHandle !== "prompt") return false;
 
       // videoRef handle only accepts video nodes
       if (connection.targetHandle === "videoRef") {
@@ -1093,7 +1108,7 @@ export default function WorkflowCanvas() {
       connectionState: any,
     ) => {
       // Remove connecting-type tag and handle highlight
-      const rf = (event.target as HTMLElement)?.closest?.(".react-flow") as HTMLElement | null;
+      const rf = wrapperRef.current?.querySelector(".react-flow");
       rf?.removeAttribute("data-connecting-type");
       document.querySelectorAll(".node-handle-connecting").forEach((el) => el.classList.remove("node-handle-connecting"));
       setConnectingHandleType(null);
@@ -1525,7 +1540,7 @@ export default function WorkflowCanvas() {
   }, [edges, ancestorEdgeIds, potentialGroupIds, dyingEdgeIds]);
 
   return (
-    <div className="relative flex-1 flex flex-col min-w-0 h-full" style={{ background: "#0F0F1A" }}>
+    <div className="relative flex-1 flex flex-col min-w-0 h-full" style={{ background: "var(--app-v2-bg-page)" }}>
       <div
         ref={wrapperRef}
         className={`relative flex-1 flex flex-col min-h-0 min-w-0${activeTool === "hand" ? " canvas-hand-mode" : ""}`}
@@ -1567,7 +1582,11 @@ export default function WorkflowCanvas() {
           edgeTypes={edgeTypes}
           fitView
           minZoom={0.05}
-          colorMode="dark"
+          /* Leva 9: o canvas passou ao claro. Esta prop é o seletor de tema
+             do próprio xyflow — a folha dele define `--xy-background-color-default`
+             por `.react-flow.dark`, e essa folha é importada DEPOIS do
+             globals.css, então nenhum override nosso a alcançava. */
+          colorMode="light"
           className={`flex-1${isRubberBandSelecting ? " is-rubber-band-selecting" : ""}`}
           style={{ background: "transparent" }}
           // Hand mode: left-click pans; Select mode: right-click pans + left-click selects
@@ -1585,7 +1604,7 @@ export default function WorkflowCanvas() {
             strokeLinecap: "round",
           }}
         >
-          <Background variant={BackgroundVariant.Dots} gap={28} size={1.5} color="#8B9CC7" />
+          <Background variant={BackgroundVariant.Dots} gap={28} size={1.5} color="var(--ms-border-strong)" />
           <ViewportSyncer />
           <GroupPreviewOverlay groupIds={potentialGroupIds} />
           <SelectionToolbar />
@@ -1607,7 +1626,7 @@ export default function WorkflowCanvas() {
 
           <Controls
             showInteractive={false}
-            className="[&>button]:!bg-[#0F0F1A] [&>button]:!border-[#262640] [&>button]:!text-[#8B9CC7] [&>button:hover]:!text-white"
+            className="[&>button]:!bg-ms-bg [&>button]:!border-ms-border-subtle [&>button]:!text-ms-text-secondary [&>button:hover]:!text-ms-text"
           />
 
         </ReactFlow>
@@ -1675,7 +1694,7 @@ export default function WorkflowCanvas() {
                   initial={{ filter: "blur(8px)", opacity: 0 }}
                   animate={{ filter: "blur(0px)", opacity: 1 }}
                   transition={{ duration: 0.9, delay: 0.15 }}
-                  style={{ color: "rgba(255,255,255,0.35)", fontSize: "14px", margin: 0 }}
+                  style={{ color: "#6f6880", fontSize: "14px", margin: 0 }}
                 >
                   Pick a node below to start building
                 </motion.p>
@@ -1723,8 +1742,9 @@ export default function WorkflowCanvas() {
                       width: "210px",
                       padding: "24px 22px 26px",
                       borderRadius: "18px",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid #e4e0ef",
+                      background: "rgba(255,255,255,0.92)",
+                      boxShadow: "0 8px 24px rgba(60,45,100,0.08)",
                       cursor: "pointer",
                       outline: "none",
                       transition: "transform 200ms ease, box-shadow 220ms ease, border-color 220ms ease, background 220ms ease",
@@ -1733,15 +1753,15 @@ export default function WorkflowCanvas() {
                       const el = e.currentTarget;
                       el.style.transform = "translateY(-4px)";
                       el.style.boxShadow = `0 0 0 1px ${accent}35, 0 16px 40px rgba(0,0,0,0.4)`;
-                      el.style.borderColor = `${accent}35`;
-                      el.style.background = `rgba(255,255,255,0.05)`;
+                      el.style.borderColor = `${accent}88`;
+                      el.style.background = `#ffffff`;
                     }}
                     onMouseLeave={(e) => {
                       const el = e.currentTarget;
                       el.style.transform = "translateY(0)";
                       el.style.boxShadow = "";
-                      el.style.borderColor = "rgba(255,255,255,0.08)";
-                      el.style.background = "rgba(255,255,255,0.03)";
+                      el.style.borderColor = "#e4e0ef";
+                      el.style.background = "rgba(255,255,255,0.92)";
                     }}
                   >
                     {/* Icon badge */}
@@ -1763,13 +1783,13 @@ export default function WorkflowCanvas() {
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "7px" }}>
                       <span style={{
                         fontSize: "15px", fontWeight: 700,
-                        color: "rgba(255,255,255,0.92)",
+                        color: "#28243a",
                         letterSpacing: "-0.2px",
                         lineHeight: 1.2,
                       }}>
                         {label}
                       </span>
-                      <span style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.42)", fontWeight: 400, lineHeight: 1.4 }}>
+                      <span style={{ fontSize: "12.5px", color: "#6d667b", fontWeight: 500, lineHeight: 1.4 }}>
                         {desc}
                       </span>
                     </div>
@@ -1779,7 +1799,7 @@ export default function WorkflowCanvas() {
 
               <motion.p
                 className="text-[11px] tracking-wide pointer-events-none select-none"
-                style={{ color: "rgba(255,255,255,0.15)" }}
+                style={{ color: "#817a91" }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6, delay: 0.5 }}

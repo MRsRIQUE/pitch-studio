@@ -1,0 +1,168 @@
+/* ============================================================
+   CAMADA DE TEMA DO TAILWIND
+
+   O app não tinha nenhuma. Sem `@theme`, ~148 utilitários geravam
+   zero CSS — 48 só em components/ui/sidebar.tsx (`bg-sidebar`,
+   `bg-sidebar-accent`, `text-sidebar-foreground`…) e ~100 nos
+   demais primitivos shadcn (`bg-muted`, `border-input`, `ring-ring`).
+
+   É essa a causa raiz do hack dos `!important` em globals.css: o
+   AppSidebar escrevia `text-white` e o CSS revertia com
+   `[class*="text-white"] { … !important }` porque não existia
+   utilitário semântico para escrever no lugar. Ligar esta camada
+   *é* eliminar o hack.
+
+   `inline` é obrigatório. Sem ele o utilitário emite
+   `var(--color-ms-bg)` e o Tailwind reemite `:root{--color-ms-bg:
+   var(--ms-bg)}` — indireção dupla que quebra qualquer
+   redeclaração de `--ms-bg` num escopo (.dark, .pitch-night).
+   Com `inline`, o utilitário emite `var(--ms-bg)` direto.
+   ============================================================ */
+
+/* ── O desarme ───────────────────────────────────────────────
+   No Tailwind v4 a variante `dark` padrão é
+   `@media (prefers-color-scheme: dark)`. Hoje ela é INERTE porque
+   não existe nenhum `--color-*` para ela colorir. No instante em
+   que esta camada liga, as 16 variantes `dark:` dos primitivos
+   shadcn (avatar, button, dropdown-menu, input, kbd) passariam a
+   valer para todo usuário com o SO em modo escuro — dentro de um
+   chrome claro.
+
+   Prender a variante a uma classe resolve, e ainda deixa o
+   interruptor disponível caso o canvas escuro precise dele. A
+   classe `dark` foi removida do <html> em app/layout.tsx, então
+   as 16 ficam provadamente inertes. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  /* ── Base do shadcn ───────────────────────────────────────
+     Sem estes nomes, os primitivos em components/ui/* ficam
+     meio-estilizados. Mapeados sobre a camada de aplicação. */
+  --color-background: var(--app-v2-bg-page);
+  --color-foreground: var(--app-v2-text-primary);
+  --color-card: var(--app-v2-bg-surface);
+  --color-card-foreground: var(--app-v2-text-primary);
+  --color-popover: var(--app-v2-bg-surface);
+  --color-popover-foreground: var(--app-v2-text-primary);
+  --color-primary: var(--app-v2-brand-solid);
+  --color-primary-foreground: var(--app-v2-text-on-brand);
+  --color-secondary: var(--app-v2-bg-component);
+  --color-secondary-foreground: var(--app-v2-text-primary);
+  --color-muted: var(--app-v2-bg-component);
+  --color-muted-foreground: var(--app-v2-text-secondary);
+  --color-accent: var(--app-v2-bg-component-hover);
+  --color-accent-foreground: var(--app-v2-text-primary);
+  --color-destructive: var(--app-v2-danger-text);
+  --color-border: var(--app-v2-border-subtle);
+  --color-input: var(--app-v2-border);
+  --color-ring: var(--app-v2-ring);
+
+  /* Os 48 utilitários de components/ui/sidebar.tsx. */
+  --color-sidebar: var(--app-v2-bg-component);              /* #F0F0F0 */
+  --color-sidebar-foreground: var(--app-v2-text-primary);
+  --color-sidebar-accent: var(--app-v2-bg-component-active); /* #E0E0E0, a pílula ativa */
+  --color-sidebar-accent-foreground: var(--app-v2-text-primary);
+  --color-sidebar-border: transparent;                       /* o Miora não tem borda na nav */
+  --color-sidebar-ring: var(--app-v2-ring);
+
+  /* ── Família ms-* ─────────────────────────────────────────
+     Alimenta bg-ms-* / text-ms-* / border-ms-* / ring-ms-*.
+     São exatamente as classes que os componentes portados de
+     miora/sections/ usam; sem estes nomes elas viram no-ops
+     silenciosos — não dão erro, só não pintam nada. */
+  --color-ms-bg: var(--ms-bg);
+  --color-ms-bg-subtle: var(--ms-bg-subtle);
+  --color-ms-bg-component: var(--ms-bg-component);
+  --color-ms-bg-component-hover: var(--ms-bg-component-hover);
+  --color-ms-bg-component-active: var(--ms-bg-component-active);
+  --color-ms-bg-hover: var(--ms-bg-hover);
+  --color-ms-bg-active: var(--ms-bg-active);
+  --color-ms-bg-overlay: var(--ms-bg-overlay);
+  --color-ms-bg-brand: var(--ms-bg-brand);
+  --color-ms-bg-brand-subtle: var(--ms-bg-brand-subtle);
+  --color-ms-bg-danger: var(--ms-bg-danger);
+  --color-ms-bg-success: var(--ms-bg-success);
+
+  --color-ms-text: var(--ms-text);
+  --color-ms-text-secondary: var(--ms-text-secondary);
+  --color-ms-text-tertiary: var(--ms-text-tertiary);
+  --color-ms-text-placeholder: var(--ms-text-placeholder);
+  --color-ms-text-disabled: var(--ms-text-disabled);
+  --color-ms-text-danger: var(--ms-text-danger);
+  --color-ms-text-link: var(--ms-text-link);
+  --color-ms-text-brand: var(--ms-text-brand);
+  --color-ms-text-on-brand: var(--ms-text-on-brand);
+  --color-ms-text-on-solid: var(--ms-text-on-solid);
+
+  --color-ms-icon: var(--ms-icon);
+  --color-ms-icon-secondary: var(--ms-icon-secondary);
+  --color-ms-icon-tertiary: var(--ms-icon-tertiary);
+  --color-ms-icon-disabled: var(--ms-icon-disabled);
+  --color-ms-icon-brand: var(--ms-icon-brand);
+
+  --color-ms-border: var(--ms-border);
+  --color-ms-border-subtle: var(--ms-border-subtle);
+  --color-ms-border-strong: var(--ms-border-strong);
+  --color-ms-border-brand: var(--ms-border-brand);
+  --color-ms-ring: var(--ms-ring);
+
+  --color-ms-solid: var(--ms-solid);
+  --color-ms-solid-hover: var(--ms-solid-hover);
+  --color-ms-solid-brand: var(--ms-solid-brand);
+
+  /* O nome curto da classe mapeia para o token real, que tem sufixo. */
+  --color-ms-button: var(--ms-button-bg);
+  --color-ms-button-fg: var(--ms-button-fg);
+  --color-ms-button-secondary: var(--ms-button-secondary-bg);
+  --color-ms-button-secondary-active: var(--ms-button-secondary-bg-active);
+
+  /* Três usos, todos na seção 09 (canvas). Custa duas linhas. */
+  --color-mio-color-text-secondary: var(--ms-text-secondary);
+  --color-mio-color-text-placeholder: var(--ms-text-placeholder);
+
+  /* ── Raios ────────────────────────────────────────────────
+     DE PROPÓSITO só a família ms-*, sem tocar na escala padrão
+     do Tailwind. O canvas congelado usa rounded-lg/md/xl em 45
+     lugares; deslocar os defaults para a escala do Miora mudaria
+     a aparência de uma área que não pode mudar. As telas novas
+     escrevem rounded-ms-* explicitamente. */
+  --radius-ms-sm: var(--ms-radius-sm);      /*  4px */
+  --radius-ms: var(--ms-radius);            /*  6px */
+  --radius-ms-md: var(--ms-radius-md);      /*  8px */
+  --radius-ms-lg: var(--ms-radius-lg);      /* 12px */
+  --radius-ms-xl: var(--ms-radius-xl);      /* 16px */
+  --radius-ms-2xl: var(--ms-radius-2xl);    /* 20px */
+  --radius-ms-3xl: var(--ms-radius-3xl);    /* 24px */
+  --radius-ms-full: var(--ms-radius-full);
+
+  /* ── Sombras ──────────────────────────────────────────────── */
+  --shadow-ms-sm: var(--ms-shadow-sm);
+  --shadow-ms-md: var(--ms-shadow-md);
+  --shadow-ms-lg: var(--ms-shadow-lg);
+  --shadow-ms-button: var(--ms-button-shadow);
+  --shadow-ms-button-hover: var(--ms-button-shadow-hover);
+  --shadow-ms-button-active: var(--ms-button-shadow-active);
+  --shadow-ms-button-secondary: var(--ms-button-secondary-shadow);
+  --shadow-ms-button-secondary-hover: var(--ms-button-secondary-shadow-hover);
+  --shadow-ms-button-secondary-active: var(--ms-button-secondary-shadow-active);
+
+  /* ── Escala de tamanhos ───────────────────────────────────
+     Esta é a escala que faz a UI parecer Miora — não o desenho da
+     letra. Adotada inteira, mantendo DM Sans como família. */
+  --text-ms-xs: var(--ms-text-xs);          /* 10px */
+  --text-ms-sm: var(--ms-text-sm);          /* 11px */
+  --text-ms-base: var(--ms-text-base);      /* 12px */
+  --text-ms-md: var(--ms-text-md);          /* 13px */
+  --text-ms-lg: var(--ms-text-lg);          /* 14px */
+  --text-ms-xl: var(--ms-text-xl);          /* 16px */
+  --text-ms-2xl: var(--ms-text-2xl);        /* 20px */
+  --text-ms-3xl: var(--ms-text-3xl);        /* 24px */
+
+  --leading-ms-tight: var(--ms-leading-tight);
+  --leading-ms-normal: var(--ms-leading-normal);
+  --leading-ms-relaxed: var(--ms-leading-relaxed);
+
+  /* ── Famílias ─────────────────────────────────────────────── */
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-metric);
+}

@@ -7,15 +7,14 @@ import { useWorkflowStore, Space } from "@/lib/store";
 import { makeUGCTemplate, makeTrocaPessoaTemplate, TROCA_PESSOA_TEMPLATE_NAME, makeFitnessTemplate, FITNESS_TEMPLATE_NAME, makeBelezaTemplate, BELEZA_TEMPLATE_NAME, makeUnboxingTemplate, UNBOXING_TEMPLATE_NAME, makeDepoimentoTemplate, DEPOIMENTO_TEMPLATE_NAME, makeComparacaoTemplate, COMPARACAO_TEMPLATE_NAME, makeLiveTemplate, LIVE_TEMPLATE_NAME } from "@/lib/templates";
 import { timeAgo } from "@/lib/useSpaceSync";
 import { WorkflowHero } from "@/components/WorkflowHero";
-import DotCanvasBackground from "@/components/ui/DotCanvasBackground";
 
 // ── CSS ───────────────────────────────────────────────────────────────────────
 
 const CSS = `
   .wsd-card {
     position: relative;
-    background: #0F0F1A;
-    border: 1px solid rgba(255,255,255,0.06);
+    background: var(--app-v2-bg-page);
+    border: 1px solid rgba(0,0,0,0.06);
     border-radius: 18px;
     overflow: hidden;
     cursor: pointer;
@@ -25,9 +24,9 @@ const CSS = `
   }
   .wsd-card:hover {
     transform: translateY(-4px);
-    border-color: rgba(255,255,255,0.13);
+    border-color: rgba(0,0,0,0.13);
     box-shadow:
-      0 0 0 1px rgba(134, 140, 255,0.12),
+      0 0 0 1px rgba(67,24,255,0.12),
       0 16px 48px rgba(0,0,0,0.7),
       0 4px 12px rgba(0,0,0,0.4);
   }
@@ -45,14 +44,14 @@ const CSS = `
     width: 30px; height: 30px; border-radius: 8px;
     display: grid; place-items: center;
     background: rgba(10,12,18,0.82);
-    color: rgba(255,255,255,0.7);
-    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(0,0,0,0.7);
+    border: 1px solid rgba(0,0,0,0.1);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     cursor: pointer;
     transition: all 130ms ease;
   }
-  .wsd-act:hover { color: white; border-color: rgba(255,255,255,0.22); background: rgba(30,34,44,0.95); }
+  .wsd-act:hover { color: #fff; border-color: rgba(0,0,0,0.22); background: rgba(30,34,44,0.95); }
 
   .wsd-thumbs {
     position: relative;
@@ -82,7 +81,7 @@ const CSS = `
   .wsd-foot {
     padding: 14px 16px 16px;
     display: flex; flex-direction: column; gap: 10px;
-    border-top: 1px solid rgba(255,255,255,0.05);
+    border-top: 1px solid rgba(0,0,0,0.05);
     background: linear-gradient(180deg, rgba(12,14,20,0.5) 0%, rgba(8,10,16,0.9) 100%);
   }
   .wsd-foot-row {
@@ -91,8 +90,8 @@ const CSS = `
 
   .wsd-new {
     position: relative;
-    background: #0F0F1A;
-    border: 1px dashed rgba(255,255,255,0.12);
+    background: var(--app-v2-bg-page);
+    border: 1px dashed rgba(0,0,0,0.12);
     border-radius: 18px;
     overflow: hidden;
     cursor: pointer;
@@ -103,15 +102,15 @@ const CSS = `
                 background 240ms ease;
   }
   .wsd-new:hover {
-    border-color: rgba(134, 140, 255,0.35);
+    border-color: rgba(67,24,255,0.35);
     background: #0e1219;
     box-shadow:
-      0 0 0 1px rgba(134, 140, 255,0.12),
+      0 0 0 1px rgba(67,24,255,0.12),
       0 16px 48px rgba(0,0,0,0.6);
     transform: translateY(-4px);
   }
   .wsd-new:hover .wsd-plus-orb {
-    box-shadow: 0 0 32px rgba(134, 140, 255,0.4), 0 0 0 1px rgba(255,255,255,0.15) inset;
+    box-shadow: 0 0 32px rgba(67,24,255,0.4), 0 0 0 1px rgba(0,0,0,0.15) inset;
   }
   .wsd-new-art {
     flex: 1; aspect-ratio: 3/2;
@@ -121,8 +120,8 @@ const CSS = `
   .wsd-new-art::before {
     content:""; position:absolute; inset: 0;
     background-image:
-      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px);
     background-size: 20px 20px;
     mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 0%, transparent 100%);
     -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 0%, transparent 100%);
@@ -130,10 +129,10 @@ const CSS = `
   .wsd-plus-orb {
     position: relative; z-index: 1;
     width: 64px; height: 64px; border-radius: 50%;
-    background: linear-gradient(135deg, #6B5FE0 0%, #868CFF 100%);
+    background: var(--brand-gradient);
     display: grid; place-items: center;
-    color: white;
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.15) inset;
+    color: #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.15) inset;
     transition: box-shadow 240ms ease;
   }
 
@@ -141,8 +140,8 @@ const CSS = `
     appearance: none; border: 0; cursor: pointer;
     display: inline-flex; align-items: center; gap: 8px;
     padding: 9px 16px;
-    background: linear-gradient(135deg, #6B5FE0 0%, #868CFF 100%);
-    color: white; font-size: 12px; font-weight: 600; border-radius: 10px;
+    background: var(--brand-gradient);
+    color: #fff; font-size: 12px; font-weight: 600; border-radius: 10px;
     transition: filter 140ms ease, transform 140ms ease;
     white-space: nowrap; font-family: inherit;
     letter-spacing: 0.01em;
@@ -153,16 +152,16 @@ const CSS = `
     appearance: none; cursor: pointer;
     display: inline-flex; align-items: center; gap: 8px;
     padding: 9px 16px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.12);
-    color: rgba(255,255,255,0.75); font-size: 12px; font-weight: 600; border-radius: 10px;
+    background: rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.12);
+    color: rgba(0,0,0,0.75); font-size: 12px; font-weight: 600; border-radius: 10px;
     transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, color 140ms ease;
     white-space: nowrap; font-family: inherit; letter-spacing: 0.01em;
   }
   .wsd-import-btn:hover:not(:disabled) {
-    background: rgba(255,255,255,0.08);
-    border-color: rgba(255,255,255,0.22);
-    color: #fff;
+    background: rgba(0,0,0,0.08);
+    border-color: rgba(0,0,0,0.22);
+    color: var(--app-v2-text-primary);
     transform: translateY(-1px);
   }
   .wsd-import-btn:disabled { opacity: 0.5; cursor: default; }
@@ -171,8 +170,8 @@ const CSS = `
 
   .wsd-tmpl {
     position: relative;
-    background: #0F0F1A;
-    border: 1px dashed rgba(134, 140, 255,0.3);
+    background: var(--app-v2-bg-page);
+    border: 1px dashed rgba(67,24,255,0.3);
     border-radius: 18px;
     overflow: hidden;
     cursor: pointer;
@@ -183,15 +182,15 @@ const CSS = `
                 background 240ms ease;
   }
   .wsd-tmpl:hover {
-    border-color: rgba(134, 140, 255,0.55);
+    border-color: rgba(67,24,255,0.55);
     background: #0e1019;
     box-shadow:
-      0 0 0 1px rgba(134, 140, 255,0.15),
+      0 0 0 1px rgba(67,24,255,0.15),
       0 16px 48px rgba(0,0,0,0.6);
     transform: translateY(-4px);
   }
   .wsd-tmpl:hover .wsd-tmpl-orb {
-    box-shadow: 0 0 32px rgba(134, 140, 255,0.45), 0 0 0 1px rgba(255,255,255,0.15) inset;
+    box-shadow: 0 0 32px rgba(67,24,255,0.45), 0 0 0 1px rgba(0,0,0,0.15) inset;
   }
 `;
 
@@ -242,23 +241,23 @@ function TemplateCard({
       </div>
       <div style={{
         padding: "14px 16px 16px",
-        borderTop: "1px solid rgba(134, 140, 255,0.1)",
+        borderTop: "1px solid rgba(67,24,255,0.1)",
         display: "flex", flexDirection: "column", gap: "10px",
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: "15px", fontWeight: 600, color: "#fff", letterSpacing: "-0.015em" }}>
+          <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--app-v2-text-primary)", letterSpacing: "-0.015em" }}>
             {title}
           </div>
           <button
             onClick={onReset}
             title="Reset template"
             style={{
-              appearance: "none", border: "1px solid rgba(134, 140, 255,0.25)", background: "rgba(134, 140, 255,0.08)",
+              appearance: "none", border: "1px solid rgba(67,24,255,0.25)", background: "rgba(67,24,255,0.08)",
               borderRadius: "7px", width: "28px", height: "28px", display: "grid", placeItems: "center",
-              cursor: "pointer", color: "rgba(134, 140, 255,0.7)", transition: "all 140ms ease", flexShrink: 0,
+              cursor: "pointer", color: "var(--brand-violet)", transition: "all 140ms ease", flexShrink: 0,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(134, 140, 255,0.2)"; e.currentTarget.style.color = "#868cff"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(134, 140, 255,0.08)"; e.currentTarget.style.color = "rgba(134, 140, 255,0.7)"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(67,24,255,0.18)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(67,24,255,0.08)"; }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -269,7 +268,7 @@ function TemplateCard({
         <div style={{
           display: "flex", alignItems: "center", gap: "6px",
           fontSize: "10px", fontWeight: 500, letterSpacing: "0.04em",
-          color: "rgba(134, 140, 255,0.6)", textTransform: "uppercase",
+          color: "var(--brand-ink)", textTransform: "uppercase",
         }}>
           <span>{subtitle}</span>
         </div>
@@ -405,15 +404,15 @@ function CardMenu({ spaceId, onOpen, onStartRename, onDelete, onClose }: CardMen
       style={{
         display: "flex", alignItems: "center", gap: "10px", width: "100%",
         padding: "8px 12px", background: "transparent", border: "none",
-        color: disabled ? "rgba(255,255,255,0.2)" : danger ? "#ff8a8a" : "rgba(255,255,255,0.85)",
+        color: disabled ? "rgba(0,0,0,0.2)" : danger ? "#ff8a8a" : "rgba(0,0,0,0.85)",
         fontSize: "13px", fontWeight: 450, cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.5 : 1, fontFamily: "inherit", textAlign: "left",
         transition: "background 120ms",
       }}
-      onMouseEnter={(e) => { if (!disabled) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; }}
+      onMouseEnter={(e) => { if (!disabled) (e.currentTarget as HTMLElement).style.background = "rgba(0,0,0,0.06)"; }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
     >
-      <span style={{ color: disabled ? "rgba(255,255,255,0.2)" : danger ? "#ff8a8a" : "rgba(255,255,255,0.4)", flexShrink: 0 }}>
+      <span style={{ color: disabled ? "rgba(0,0,0,0.2)" : danger ? "#ff8a8a" : "rgba(0,0,0,0.4)", flexShrink: 0 }}>
         {icon}
       </span>
       {label}
@@ -429,8 +428,8 @@ function CardMenu({ spaceId, onOpen, onStartRename, onDelete, onClose }: CardMen
         top: "calc(100% + 6px)",
         right: 0,
         width: "186px",
-        background: "#171728",
-        border: "1px solid rgba(255,255,255,0.1)",
+        background: "var(--app-v2-bg-surface)",
+        border: "1px solid rgba(0,0,0,0.1)",
         borderRadius: "12px",
         boxShadow: "0 16px 48px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.4)",
         overflow: "hidden",
@@ -438,10 +437,10 @@ function CardMenu({ spaceId, onOpen, onStartRename, onDelete, onClose }: CardMen
       }}
     >
       {item("Open", <OpenIcon />, () => { onClose(); onOpen(); })}
-      <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", margin: "0 10px" }} />
+      <div style={{ height: "1px", background: "rgba(0,0,0,0.07)", margin: "0 10px" }} />
       {item("Rename", <RenameIcon />, () => { onClose(); onStartRename(); })}
       {item("Duplicate", <DuplicateIcon />, () => { duplicateSpace(spaceId); onClose(); })}
-      <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", margin: "0 10px" }} />
+      <div style={{ height: "1px", background: "rgba(0,0,0,0.07)", margin: "0 10px" }} />
       {item("Delete", <DeleteIcon />, () => { onClose(); onDelete(); }, true, spaces.length <= 1)}
     </div>
   );
@@ -479,16 +478,16 @@ function DeleteConfirmModal({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#171728",
-          border: "1px solid rgba(255,255,255,0.1)",
+          background: "var(--app-v2-bg-surface)",
+          border: "1px solid rgba(0,0,0,0.1)",
           borderRadius: "16px", padding: "24px", width: "320px",
           boxShadow: "0 24px 64px rgba(0,0,0,0.8)",
         }}
       >
-        <p style={{ fontSize: "15px", fontWeight: 600, color: "#fff", margin: "0 0 8px" }}>
+        <p style={{ fontSize: "15px", fontWeight: 600, color: "var(--app-v2-text-primary)", margin: "0 0 8px" }}>
           Delete workflow?
         </p>
-        <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.45)", margin: "0 0 24px", lineHeight: 1.5 }}>
+        <p style={{ fontSize: "13px", color: "rgba(0,0,0,0.45)", margin: "0 0 24px", lineHeight: 1.5 }}>
           &ldquo;{spaceName}&rdquo; will be permanently deleted. This cannot be undone.
         </p>
         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
@@ -496,8 +495,8 @@ function DeleteConfirmModal({
             onClick={onCancel}
             style={{
               padding: "8px 16px", borderRadius: "8px",
-              border: "1px solid rgba(255,255,255,0.15)", background: "transparent",
-              color: "rgba(255,255,255,0.6)", fontSize: "13px", fontWeight: 500,
+              border: "1px solid rgba(0,0,0,0.15)", background: "transparent",
+              color: "rgba(0,0,0,0.6)", fontSize: "13px", fontWeight: 500,
               cursor: "pointer", fontFamily: "inherit",
             }}
           >
@@ -550,6 +549,9 @@ function SpaceCard({ space, onOpen }: { space: Space; onOpen: () => void }) {
   return (
     <article
       className="wsd-card"
+      tabIndex={0}
+      aria-label={`Abrir workflow ${space.name}`}
+      onKeyDown={event => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); if (!renaming && !menuOpen) onOpen(); } }}
       onClick={() => { if (!renaming && !menuOpen) onOpen(); }}
     >
       {/* Hover action buttons */}
@@ -596,7 +598,7 @@ function SpaceCard({ space, onOpen }: { space: Space; onOpen: () => void }) {
               autoFocus
               style={{
                 flex: 1, background: "transparent", border: "none",
-                color: "#fff", fontSize: "15px", fontWeight: 600,
+                color: "var(--app-v2-text-primary)", fontSize: "15px", fontWeight: 600,
                 outline: "none", padding: 0, fontFamily: "inherit",
                 letterSpacing: "-0.015em",
               }}
@@ -604,7 +606,7 @@ function SpaceCard({ space, onOpen }: { space: Space; onOpen: () => void }) {
           ) : (
             <div style={{
               flex: 1, minWidth: 0,
-              fontSize: "15px", fontWeight: 600, color: "#fff",
+              fontSize: "15px", fontWeight: 600, color: "var(--app-v2-text-primary)",
               letterSpacing: "-0.015em",
               whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
             }}>
@@ -618,7 +620,7 @@ function SpaceCard({ space, onOpen }: { space: Space; onOpen: () => void }) {
           <span style={{
             fontFamily: "var(--font-metric)",
             fontSize: "10px", fontWeight: 500,
-            color: "rgba(255,255,255,0.28)",
+            color: "rgba(0,0,0,0.28)",
             letterSpacing: "0.05em", textTransform: "uppercase",
           }}>
             {timeAgo(new Date(ts))}
@@ -658,16 +660,16 @@ function CreateCard({ onCreate }: { onCreate: () => void }) {
       </div>
       <div style={{
         padding: "14px 16px 16px",
-        borderTop: "1px solid rgba(255,255,255,0.05)",
+        borderTop: "1px solid rgba(0,0,0,0.05)",
         display: "flex", flexDirection: "column", gap: "10px",
       }}>
-        <div style={{ fontSize: "15px", fontWeight: 600, color: "#fff", letterSpacing: "-0.015em" }}>
+        <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--app-v2-text-primary)", letterSpacing: "-0.015em" }}>
           Novo workflow
         </div>
         <div style={{
           display: "flex", alignItems: "center", gap: "6px",
           fontSize: "10px", fontWeight: 500, letterSpacing: "0.04em",
-          color: "rgba(255,255,255,0.25)", textTransform: "uppercase",
+          color: "rgba(0,0,0,0.25)", textTransform: "uppercase",
         }}>
           <span>Comece do zero</span>
         </div>
@@ -774,15 +776,15 @@ export default function WorkflowDashboard() {
 
   return (
     <div
+      className="miora-workflows"
       style={{
         flex: 1,
         minHeight: 0,
         overflowY: "auto",
         position: "relative",
-        background: "#0F0F1A",
+        background: "var(--app-v2-bg-page)",
       }}
     >
-      <DotCanvasBackground />
       <style>{CSS}</style>
 
       <div style={{ paddingBottom: "80px" }}>
@@ -799,7 +801,7 @@ export default function WorkflowDashboard() {
             <h1 style={{
               margin: 0,
               fontSize: "28px", fontWeight: 600, lineHeight: 1.1, letterSpacing: "-0.02em",
-              color: "#ffffff",
+              color: "var(--app-v2-text-primary)",
             }}>
               Meus workflows
             </h1>
@@ -807,10 +809,10 @@ export default function WorkflowDashboard() {
               marginTop: "10px",
               display: "inline-flex", alignItems: "center", gap: "8px",
               fontFamily: "var(--font-metric)",
-              fontSize: "11px", fontWeight: 500, color: "rgba(255,255,255,0.4)",
+              fontSize: "11px", fontWeight: 500, color: "rgba(0,0,0,0.4)",
               letterSpacing: "0.06em", textTransform: "uppercase",
             }}>
-              <b style={{ color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{sorted.length}</b>
+              <b style={{ color: "rgba(0,0,0,0.7)", fontWeight: 500 }}>{sorted.length}</b>
               <span>workspace{sorted.length !== 1 ? "s" : ""}</span>
             </div>
           </div>
@@ -839,7 +841,7 @@ export default function WorkflowDashboard() {
         </section>
 
         {/* ── Grid ── */}
-        <section style={{
+        <section className="miora-workflow-grid" style={{
           display: "grid",
           gridTemplateColumns: "repeat(4, 1fr)",
           gap: "18px",

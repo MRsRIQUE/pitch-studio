@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="280" viewBox="0 0 750 280" role="img" aria-label="Workflow UGC">
+  <defs>
+    <linearGradient id="ugc-field" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B0A18"/>
+      <stop offset="1" stop-color="#241C4D"/>
+    </linearGradient>
+    <radialGradient id="ugc-glow" cx=".74" cy=".58" r=".52">
+      <stop offset="0" stop-color="#4318FF" stop-opacity=".78"/>
+      <stop offset="1" stop-color="#4318FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ugc-wire" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8A6DFF" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#8A6DFF" stop-opacity=".85"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="750" height="280" fill="url(#ugc-field)"/>
+  <rect width="750" height="280" fill="url(#ugc-glow)"/>
+
+  <!-- Quatro trilhas: a mesma forma que o makeUGCTemplate monta no canvas -->
+  <g fill="none" stroke="url(#ugc-wire)" stroke-width="2">
+    <path d="M470 76h58a14 14 0 0 1 14 14v18a14 14 0 0 0 14 14h58"/>
+    <path d="M470 128h58a14 14 0 0 1 14 14v0a14 14 0 0 0 14 14h58"/>
+    <path d="M470 180h58a14 14 0 0 1 14-14v-18a14 14 0 0 1 14-14h58"/>
+    <path d="M470 232h58a14 14 0 0 1 14-14v-70a14 14 0 0 1 14-14h58"/>
+  </g>
+  <g fill="#8A6DFF">
+    <rect x="440" y="68" width="30" height="16" rx="5" opacity=".55"/>
+    <rect x="440" y="120" width="30" height="16" rx="5" opacity=".55"/>
+    <rect x="440" y="172" width="30" height="16" rx="5" opacity=".55"/>
+    <rect x="440" y="224" width="30" height="16" rx="5" opacity=".55"/>
+    <rect x="614" y="112" width="52" height="32" rx="9"/>
+  </g>
+
+  <g font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+    <text x="46" y="86" font-size="15" font-weight="700" fill="#8A6DFF" letter-spacing="2.4">TEMPLATE PRONTO</text>
+    <text x="46" y="150" font-size="52" font-weight="800" font-style="italic" fill="#FFFFFF" letter-spacing="-1.6">Workflow UGC</text>
+    <text x="46" y="188" font-size="19" font-weight="600" fill="#CFC4FF">Quatro roteiros, quatro vídeos, um clique.</text>
+    <text x="46" y="232" font-size="14" font-weight="700" fill="#8A6DFF" letter-spacing=".4">Abrir o template &#8594;</text>
+  </g>
+</svg>

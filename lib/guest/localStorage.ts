@@ -12,6 +12,16 @@ function hashBuffer(buf: Buffer): string {
 }
 
 function ext(contentType: string): string {
+  if (contentType.includes("model/gltf-binary")) return "glb";
+  if (contentType.includes("audio/webm")) return "weba";
+  if (contentType.includes("audio/opus")) return "opus";
+  if (contentType.includes("audio/mpeg")) return "mp3";
+  if (contentType.includes("audio/wav") || contentType.includes("audio/x-wav")) return "wav";
+  if (contentType.includes("audio/ogg")) return "ogg";
+  if (contentType.includes("audio/mp4")) return "m4a";
+  if (contentType.includes("audio/flac")) return "flac";
+  if (contentType.includes("audio/aac")) return "aac";
+  if (contentType.startsWith("audio/")) return "bin";
   if (contentType.includes("mp4"))  return "mp4";
   if (contentType.includes("webm")) return "webm";
   if (contentType.includes("png"))  return "png";
@@ -55,9 +65,22 @@ function fetchToBuffer(url: string, maxRedirects = 5): Promise<{ buf: Buffer; co
   });
 }
 
+/** Provider result CDNs (kie.ai's `tempfile.aiquickdraw.com`, etc.) occasionally
+ *  drop a connection mid-transfer. A caller that gives up on the first failure
+ *  falls back to that source URL — which is often a genuinely temporary link —
+ *  so retry a couple of times before surfacing the error. */
 export async function mirrorToStorage(url: string, folder: string): Promise<string> {
-  const { buf, contentType } = await fetchToBuffer(url);
-  return uploadBuffer(buf, contentType, folder);
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const { buf, contentType } = await fetchToBuffer(url);
+      return await uploadBuffer(buf, contentType, folder);
+    } catch (e) {
+      lastErr = e;
+      if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * attempt));
+    }
+  }
+  throw lastErr;
 }
 
 export async function uploadDataUrl(dataUrl: string, folder: string): Promise<string> {

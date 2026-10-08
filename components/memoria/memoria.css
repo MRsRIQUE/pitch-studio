@@ -1,0 +1,677 @@
+/* ============================================================
+   MEMÓRIA — a única tela escura do app
+
+   Réplica do bloco 08 (`miora/sections/08-memory-graph`). Todo
+   valor daqui saiu do `<style>` do `preview.html` ou da tabela de
+   geometria do `INFO.md`, não do `className` — no bundle da
+   referência o modificador de opacidade sobre token com alfa some
+   sem erro, e ler a classe erra ~18%.
+
+   A referência monta o escuro empilhando DUAS classes no mesmo
+   `<div>`: `.dark` troca as escalas cruas e `.mio-memory-dark`
+   re-declara a camada semântica inteira em cima delas. Sem a
+   segunda nada mudaria, porque as semânticas de `:root` já tinham
+   resolvido as escalas claras. Copiamos essa arquitetura com um
+   nome nosso: `.ms-memoria-dark`.
+   ============================================================ */
+
+/* ── 1. Escalas cruas do escuro ─────────────────────────────
+   Cópia literal do `.dark` da referência para cinza e alfa —
+   cinza e alfa NÃO são licença. A rampa de marca é a única
+   substituída: onde a referência tem a rampa laranja escura, o
+   nosso acento é o Lilás, porque o Violeta #4318FF não alcança
+   contraste sobre a superfície noturna. */
+.ms-memoria-dark {
+  --ms-gray-1: 0 0% 6.66%;   --ms-gray-2: 0 0% 9.8%;    --ms-gray-3: 0 0% 13.34%;
+  --ms-gray-4: 0 0% 16.47%;  --ms-gray-5: 0 0% 19.22%;  --ms-gray-6: 0 0% 22.75%;
+  --ms-gray-7: 0 0% 28.24%;  --ms-gray-8: 0 0% 37.65%;  --ms-gray-9: 0 0% 43.13%;
+  --ms-gray-10: 0 0% 48.23%; --ms-gray-11: 0 0% 70.58%; --ms-gray-12: 0 0% 93.33%;
+
+  --ms-grayA-1-hex: #00000000; --ms-grayA-2-hex: #ffffff09; --ms-grayA-3-hex: #ffffff12;
+  --ms-grayA-4-hex: #ffffff1b; --ms-grayA-5-hex: #ffffff22; --ms-grayA-6-hex: #ffffff2c;
+  --ms-grayA-7-hex: #ffffff3b; --ms-grayA-8-hex: #ffffff55; --ms-grayA-9-hex: #ffffff64;
+  --ms-grayA-10-hex: #ffffff72; --ms-grayA-11-hex: #ffffffaf; --ms-grayA-12-hex: #ffffffed;
+
+  /* ── 2. Camada semântica, re-declarada ────────────────────
+     Mesmas fórmulas do `:root` da referência. É a re-declaração
+     que força o recálculo em cima das escalas acima. */
+  --ms-bg: hsl(var(--ms-gray-1));
+  --ms-bg-component: hsl(var(--ms-gray-3));
+  --ms-bg-component-hover: hsl(var(--ms-gray-4));
+  --ms-bg-component-active: hsl(var(--ms-gray-5));
+  --ms-bg-hover: var(--ms-grayA-3-hex);
+  --ms-bg-active: var(--ms-grayA-4-hex);
+  --ms-bg-overlay: var(--ms-blackA-9-hex);
+  --ms-solid: hsl(var(--ms-gray-12));
+  --ms-border-subtle: hsl(var(--ms-gray-6));
+  --ms-border: hsl(var(--ms-gray-7));
+  --ms-border-strong: hsl(var(--ms-gray-8));
+  --ms-text: var(--ms-grayA-12-hex);
+  --ms-text-secondary: var(--ms-grayA-11-hex);
+  --ms-text-tertiary: var(--ms-grayA-10-hex);
+  --ms-icon: var(--ms-grayA-12-hex);
+  --ms-icon-secondary: var(--ms-grayA-11-hex);
+
+  /* ── 3. As licenças ───────────────────────────────────────
+     Fundo: o mapa e a frente fixam a Noite da Pitch no lugar do
+     `hsl(0 0% 9.8%)` = #191919 da referência. É o único cinza que
+     não copiamos, e é decisão de marca, não de gosto. */
+  --ms-bg-subtle: var(--surface-night);
+
+  /* Marca no escuro. A referência resolve `--ms-ring` em
+     `hsl(--ms-brand-8)` = #D3813F e `--ms-icon-brand` em
+     `hsl(--ms-brand-11)`, os dois laranjas. Aqui os dois papéis
+     são o Lilás, que é exatamente o que `app/tokens/pitch.css`
+     define para superfície escura. */
+  --ms-ring: var(--brand-lilac);
+  --ms-icon-brand: var(--brand-lilac-soft);
+  /* Na referência estes dois são os degraus 3 e 4 da rampa LARANJA
+     ESCURA (L 11,88% e 21,34%) — tinta de marca rebaixada até virar
+     fundo. A nossa rampa `--ms-brand-*` é de tema claro, então aqui
+     eles são o Violeta rebaixado sobre a Noite, nas mesmas
+     luminâncias. É o que faz o contador de anexos ter contraste com
+     o branco, como lá. */
+  --ms-bg-brand: color-mix(in srgb, var(--brand-violet) 10%, var(--surface-night));
+  --ms-bg-brand-hover: color-mix(in srgb, var(--brand-violet) 28%, var(--surface-night));
+  --ms-solid-brand: var(--brand-violet);
+  --ms-text-on-brand: var(--ms-whiteA-12-hex);
+  /* O segmentado ativo é tinta cheia com texto branco: aí o Violeta
+     é que serve (7,46:1 com branco), não o Lilás (2,91:1). */
+  --ms-tabs-trigger-active-bg: color-mix(in srgb, var(--brand-violet) 90%, transparent);
+
+  /* ── 4. Literais sem token na nossa camada ────────────────
+     Os três valores abaixo vêm da referência e não têm token
+     equivalente hoje. Sinalizados ao Maestro.
+
+     `--mem-sombra-nucleo`: a sombra literal do nó central. A
+     camada só publica `--ms-shadow-*` de tema claro (preto a
+     4–12%), que sobre superfície noturna desaparece. */
+  --mem-sombra-nucleo:
+    rgb(0 0 0 / .5) 0 24px 24px -12px,
+    rgb(0 0 0 / .24) 0 2px 4px 0,
+    rgb(0 0 0 / .24) 0 8px 8px -4px;
+  /* Os dois brilhos internos do mesmo nó são `.08` e `.16` de
+     branco na referência; a rampa alfa do escuro cobre com 7% e
+     17% — a diferença é de um ponto percentual e evita hex cravado. */
+  --mem-brilho-interno: var(--ms-grayA-3-hex);
+  --mem-brilho-topo: var(--ms-grayA-6-hex);
+  /* `text-green-400` do interruptor: hsl(150 72% 58%), literal. */
+  --mem-verde-ligado: hsl(150 72% 58%);
+  /* `ge` do chunk do núcleo: near-white fora da rampa de cinzas. */
+  --mem-chip-branco: #f7f8fa;
+  /* O miolo do nó central é preto puro: o canvas repinta os 128×128
+     com `fillRect` antes de cada quadro. Não é `--ms-bg` (#111111),
+     e a rampa de cinzas não publica o preto absoluto. */
+  --mem-chip-fundo: #000;
+  /* `--mio-shadow-dialog-tips` da referência, o único degrau de
+     elevação que aparece sobre superfície noturna: `--ms-shadow-lg`
+     é preto a 12% e some no escuro (conferido no navegador — o
+     cartão de criação ficava invisível). */
+  --mem-sombra-dialogo: 0 12px 32px rgb(0 0 0 / .45), 0 2px 8px rgb(0 0 0 / .35);
+
+  /* ── 5. Canvas ────────────────────────────────────────────
+     Onde a referência anda de #ff7908 a #ffb508 (marca → marca
+     clareada), nós andamos de Violeta a Lilás. Mesma relação,
+     nossa cor. Lidos pelo JS via getComputedStyle. */
+  --mem-chip-de: var(--brand-violet);
+  --mem-chip-para: var(--brand-lilac);
+  --mem-rastro-halo: var(--brand-violet);
+  --mem-rastro-nucleo: var(--brand-lilac-soft);
+
+  /* ── 6. Camadas ───────────────────────────────────────────
+     `--z-dialog` e `--z-toolbar` da referência. */
+  --mem-z-dialog: 2000;
+  --mem-z-toolbar: 1800;
+
+  /* Raio superelíptico: a referência dobra o raio por 1.25 e
+     desenha superelipse de expoente 1.45 quando o navegador
+     suporta. Escopado aqui porque `app/tokens/` é do Maestro. */
+  --mem-radius-scale: 1;
+  --mem-superellipse: 1;
+}
+
+@supports (corner-shape: superellipse(1)) {
+  .ms-memoria-dark { --mem-radius-scale: 1.25; --mem-superellipse: 1.45; }
+}
+
+/* ── Raios da referência ────────────────────────────────────
+   `rounded-ms-xl` no bundle dela é `calc(--ms-radius-xl * --radius-scale)`
+   mais `corner-shape`. O utilitário do nosso tema entrega só os 16px
+   crus, então as três variantes usadas neste bloco moram aqui. */
+.mem-r-md {
+  border-radius: calc(var(--ms-radius-md) * var(--mem-radius-scale));
+  corner-shape: superellipse(var(--mem-superellipse));
+}
+.mem-r-lg {
+  border-radius: calc(var(--ms-radius-lg) * var(--mem-radius-scale));
+  corner-shape: superellipse(var(--mem-superellipse));
+}
+.mem-r-xl {
+  border-radius: calc(var(--ms-radius-xl) * var(--mem-radius-scale));
+  corner-shape: superellipse(var(--mem-superellipse));
+}
+
+/* ── O overlay ──────────────────────────────────────────────
+   `fixed inset-0 z-dialog`: cobre inclusive a barra lateral. A
+   Memória não é uma página dentro do chrome claro; ela apaga o
+   chrome, como na referência. */
+.mem-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--mem-z-dialog);
+  background: var(--ms-bg-subtle);
+  color: var(--ms-text);
+}
+
+/* ── Botões do design system ────────────────────────────────
+   A transição literal das classes longas do DOM da referência. */
+.mem-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-size: var(--ms-text-sm);
+  line-height: var(--ms-leading-normal);
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background-color 150ms cubic-bezier(.4, 0, .2, 1),
+    box-shadow 150ms cubic-bezier(.4, 0, .2, 1),
+    opacity 150ms cubic-bezier(.4, 0, .2, 1),
+    transform 150ms cubic-bezier(0, 0, .2, 1);
+}
+.mem-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ms-ring); }
+.mem-btn:active { transform: scale(.97); }
+.mem-btn:disabled { pointer-events: none; opacity: .5; }
+.mem-btn svg { pointer-events: none; flex-shrink: 0; }
+
+/* A descoberta do bloco: `bg-ms-bg-overlay/80` está no DOM da
+   referência e NÃO existe no CSS gerado dela. Estes controles não
+   têm fundo nenhum — o vidro é só `backdrop-filter` sobre a malha
+   de pontos, mais a borda e a sombra. Copiar o `className` aqui
+   custava 18% de divergência no cabeçalho. */
+.mem-btn-flutuante {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--ms-border);
+  color: var(--ms-icon-secondary);
+  box-shadow: var(--ms-shadow-md);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.mem-btn-flutuante:hover { color: var(--ms-icon); box-shadow: var(--ms-button-secondary-shadow-hover); }
+.mem-btn-flutuante:active {
+  background: var(--ms-button-secondary-bg-active);
+  box-shadow: var(--ms-button-secondary-shadow-active);
+  transform: scale(.97);
+}
+.mem-btn-flutuante[aria-pressed="true"] { color: var(--ms-icon); border-color: var(--ms-border-strong); }
+
+.mem-btn-fantasma {
+  width: 24px;
+  height: 24px;
+  color: var(--ms-icon-secondary);
+}
+.mem-btn-fantasma:hover { background: var(--ms-bg-hover); color: var(--ms-icon); }
+.mem-btn-fantasma:active { background: var(--ms-bg-active); }
+
+.mem-btn-interruptor {
+  height: 36px;
+  padding: 0 20px;
+  gap: 8px;
+  font-size: var(--ms-text-base);
+  line-height: var(--ms-leading-normal);
+  border: 1px solid var(--ms-border-strong);
+  color: var(--ms-text);
+  box-shadow: var(--ms-shadow-md);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.mem-btn-interruptor:active { background: var(--ms-bg-active); transform: scale(.97); }
+.mem-btn-interruptor[data-desligada="1"] { color: var(--ms-text-secondary); }
+.mem-power-ligada { color: var(--mem-verde-ligado); }
+.mem-power-desligada { color: var(--ms-text-tertiary); }
+
+/* ── Pílula "Memória pessoal" ───────────────────────────────
+   height 36, pl 10 / pr 6, gap 6, texto 12px/500. */
+.mem-pilula {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  gap: 6px;
+  border: 1px solid var(--ms-border);
+  padding-left: 10px;
+  padding-right: 6px;
+  box-shadow: var(--ms-shadow-md);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.mem-pilula > span {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ms-text);
+}
+
+/* ── Segmentado de escopo ───────────────────────────────────
+   Caixa de 36px em top:16, centrada; pílula ativa de 28px. */
+.mem-escopo {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--mem-z-toolbar);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 36px;
+  padding: 4px;
+  border: 1px solid var(--ms-border);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.mem-escopo button {
+  height: 28px;
+  padding: 0 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 9999px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  color: var(--ms-text-secondary);
+  transition:
+    background-color .18s cubic-bezier(.4, 0, .2, 1),
+    color .18s cubic-bezier(.4, 0, .2, 1);
+}
+.mem-escopo button:hover:not(:disabled) { color: var(--ms-text); }
+.mem-escopo button:disabled { cursor: not-allowed; opacity: .5; }
+.mem-escopo button[aria-selected="true"] {
+  background: var(--ms-tabs-trigger-active-bg);
+  color: var(--ms-text-on-brand);
+}
+
+/* ── Zoom ───────────────────────────────────────────────────
+   Coluna de três 36×36 em bottom:16 left:16, com `overflow:hidden`
+   e divisores nos dois primeiros. */
+.mem-zoom {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: var(--mem-z-toolbar);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--ms-border);
+  box-shadow: var(--ms-shadow-md);
+}
+.mem-zoom button {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+  color: var(--ms-icon-secondary);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.mem-zoom button.mem-divisor { border-bottom: 1px solid var(--ms-border-subtle); }
+.mem-zoom button:hover { background: var(--ms-bg-component-hover); color: var(--ms-icon); }
+.mem-zoom button:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--ms-ring); }
+
+/* ── Grafo ──────────────────────────────────────────────────
+   As duas únicas regras que a referência escreve por cima do
+   xyflow. A de seleção é laranja lá; aqui é a nossa marca. */
+.mem-overlay .react-flow {
+  --xy-selection-background-color: color-mix(in srgb, var(--brand-violet) 12%, transparent);
+  --xy-selection-border: 1px solid var(--brand-violet);
+}
+.mem-overlay .react-flow__node {
+  content-visibility: auto;
+  cursor: pointer !important;
+}
+/* No app quem move os nós entre um layout e o outro é o d3-force
+   rodando 200 ticks; a transição de transform faz o mesmo papel. */
+.mem-overlay .react-flow__node { transition: transform .42s cubic-bezier(.4, 0, .2, 1); }
+.mem-overlay .react-flow__nodes.mem-instantaneo .react-flow__node { transition: none; }
+.mem-overlay .react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+  min-width: 1px;
+  min-height: 1px;
+  width: 1px;
+  height: 1px;
+  border: none;
+  background: transparent;
+}
+
+/* ── Nó central ─────────────────────────────────────────────
+   128×128, `--ms-bg` de fundo, 1px de `--ms-ring` e a pilha de
+   cinco sombras da referência (três pretas + dois brilhos internos). */
+.mem-nucleo {
+  position: relative;
+  overflow: hidden;
+  width: 128px;
+  height: 128px;
+  background: var(--ms-bg);
+  border: 1px solid var(--ms-ring);
+  box-shadow:
+    var(--mem-sombra-nucleo),
+    var(--mem-brilho-interno) 0 0 0 1px inset,
+    var(--mem-brilho-topo) 0 .5px 0 0 inset;
+}
+.mem-nucleo canvas { display: block; width: 128px; height: 128px; }
+
+/* ── Satélite ───────────────────────────────────────────────
+   Círculo de 110×110, `gap-1`, rótulo 14/22/500 e contador 14/1. */
+.mem-satelite-grupo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+.mem-satelite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 110px;
+  height: 110px;
+  border-radius: var(--ms-radius-full);
+  background: var(--ms-bg-component);
+  box-shadow: var(--ms-shadow-md);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ms-icon-secondary);
+  transition: background-color 150ms cubic-bezier(.4, 0, .2, 1);
+}
+.mem-satelite:hover { background: var(--ms-bg-component-hover); }
+.mem-satelite:active { transform: scale(.97); }
+.mem-satelite:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ms-ring); }
+.mem-satelite-rotulo {
+  font-size: 14px;
+  line-height: 22px;
+  letter-spacing: .01em;
+  font-weight: 500;
+  color: var(--ms-text);
+}
+.mem-satelite-contador {
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: .01em;
+  color: var(--ms-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* O "+ Adicionar" nasce colapsado e desce no hover do grupo. A
+   referência anima `max-height` de 0 a 40px junto com a opacidade,
+   200ms `ease-out` — e some do DOM com a memória desligada. */
+.mem-adicionar {
+  /* Explícito porque o `max-height: 0` precisa valer para a caixa
+     inteira: em `content-box` os 12px de padding vertical sobrariam e
+     o wrapper do satélite ficaria 16px mais alto que os 114 da
+     referência (110 do círculo + os 4 do `mt-1`). Medido. */
+  box-sizing: border-box;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--ms-text-secondary);
+  box-shadow: var(--ms-shadow-sm);
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--ms-text-sm);
+  line-height: 1;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all .2s cubic-bezier(0, 0, .2, 1);
+}
+.mem-satelite-grupo:hover .mem-adicionar,
+.react-flow__node[data-selecionado="1"] .mem-adicionar { max-height: 40px; opacity: 1; }
+.mem-adicionar:hover { background: var(--ms-bg-component-hover); color: var(--ms-text); }
+.mem-adicionar:focus-visible { outline: none; opacity: 1; max-height: 40px; box-shadow: 0 0 0 2px var(--ms-ring); }
+
+/* ── Âncora ─────────────────────────────────────────────────
+   Onde a referência pendura cada memória salva, penduramos o item
+   real: a pasta, o projeto, a geração, a conversa. Caixa literal
+   do chunk: `rounded-ms-lg px-3 py-2.5 text-center shadow-ms-md`,
+   min 120 / max 400. */
+.mem-ancora {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 200px;
+  height: 60px;
+  padding: 10px 12px;
+  text-align: center;
+  overflow: hidden;
+  box-shadow: var(--ms-shadow-md);
+  background: var(--ms-bg-component);
+  color: var(--ms-text);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border: none;
+  cursor: pointer;
+  animation: mem-ancora-entra .34s cubic-bezier(.4, 0, .2, 1) both;
+}
+.mem-ancora:hover { background: var(--ms-bg-component-hover); }
+.mem-ancora:active { transform: scale(.97); }
+.mem-ancora:focus-visible { outline: none; box-shadow: var(--ms-shadow-md), 0 0 0 2px var(--ms-ring); }
+.react-flow__node[data-selecionado="1"] .mem-ancora {
+  box-shadow: var(--ms-shadow-md), 0 0 0 1px var(--ms-border-strong);
+}
+/* Com imagem anexada o cartão vira uma linha: miniatura à esquerda,
+   texto alinhado a ela. É o `Zn` do chunk — o nó de âncora que
+   carrega um asset em vez de só texto. */
+.mem-ancora-miniatura {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: calc(var(--ms-radius-md) * var(--mem-radius-scale));
+  corner-shape: superellipse(var(--mem-superellipse));
+  background: var(--ms-bg-component-active);
+}
+.mem-ancora-texto {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mem-ancora[data-com-imagem="1"] {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.mem-ancora-detalhe {
+  display: block;
+  font-size: var(--ms-text-sm);
+  line-height: var(--ms-leading-normal);
+  color: var(--ms-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes mem-ancora-entra {
+  0% { opacity: 0; transform: scale(.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ── Cartão de criação ──────────────────────────────────────
+   Portal fixo, como o floating-ui do app: `placement:"bottom"`,
+   `offset 8`, cartão de 280 de largura. */
+.mem-form {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.mem-form-cartao {
+  width: 280px;
+  max-width: 320px;
+  padding: 10px 12px;
+  /* Sem `background`: `bg-ms-bg-overlay/95` está no DOM da referência e
+     NÃO existe no CSS gerado dela. O cartão é só `backdrop-filter`
+     sobre a malha de pontos, mais o anel de 1px e a sombra. */
+  box-shadow: 0 0 0 1px var(--ms-grayA-4-hex), var(--mem-sombra-dialogo);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.mem-form-cartao textarea {
+  width: 100%;
+  resize: none;
+  background: transparent;
+  border: 0;
+  outline: none;
+  margin: 0;
+  padding: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ms-text);
+}
+.mem-form-cartao textarea::placeholder { color: var(--ms-text-tertiary); }
+.mem-form-barra-caixa { display: flex; justify-content: center; }
+.mem-form-barra {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 9999px;
+  padding: 6px 8px;
+  box-shadow: 0 0 0 1px var(--ms-grayA-4-hex), var(--mem-sombra-dialogo);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.mem-form-barra button {
+  position: relative;
+  border-radius: 9999px;
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: var(--ms-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color .15s cubic-bezier(.4, 0, .2, 1),
+    color .15s cubic-bezier(.4, 0, .2, 1);
+}
+.mem-form-barra button:hover { background: var(--ms-bg-hover); color: var(--ms-text); }
+/* 20% de branco na referência; `--ms-grayA-7-hex` (23%) é o degrau
+   mais próximo da rampa alfa do escuro. */
+.mem-form-barra button[data-pode="0"] { color: var(--ms-grayA-7-hex); cursor: not-allowed; }
+.mem-form-barra button[data-pode="0"]:hover { background: transparent; color: var(--ms-grayA-7-hex); }
+.mem-form-barra button[data-pode="1"] { color: var(--ms-icon-brand); }
+.mem-form-barra button[data-pode="1"]:hover { color: var(--ms-bg-brand-hover); background: transparent; }
+
+/* O contador de imagens anexadas: 16 × 16 no canto superior direito
+   do botão, 9px/700, literal do `mio-form-badge`. */
+.mem-form-badge {
+  position: absolute;
+  right: -2px;
+  top: -2px;
+  display: flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--ms-bg-brand);
+  color: var(--ms-text);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Enquanto o arquivo sobe o botão fica inerte e o cursor diz por quê.
+   Não há barra de progresso: `/api/upload` é uma requisição só, sem
+   evento de progresso, e desenhar uma régua andando seria inventar
+   um número que ninguém mediu. */
+.mem-form-barra button[data-enviando="1"] {
+  cursor: wait;
+  opacity: .5;
+}
+
+/* O erro do upload mora no cartão, junto do texto que ele acompanha. */
+.mem-form-erro {
+  margin-top: 8px;
+  font-size: var(--ms-text-sm);
+  line-height: var(--ms-leading-normal);
+  color: var(--ms-text-danger);
+}
+
+/* ── Ajuda ──────────────────────────────────────────────────
+   O `?` da pílula abre a mesma explicação que a referência abre:
+   o que esta tela lembra e de onde. */
+.mem-ajuda {
+  position: absolute;
+  left: 52px;
+  top: 60px;
+  z-index: var(--mem-z-toolbar);
+  width: 320px;
+  padding: 12px 14px;
+  border: 1px solid var(--ms-border);
+  box-shadow: var(--mem-sombra-dialogo);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  font-size: var(--ms-text-base);
+  line-height: var(--ms-leading-relaxed);
+  color: var(--ms-text-secondary);
+}
+.mem-ajuda strong { display: block; color: var(--ms-text); font-weight: 500; }
+
+/* ── Canvas do rastro ───────────────────────────────────────
+   Literal: `position:absolute; inset:0; pointer-events:none; z-index:1`. */
+.mem-rastro {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Nesta tela não há um único `@keyframes` vindo da referência: as
+   duas animações vivas são `requestAnimationFrame` em `<canvas>`.
+   Com movimento reduzido o núcleo é pintado uma vez, na fase 0, e o
+   canvas do rastro nem monta. */
+@media (prefers-reduced-motion: reduce) {
+  .mem-adicionar,
+  .mem-btn,
+  .mem-escopo button,
+  .mem-form-barra button,
+  .mem-satelite,
+  .mem-overlay .react-flow__node { transition: none; }
+  .mem-btn:active,
+  .mem-satelite:active,
+  .mem-ancora:active { transform: none; }
+  .mem-ancora { animation: none; }
+}

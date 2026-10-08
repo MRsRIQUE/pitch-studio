@@ -10,6 +10,8 @@ interface Props {
   onDelete: () => void;
   onSave?: () => void;
   onDuplicate: () => void;
+  /** Correção focada: abre o popover que acrescenta um bloco FIX ao prompt. */
+  onFix?: () => void;
 }
 
 function Btn({
@@ -31,11 +33,7 @@ function Btn({
       onClick={(e) => { e.stopPropagation(); if (!disabled) onClick(); }}
       disabled={disabled}
       title={title}
-      className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors duration-150 disabled:opacity-30 disabled:cursor-not-allowed ${
-        danger
-          ? "text-white hover:text-red-400 hover:bg-red-400/10"
-          : "text-white hover:bg-white/10"
-      }`}
+      className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors duration-150 disabled:opacity-30 disabled:cursor-not-allowed ${ danger ? "text-ms-text-secondary hover:text-red-500 hover:bg-red-500/10" : "text-ms-text-secondary hover:text-ms-text hover:bg-ms-bg-hover" }`}
     >
       {children}
     </button>
@@ -51,20 +49,14 @@ function Spinner() {
   );
 }
 
-export default function NodeActionBar({ visible, hasContent, isSaving, onPreview, onDelete, onSave, onDuplicate }: Props) {
+export default function NodeActionBar({ visible, hasContent, isSaving, onPreview, onDelete, onSave, onDuplicate, onFix }: Props) {
   return (
     <NodeToolbar isVisible={visible} position={Position.Top} offset={16}>
       <div
-        className="flex items-center gap-0.5 px-1.5 py-1 node-action-bar-enter"
-        style={{
-          borderRadius: 999,
-          background: "rgba(16, 16, 16, 0.96)",
-          backdropFilter: "blur(12px)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.65), 0 1px 4px rgba(0,0,0,0.4)",
-          whiteSpace: "nowrap",
-          zIndex: 10,
-        }}
+        /* Cápsula clara, a mesma da barra vertical: ver `.canvas-pilula` em
+           `app/globals.css`. A versão escura sumia no canvas claro. */
+        className="canvas-pilula flex items-center gap-0.5 px-1.5 py-1 node-action-bar-enter"
+        style={{ zIndex: 10 }}
       >
         {onPreview !== undefined && (
           <Btn onClick={onPreview} disabled={!hasContent} title="Open preview">
@@ -77,7 +69,15 @@ export default function NodeActionBar({ visible, hasContent, isSaving, onPreview
           </Btn>
         )}
 
-        <span className="w-px h-4 bg-white/[0.08] mx-0.5 shrink-0" />
+        {onFix !== undefined && (
+          <Btn onClick={onFix} disabled={!hasContent} title="Corrigir só o que saiu errado">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M15 9h.01M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5" />
+            </svg>
+          </Btn>
+        )}
+
+        <span className="canvas-pilula-sep" />
 
         <Btn onClick={onDuplicate} title="Duplicate node">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

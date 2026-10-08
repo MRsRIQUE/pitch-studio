@@ -33,8 +33,8 @@ function Btn({
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       title={title}
       className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors duration-150 ${
-        danger ? "text-white hover:text-red-400 hover:bg-red-400/10"
-               : "text-white hover:bg-white/10"
+        danger ? "text-ms-text-secondary hover:text-red-500 hover:bg-red-500/10"
+               : "text-ms-text-secondary hover:text-ms-text hover:bg-ms-bg-hover"
       }`}
     >
       {children}
@@ -43,7 +43,7 @@ function Btn({
 }
 
 function Sep() {
-  return <span className="w-px h-4 bg-white/[0.08] mx-0.5 shrink-0" />;
+  return <span className="canvas-pilula-sep" />;
 }
 
 // Runs inside the ReactFlow provider
@@ -183,15 +183,8 @@ export default function SelectionToolbar() {
       }}
     >
       <div
-        className="flex items-center gap-0.5 px-1.5 py-1"
-        style={{
-          borderRadius: 999,
-          background:   "rgba(16, 16, 16, 0.96)",
-          backdropFilter: "blur(12px)",
-          border:       "1px solid rgba(255,255,255,0.07)",
-          boxShadow:    "0 4px 24px rgba(0,0,0,0.65), 0 1px 4px rgba(0,0,0,0.4)",
-          whiteSpace:   "nowrap",
-        }}
+        /* Cápsula clara compartilhada: `.canvas-pilula` em `app/globals.css`. */
+        className="canvas-pilula flex items-center gap-0.5 px-1.5 py-1"
       >
         {/* Arrange */}
         <Btn onClick={handleArrange} title="Auto-arrange selected nodes">

@@ -7,6 +7,7 @@ import { arrangeNodes } from "@/lib/arrangeNodes";
 import { usePipelineRunner } from "@/lib/usePipelineRunner";
 import { makeZip } from "@/lib/makeZip";
 import { VIDEO_MODELS } from "@/lib/modelConfig";
+import { CORES_DE_GRUPO } from "./paletaFixa";
 
 export type GroupNodeType = Node<NodeData, "groupNode">;
 
@@ -27,18 +28,9 @@ function collectAncestors(startId: string, allNodes: Node<NodeData>[], edges: { 
   return [...visited];
 }
 
-const GROUP_COLORS = [
-  "#1b84ff", // Blue (default)
-  "#6B5FE0", // Blue-600
-  "#01b574", // Pink
-  "#e31a1a", // Red
-  "#ffb547", // Orange
-  "#ffb547", // Yellow
-  "#01b574", // Green
-  "#14b8a6", // Teal
-  "#0bc5ea", // Cyan
-  "#9ca3af", // Gray
-];
+/* A paleta de amostras vive em `paletaFixa.ts`: é conteúdo (o usuário
+   escolhe), não tema. Ver o cabeçalho de lá. */
+const GROUP_COLORS: readonly string[] = CORES_DE_GRUPO;
 
 // ── Toolbar button ─────────────────────────────────────────────────────────────
 function Btn({
@@ -51,13 +43,7 @@ function Btn({
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       title={title}
-      className={`h-7 flex items-center justify-center rounded-full transition-colors duration-150 ${
-        label ? "px-2.5 gap-1.5" : "w-7"
-      } ${
-        active ? "text-white bg-white/15" :
-        danger ? "text-white hover:text-red-400 hover:bg-red-400/10" :
-                 "text-white hover:bg-white/10"
-      }`}
+      className={`h-7 flex items-center justify-center rounded-full transition-colors duration-150 ${ label ? "px-2.5 gap-1.5" : "w-7" } ${ active ? "text-ms-text bg-ms-bg-active" : danger ? "text-ms-text-secondary hover:text-red-500 hover:bg-red-500/10" : "text-ms-text-secondary hover:text-ms-text hover:bg-ms-bg-hover" }`}
     >
       {children}
       {label && <span className="text-[11px] font-medium leading-none tracking-wide">{label}</span>}
@@ -66,7 +52,7 @@ function Btn({
 }
 
 function Sep() {
-  return <span className="w-px h-4 bg-white/[0.08] mx-0.5 shrink-0" />;
+  return <span className="canvas-pilula-sep" />;
 }
 
 // ── Lock overlay shown on the group itself when locked ─────────────────────────
@@ -133,7 +119,7 @@ function InlineWarning({ messages }: { messages: string[] }) {
       onMouseLeave={() => setVisible(false)}
     >
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style={{ display: "block", cursor: "default" }}>
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="#e31a1a" />
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="var(--ms-icon-danger)" />
         <line x1="12" y1="9" x2="12" y2="13" stroke="white" strokeWidth="2" strokeLinecap="round" />
         <line x1="12" y1="17" x2="12.01" y2="17" stroke="white" strokeWidth="2" strokeLinecap="round" />
       </svg>
@@ -143,13 +129,13 @@ function InlineWarning({ messages }: { messages: string[] }) {
             position: "absolute",
             bottom: "calc(100% + 4px)",
             right: 0,
-            background: "#171728",
+            background: "var(--ms-bg)",
             border: "1px solid rgba(227, 26, 26,0.3)",
             borderRadius: 6,
             padding: "4px 8px",
             whiteSpace: "nowrap",
             fontSize: 10,
-            color: "#C9D2EA",
+            color: "var(--ms-text)",
             boxShadow: "0 4px 14px rgba(0,0,0,0.55)",
             zIndex: 200,
             pointerEvents: "none",
@@ -157,7 +143,7 @@ function InlineWarning({ messages }: { messages: string[] }) {
         >
           {messages.map((msg, i) => (
             <span key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ color: "#e31a1a", fontSize: 7 }}>●</span>
+              <span style={{ color: "var(--ms-text-danger)", fontSize: 7 }}>●</span>
               {msg}
             </span>
           ))}
@@ -173,9 +159,10 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
   const updateNodeData  = useWorkflowStore((s) => s.updateNodeData);
   const updateNodeSize  = useWorkflowStore((s) => s.updateNodeSize);
   const onNodesChange   = useWorkflowStore((s) => s.onNodesChange);
+  const addToast        = useWorkflowStore((s) => s.addToast);
   const { fitBounds }   = useReactFlow();
 
-  const color  = (data.color  as string)  ?? "#1b84ff";
+  const color  = (data.color  as string)  ?? "var(--ms-text-link)";
   const locked = (data.locked as boolean) ?? false;
   const label  = data.label   as string;
 
@@ -266,13 +253,26 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
     if (assets.length === 0) return;
     setIsDownloading(true);
     try {
-      const entries = await Promise.all(
+      const results = await Promise.all(
         assets.map(async ({ url, name }) => {
-          const resp = await fetch(`/api/download?url=${encodeURIComponent(url)}&filename=${name}`);
-          const buf = await resp.arrayBuffer();
-          return { name, data: new Uint8Array(buf) };
+          try {
+            const resp = await fetch(`/api/download?url=${encodeURIComponent(url)}&filename=${name}`);
+            if (!resp.ok) return null;
+            const buf = await resp.arrayBuffer();
+            return { name, data: new Uint8Array(buf) };
+          } catch {
+            return null;
+          }
         })
       );
+      const entries = results.filter((r): r is NonNullable<typeof r> => r !== null);
+      const skipped = results.length - entries.length;
+
+      if (entries.length === 0) {
+        addToast("Failed to download the group's outputs.", "error");
+        return;
+      }
+
       const blob = makeZip(entries);
       const objUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -282,10 +282,12 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(objUrl);
+
+      if (skipped > 0) addToast(`Downloaded — ${skipped} file(s) couldn't be fetched`, "info");
     } finally {
       setIsDownloading(false);
     }
-  }, [isDownloading, memberIds, label]);
+  }, [isDownloading, memberIds, label, addToast]);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -524,16 +526,10 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
       <NodeToolbar isVisible={toolbarVisible} position={Position.Top} offset={16}>
       <div
-        className="flex items-center gap-0.5 px-1.5 py-1 node-action-bar-enter"
-        style={{
-          borderRadius: 999,
-          background: "rgba(16, 16, 16, 0.96)",
-          backdropFilter: "blur(12px)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.65), 0 1px 4px rgba(0,0,0,0.4)",
-          whiteSpace: "nowrap",
-          zIndex: 10,
-        }}
+        /* Cápsula clara, a mesma da barra vertical: ver `.canvas-pilula` em
+           `app/globals.css`. */
+        className="canvas-pilula flex items-center gap-0.5 px-1.5 py-1 node-action-bar-enter"
+        style={{ zIndex: 10 }}
       >
         {locked ? (
           /* Locked: only show unlock */
@@ -584,22 +580,15 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); setColorPickerOpen((o) => !o); }}
                 title="Change color"
-                className="w-7 h-7 flex items-center justify-center rounded-full transition-colors duration-150 hover:bg-white/10"
+                className="w-7 h-7 flex items-center justify-center rounded-full transition-colors duration-150 hover:bg-ms-bg-hover"
               >
-                <span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{ background: color }} />
+                <span className="w-3.5 h-3.5 rounded-full border border-ms-border-subtle" style={{ background: color }} />
               </button>
 
               {colorPickerOpen && (
                 <div
                   ref={colorPickerRef}
-                  className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 flex flex-row gap-1.5 p-2"
-                  style={{
-                    borderRadius: 999,
-                    background: "rgba(16,16,16,0.97)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-                    whiteSpace: "nowrap",
-                  }}
+                  className="canvas-pilula absolute bottom-full mb-2 left-1/2 -translate-x-1/2 flex flex-row gap-1.5 p-2"
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   {GROUP_COLORS.map((c) => (
@@ -613,7 +602,7 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
                       className="w-5 h-5 rounded-full border-2 transition-transform hover:scale-110 shrink-0"
                       style={{
                         background: c,
-                        borderColor: color === c ? "white" : "transparent",
+                        borderColor: color === c ? "var(--ms-text)" : "transparent",
                       }}
                     />
                   ))}
@@ -655,7 +644,7 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
             <Btn onClick={handleDownload} title="Download all outputs as ZIP">
               {isDownloading ? (
                 <svg width="13" height="13" viewBox="0 0 10 10" fill="none" style={{ animation: "spin 0.9s linear infinite" }}>
-                  <circle cx="5" cy="5" r="4" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
+                  <circle cx="5" cy="5" r="4" stroke="var(--ms-grayA-5-hex)" strokeWidth="1.5" />
                   <path d="M5 1 A4 4 0 0 1 9 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               ) : (
@@ -674,7 +663,7 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
                 style={{
                   border: `1px solid ${pipelineRunning ? "rgba(134, 140, 255,0.5)" : "rgba(134, 140, 255,0.25)"}`,
                   background: pipelineRunning ? "rgba(134, 140, 255,0.18)" : "rgba(134, 140, 255,0.07)",
-                  color: readyJobCount === 0 ? "rgba(255,255,255,0.25)" : "rgba(134, 140, 255,0.9)",
+                  color: readyJobCount === 0 ? "var(--ms-grayA-6-hex)" : "rgba(134, 140, 255,0.9)",
                   opacity: readyJobCount === 0 ? 0.45 : 1,
                 }}
               >
@@ -749,7 +738,7 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
                     borderRadius: 10,
                     background: "rgba(14, 14, 14, 0.97)",
                     backdropFilter: "blur(12px)",
-                    border: "1px solid rgba(255,255,255,0.07)",
+                    border: "1px solid var(--ms-grayA-3-hex)",
                     boxShadow: "0 4px 24px rgba(0,0,0,0.65), 0 1px 4px rgba(0,0,0,0.4)",
                     minWidth: 200,
                     overflow: "hidden",
@@ -757,7 +746,7 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   <div className="px-3 py-1.5 border-b border-white/[0.06]">
-                    <span className="text-[10px] font-medium text-white/30 uppercase tracking-widest">
+                    <span className="text-[10px] font-medium text-ms-text-secondary uppercase tracking-widest">
                       Generate jobs
                     </span>
                   </div>
@@ -766,7 +755,7 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
                       key={job.genNodeId}
                       className="flex items-center gap-2 px-3 py-2 text-[11px] transition-colors duration-100"
                       style={{
-                        borderBottom: i < jobs.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                        borderBottom: i < jobs.length - 1 ? "1px solid var(--ms-grayA-1-hex)" : "none",
                         cursor: "pointer",
                       }}
                       onMouseDown={(e) => e.stopPropagation()}
@@ -775,21 +764,21 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
                         flashNode(job.genNodeId);
                         job.allAncestorIds.forEach((aid) => flashNode(aid, "node-identify-input-blink"));
                       }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.04)"; }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "var(--ms-grayA-1-hex)"; }}
                       onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
                     >
                       {/* Source icon */}
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ms-grayA-7-hex)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                         <polyline points="14 2 14 8 20 8" />
                         <line x1="16" y1="13" x2="8" y2="13" />
                         <line x1="16" y1="17" x2="8" y2="17" />
                       </svg>
-                      <ScrollLabel text={job.sourceLabel} color="rgba(255,255,255,0.5)" />
+                      <ScrollLabel text={job.sourceLabel} color="var(--ms-grayA-9-hex)" />
 
                       {/* Arrow */}
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
-                        <path d="M2 6H10M10 6L7 3M10 6L7 9" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M2 6H10M10 6L7 3M10 6L7 9" stroke="var(--ms-grayA-5-hex)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
 
                       {/* Target icon */}

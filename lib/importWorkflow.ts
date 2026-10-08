@@ -71,6 +71,15 @@ async function unzip(buf: ArrayBuffer): Promise<UnzipEntry[]> {
 function contentTypeFromName(name: string): string {
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
   switch (ext) {
+    case "glb": return "model/gltf-binary";
+    case "weba": return "audio/webm";
+    case "opus": return "audio/opus";
+    case "aac": return "audio/aac";
+    case "mp3": return "audio/mpeg";
+    case "wav": return "audio/wav";
+    case "ogg": return "audio/ogg";
+    case "m4a": return "audio/mp4";
+    case "flac": return "audio/flac";
     case "mp4": return "video/mp4";
     case "webm": return "video/webm";
     case "png": return "image/png";

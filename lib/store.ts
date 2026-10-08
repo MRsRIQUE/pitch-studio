@@ -60,6 +60,8 @@ export interface NodeData extends Record<string, unknown> {
   azureResolution?: string;
   azureCustomWidth?: number;
   azureCustomHeight?: number;
+  segmentTaskId?: string;
+  segmentMaskIndexes?: string;
   // video output
   videoUrl?: string;
   // video model
@@ -98,6 +100,12 @@ function filterKeys<T extends object>(obj: T, keys: (keyof T)[]): Partial<T> | n
 export function getNodeLabel(type: string, n: number): string {
   if (type === "assistantNode") return "ASSISTANT";
   const map: Record<string, string> = {
+    audioNode: `Áudio #${n}`,
+    scriptNode: `Roteiro #${n}`,
+    directorStudioNode: `Director Studio #${n}`,
+    smartEditNode: `Smart Edit #${n}`,
+    smartBreakdownNode: `Smart Breakdown #${n}`,
+    directorConsoleNode: `Director Console #${n}`,
     promptNode:          `Text #${n}`,
     imageInputNode:      `Image #${n}`,
     generateNode:        `Image Generator #${n}`,
@@ -209,6 +217,11 @@ interface WorkflowStore {
   onEdgesChange:      (changes: EdgeChange[]) => void;
   onConnect:          (connection: Connection) => void;
   addNode:            (node: Node<NodeData>) => void;
+  insertProductionBatch: (nodes: Node<NodeData>[], edges: Edge[]) => void;
+  /** Avança os contadores de rótulo sem empilhar desfazer. Existe para quem
+      escreve em lote (a leva do assistente): `addNode` empilha um snapshot por
+      nó, e uma leva de 12 daria 12 Ctrl+Z. */
+  avancarContadores:  (porTipo: Record<string, number>) => void;
   insertEdge:         (edge: Edge) => void;
   removeEdgesForHandle: (nodeId: string, handleId: string) => void;
   killEdgesForHandles:  (nodeId: string, handleIds: string[]) => void;
@@ -455,6 +468,28 @@ export const useWorkflowStore = create<WorkflowStore>()(
           requestWorkflowSync();
         },
 
+        avancarContadores: (porTipo) =>
+          set((s) => {
+            const nodeCounters = { ...s.nodeCounters };
+            for (const [tipo, quantos] of Object.entries(porTipo)) {
+              nodeCounters[tipo] = (nodeCounters[tipo] ?? 0) + quantos;
+            }
+            return {
+              nodeCounters,
+              spaces: syncSpace(s.spaces, s.activeSpaceId, s.nodes, s.edges, nodeCounters),
+            };
+          }),
+
+        insertProductionBatch: (batchNodes, batchEdges) => {
+          set((s) => {
+            const nodes = [...s.nodes.map(n => ({ ...n, selected: false })), ...batchNodes];
+            const edges = [...s.edges, ...batchEdges];
+            const nodeCounters = { ...s.nodeCounters };
+            for (const n of batchNodes) if (n.type) nodeCounters[n.type] = (nodeCounters[n.type] ?? 0) + 1;
+            return { nodes, edges, nodeCounters, undoStack: [...s.undoStack.slice(-(MAX_UNDO - 1)), { nodes: s.nodes, edges: s.edges }], redoStack: [], spaces: syncSpace(s.spaces, s.activeSpaceId, nodes, edges, nodeCounters) };
+          });
+          requestWorkflowSync();
+        },
         addNode: (node) => {
           set((s) => {
             const undoStack    = [...s.undoStack.slice(-(MAX_UNDO - 1)), { nodes: s.nodes, edges: s.edges }];

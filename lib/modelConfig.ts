@@ -65,6 +65,13 @@ export interface ImageModel {
   textOnlyPromptMaxLength?: number;
   /** Default quality value for this model (used when switching to the model). */
   defaultQuality?: string;
+  /** Aspect ratios that the provider only accepts at 1K. */
+  oneKOnlyRatios?: string[];
+  /**
+   * Kie Grok segment editing is task-based instead of URL-based: the request
+   * needs a previous Grok/segment-map task id plus one or more mask indexes.
+   */
+  requiresSegmentTask?: boolean;
   /**
    * When set and provider is "azure", these quality values are offered
    * instead of the standard 1k/2k/4k picker.
@@ -124,6 +131,17 @@ export function validateAzureCustomSize(width: number, height: number): string |
   const total = width * height;
   if (total < 655360 || total > 8294400) return "Total pixels must be 655,360–8,294,400";
   return null;
+}
+
+/** Parse the comma/space-separated mask list used by Grok Segment Edit. */
+export function parseSegmentMaskIndexes(value: string): number[] {
+  return [...new Set(
+    value
+      .split(/[\s,;]+/)
+      .filter(Boolean)
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n >= 0),
+  )];
 }
 
 export const IMAGE_MODELS: ImageModel[] = [
@@ -271,6 +289,68 @@ export const IMAGE_MODELS: ImageModel[] = [
       imageInputKey: "image_urls",
       promptMaxLength: 390000,
       extra: { nsfw_checker: false },
+    },
+  },
+  {
+    id: "grok-imagine-image-2-segment-edit",
+    apiId: "grok-imagine-image-2-0/segment-edit",
+    name: "Grok Imagine 2.0 · Segment Edit",
+    provider: "X",
+    ratios: [],
+    supportsImages: false,
+    maxImages: 0,
+    supportsQuality: false,
+    requiresSegmentTask: true,
+    apiInput: {
+      // Segment Edit does not accept aspect_ratio; the route handles its
+      // task_id + mask_indexs payload separately.
+      aspectRatioKey: "",
+      promptMaxLength: 390000,
+    },
+  },
+  // ── OpenAI GPT Image 2.5 Flare ──────────────────────────────────────────────
+  {
+    id: "gpt-image-2-5-flare",
+    // Use the reference-capable endpoint whenever images are attached, and
+    // transparently fall back to text-to-image when the prompt stands alone.
+    apiId: "gpt-image-2-5-flare-image-to-image",
+    textOnlyApiId: "gpt-image-2-5-flare-text-to-image",
+    name: "GPT Image 2.5 Flare",
+    provider: "OpenAI",
+    ratios: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "27:16", "16:27", "9:8", "8:9"],
+    supportsImages: true,
+    maxImages: 16,
+    supportsQuality: true,
+    defaultQuality: "1k",
+    oneKOnlyRatios: ["27:16", "16:27", "9:8", "8:9"],
+    apiInput: {
+      aspectRatioKey: "aspect_ratio",
+      imageInputKey: "input_urls",
+      qualityKey: "resolution",
+      qualityOptions: ["1k", "2k", "4k"],
+      promptMaxLength: 20000,
+      extra: { background: "auto" },
+    },
+  },
+  {
+    id: "gpt-image-2-5-sunburst",
+    apiId: "gpt-image-2-5-sunburst-image-to-image",
+    textOnlyApiId: "gpt-image-2-5-sunburst-text-to-image",
+    name: "GPT Image 2.5 Sunburst",
+    provider: "OpenAI",
+    ratios: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "27:16", "16:27", "9:8", "8:9"],
+    supportsImages: true,
+    maxImages: 16,
+    supportsQuality: true,
+    defaultQuality: "1k",
+    oneKOnlyRatios: ["27:16", "16:27", "9:8", "8:9"],
+    apiInput: {
+      aspectRatioKey: "aspect_ratio",
+      imageInputKey: "input_urls",
+      qualityKey: "resolution",
+      qualityOptions: ["1k", "2k", "4k"],
+      promptMaxLength: 20000,
+      extra: { background: "auto" },
     },
   },
   // ── OpenAI GPT Image 2 ────────────────────────────────────────────────────────
@@ -431,6 +511,8 @@ export interface VideoModel {
      * Independent of durationMax which controls the generated output length.
      */
     videoRefMaxDuration?: number;
+    /** Minimum duration accepted for a connected reference video. */
+    videoRefMinDuration?: number;
     /** Field name for the start frame image URL (e.g. "first_frame_url") */
     firstFrameKey?: string;
     /** Field name for the end frame image URL (e.g. "last_frame_url") */
@@ -451,6 +533,10 @@ export interface VideoModel {
     useGoogleVeo?: boolean;
     /** When true, use Gemini Omni Video payload (image_urls + video_list, quota-based) */
     useGeminiOmniVideo?: boolean;
+    /** When true, submit the model through the official Higgsfield SDK. */
+    useHiggsfield?: boolean;
+    /** When true, use the Genjutsu video + reference-images request schema. */
+    useHiggsfieldGenjutsu?: boolean;
     /**
      * When true, routes based on whether a start-frame image is provided:
      * - with image → imageApiId (i2v), sends image_urls + duration + resolution, no aspect_ratio
@@ -471,6 +557,87 @@ export interface VideoModel {
 }
 
 export const VIDEO_MODELS: VideoModel[] = [
+  // ── Higgsfield ───────────────────────────────────────────────────────────────
+  {
+    id: "higgsfield-seedance-2",
+    apiId: "bytedance/seedance-2.0/text-to-video",
+    name: "Seedance 2.0",
+    provider: "Higgsfield",
+    ratios: ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9"],
+    durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    defaultDuration: 5,
+    defaultRatio: "16:9",
+    handles: ["prompt"],
+    sound: true,
+    resolutions: ["480p", "720p", "1080p", "4k"],
+    defaultResolution: "720p",
+    apiInput: {
+      aspectRatioKey: "aspect_ratio",
+      durationKey: "duration",
+      durationMin: 4,
+      durationMax: 15,
+      resolutionKey: "resolution",
+      soundKey: "generate_audio",
+      promptMaxLength: 10000,
+      useHiggsfield: true,
+    },
+  },
+  {
+    id: "higgsfield-genjutsu-motion-transfer",
+    apiId: "higgsfield/genjutsu/motion-transfer/v1.0",
+    name: "Genjutsu · Motion Transfer",
+    provider: "Higgsfield",
+    ratios: [],
+    durations: [],
+    defaultDuration: 0,
+    defaultRatio: "9:16",
+    handles: ["prompt", "resource", "videoRef"],
+    requiredHandles: ["resource", "videoRef"],
+    promptOptional: true,
+    maxResources: 8,
+    sound: false,
+    resolutions: ["480p", "720p"],
+    defaultResolution: "720p",
+    apiInput: {
+      durationMin: 0,
+      durationMax: 0,
+      resolutionKey: "resolution",
+      referenceImagesKey: "image_urls",
+      promptMaxLength: 10000,
+      videoRefMinDuration: 4,
+      videoRefMaxDuration: 30,
+      useHiggsfield: true,
+      useHiggsfieldGenjutsu: true,
+    },
+  },
+  {
+    id: "higgsfield-genjutsu-object-swap",
+    apiId: "higgsfield/genjutsu/object-swap/v1.0",
+    name: "Genjutsu · Object Swap",
+    provider: "Higgsfield",
+    ratios: [],
+    durations: [],
+    defaultDuration: 0,
+    defaultRatio: "9:16",
+    handles: ["prompt", "resource", "videoRef"],
+    requiredHandles: ["resource", "videoRef"],
+    promptOptional: true,
+    maxResources: 8,
+    sound: false,
+    resolutions: ["480p", "720p"],
+    defaultResolution: "720p",
+    apiInput: {
+      durationMin: 0,
+      durationMax: 0,
+      resolutionKey: "resolution",
+      referenceImagesKey: "image_urls",
+      promptMaxLength: 10000,
+      videoRefMinDuration: 4,
+      videoRefMaxDuration: 30,
+      useHiggsfield: true,
+      useHiggsfieldGenjutsu: true,
+    },
+  },
   // ── Google ──────────────────────────────────────────────────────────────────
   {
     id: "veo3_lite",

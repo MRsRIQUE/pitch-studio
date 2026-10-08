@@ -2,18 +2,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { GalleryItem, galleryCache, getToken, thumbSrc } from "@/lib/galleryUtils";
+import "./superficies.css";
 
 type TabId = "uploads" | "image-gen" | "video-gen";
 
-const SHIMMER_CSS = `
-@keyframes picker-shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position:  200% 0; }
-}
-@keyframes picker-dropIn {
-  0% { opacity: 0; transform: translateY(12px); }
-  100% { opacity: 1; transform: translateY(0); }
-}`;
+/* O esqueleto e o giro moraram aqui; agora são `.ms-esqueleto` e
+   `.ms-giro` em `superficies.css`, com as cores do kit. */
 
 const PICKER_POS_STORAGE_KEY = "mediaPickerModal:pos";
 
@@ -43,14 +37,9 @@ function PickerImage({ src }: { src: string }) {
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
   const thumbUrl = thumbSrc(src);
   return (
-    <div style={{ position: "absolute", inset: 0 }}>
+    <div className="absolute inset-0">
       {status === "loading" && (
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(90deg, #171728 25%, #2a2d31 50%, #171728 75%)",
-          backgroundSize: "200% 100%",
-          animation: "picker-shimmer 1.4s ease-in-out infinite",
-        }} />
+        <div className="ms-esqueleto absolute inset-0" />
       )}
       {status !== "error" && (
         <img
@@ -172,12 +161,12 @@ export function MediaPickerModal({
         body: JSON.stringify({ url: trimmed }),
       });
       const data = await res.json() as { cdnUrl?: string; mediaType?: "image" | "video"; error?: string };
-      if (!res.ok || !data.cdnUrl) throw new Error(data.error ?? "Failed to fetch URL");
+      if (!res.ok || !data.cdnUrl) throw new Error(data.error ?? "Não consegui buscar esse endereço.");
       setUrlInput("");
       onPickUrl(data.cdnUrl, data.mediaType ?? "image");
       onClose();
     } catch (e: unknown) {
-      setUrlError(e instanceof Error ? e.message : "Failed to fetch URL");
+      setUrlError(e instanceof Error ? e.message : "Não consegui buscar esse endereço.");
     } finally {
       setUrlLoading(false);
     }
@@ -393,23 +382,22 @@ export function MediaPickerModal({
   const tabs: { id: TabId; label: string }[] =
     mediaKind === "any"
       ? [
-          { id: "uploads",   label: "Uploads" },
-          { id: "image-gen", label: "Image Generations" },
-          { id: "video-gen", label: "Video Generations" },
+          { id: "uploads",   label: "Enviadas" },
+          { id: "image-gen", label: "Imagens geradas" },
+          { id: "video-gen", label: "Vídeos gerados" },
         ]
       : mediaKind === "image"
       ? [
-          { id: "image-gen", label: "Image Generations" },
-          { id: "uploads",   label: "Uploads" },
+          { id: "image-gen", label: "Imagens geradas" },
+          { id: "uploads",   label: "Enviadas" },
         ]
       : [
-          { id: "video-gen", label: "Video Generations" },
-          { id: "uploads",   label: "Uploads" },
+          { id: "video-gen", label: "Vídeos gerados" },
+          { id: "uploads",   label: "Enviadas" },
         ];
 
   const modal = createPortal(
     <div data-prompt-overlay="" style={{ position: "fixed", inset: 0, zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-      <style>{SHIMMER_CSS}</style>
       <div
         onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
         style={{ position: "absolute", inset: 0, pointerEvents: "auto" }}
@@ -422,62 +410,52 @@ export function MediaPickerModal({
         transform: (pos.isAnchored || pos.isCustom) ? "none" : "translate(-50%, -50%)",
         width: (pos.isAnchored || pos.isCustom) ? pos.width : "min(660px, calc(100vw - 32px))",
         height: pos.isCustom ? `${pos.width}px` : pos.isAnchored ? `${88 + 0.25 * (pos.width - 64)}px` : "520px",
-        background: "rgba(15, 15, 26,0.92)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        border: "1px solid rgba(255,255,255,0.09)",
-        borderRadius: "18px",
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden",
-        boxShadow: "0 32px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.04)",
         pointerEvents: "auto",
-        animation: "picker-dropIn 160ms cubic-bezier(0.16,1,0.3,1)",
-      }}>
+      }}
+      className="ms-superficie-entrada-baixo overflow-hidden rounded-ms-xl border border-ms-border-subtle bg-ms-bg shadow-ms-lg"
+      >
         {/* Tab bar */}
         <div
           onMouseDown={handleDragStart}
-          style={{
-            padding: "14px 18px 12px", display: "flex", alignItems: "center", gap: "4px", flexShrink: 0,
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
-            cursor: pos.isCustom ? (isDragging ? "grabbing" : "grab") : "default",
-          }}
+          className="flex shrink-0 items-center gap-1 border-b border-ms-border-subtle px-[18px] pb-3 pt-3.5"
+          style={{ cursor: pos.isCustom ? (isDragging ? "grabbing" : "grab") : "default" }}
         >
           {tabs.map((t) => {
             const active = activeTab === t.id;
             return (
-              <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-                padding: "6px 16px", borderRadius: "100px", border: "none", cursor: "pointer",
-                fontSize: "13px", fontWeight: active ? 600 : 400,
-                background: active ? "#ffffff" : "transparent",
-                color: active ? "#0F0F1A" : "rgba(255,255,255,0.5)",
-                transition: "background 150ms, color 150ms",
-              }}>
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                className={
+                  "cursor-pointer rounded-ms-full border-none px-4 py-1.5 text-ms-md transition-colors duration-150 " +
+                  (active
+                    ? "bg-ms-solid-brand font-medium text-ms-text-on-solid"
+                    : "bg-transparent text-ms-text-secondary hover:bg-ms-bg-hover hover:text-ms-text")
+                }
+              >
                 {t.label}
               </button>
             );
           })}
           {maxCount !== undefined && (
-            <span style={{
-              marginLeft: "8px", fontSize: "11px", fontWeight: 500,
-              padding: "3px 8px", borderRadius: "100px",
-              background: (selectedUrls?.length ?? 0) >= maxCount ? "rgba(134, 140, 255,0.15)" : "rgba(255,255,255,0.07)",
-              color: (selectedUrls?.length ?? 0) >= maxCount ? "#868CFF" : "rgba(255,255,255,0.4)",
-              flexShrink: 0,
-            }}>
+            <span
+              className={
+                "ml-2 shrink-0 rounded-ms-full px-2 py-[3px] text-ms-sm font-medium " +
+                ((selectedUrls?.length ?? 0) >= maxCount
+                  ? "bg-ms-bg-brand text-ms-text-brand"
+                  : "bg-ms-bg-component text-ms-text-tertiary")
+              }
+            >
               {selectedUrls?.length ?? 0}/{maxCount}
             </span>
           )}
           <button
             onClick={onClose}
-            style={{
-              marginLeft: maxCount !== undefined ? "4px" : "auto", width: "28px", height: "28px", borderRadius: "50%", flexShrink: 0,
-              background: "rgba(255,255,255,0.07)", border: "none",
-              color: "rgba(255,255,255,0.6)", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", transition: "background 120ms",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.13)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; }}
+            aria-label="Fechar"
+            className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-ms-full border-none bg-ms-bg-component text-ms-icon-secondary transition-colors duration-150 hover:bg-ms-bg-component-active hover:text-ms-text"
+            style={{ marginLeft: maxCount !== undefined ? "4px" : "auto" }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M18 6 6 18M6 6l12 12" />
@@ -486,85 +464,63 @@ export function MediaPickerModal({
         </div>
 
         {/* URL input bar */}
-        <div style={{ padding: "10px 18px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <div style={{ flex: 1, position: "relative" }}>
+        <div className="shrink-0 border-b border-ms-border-subtle px-[18px] py-2.5">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
               <input
                 type="url"
-                placeholder="Paste an image URL…"
+                placeholder="Cole o endereço de uma imagem…"
                 value={urlInput}
                 onChange={e => { setUrlInput(e.target.value); setUrlError(""); }}
                 onKeyDown={e => { if (e.key === "Enter") submitUrl(); }}
-                style={{
-                  width: "100%", boxSizing: "border-box",
-                  height: "32px", padding: "0 12px",
-                  background: "rgba(255,255,255,0.06)",
-                  border: urlError ? "1px solid rgba(255, 138, 138,0.5)" : "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "8px",
-                  color: "rgba(255,255,255,0.85)", fontSize: "12px",
-                  outline: "none", transition: "border-color 150ms",
-                }}
-                onFocus={e => { if (!urlError) e.currentTarget.style.borderColor = "rgba(134, 140, 255,0.4)"; }}
-                onBlur={e => { if (!urlError) e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; }}
+                className="box-border h-8 w-full rounded-ms-md border bg-ms-bg-component px-3 text-ms-base text-ms-text outline-none transition-colors duration-150 placeholder:text-ms-text-placeholder focus:border-ms-border-brand"
+                style={{ borderColor: urlError ? "var(--signal-critical)" : "var(--ms-border-subtle)" }}
               />
             </div>
             <button
               onClick={submitUrl}
               disabled={!urlInput.trim() || urlLoading}
-              style={{
-                height: "32px", padding: "0 14px", borderRadius: "8px", border: "none",
-                background: urlInput.trim() && !urlLoading ? "rgba(134, 140, 255,0.18)" : "rgba(255,255,255,0.05)",
-                color: urlInput.trim() && !urlLoading ? "#868CFF" : "rgba(255,255,255,0.25)",
-                fontSize: "12px", fontWeight: 500, cursor: urlInput.trim() && !urlLoading ? "pointer" : "default",
-                transition: "background 150ms, color 150ms", flexShrink: 0,
-                display: "flex", alignItems: "center", gap: "6px",
-              }}
+              className={
+                "flex h-8 shrink-0 items-center gap-1.5 rounded-ms-md border-none px-3.5 text-ms-base font-medium transition-colors duration-150 " +
+                (urlInput.trim() && !urlLoading
+                  ? "ms-botao-marca cursor-pointer"
+                  : "cursor-default bg-ms-bg-component text-ms-text-disabled")
+              }
             >
               {urlLoading ? (
-                <span style={{ width: "12px", height: "12px", borderRadius: "50%", border: "1.5px solid rgba(134, 140, 255,0.3)", borderTopColor: "#868CFF", display: "inline-block", animation: "spin 0.75s linear infinite" }} />
+                <span className="ms-giro h-3 w-3 border-[1.5px]" />
               ) : (
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               )}
-              Attach
+              Anexar
             </button>
           </div>
           {urlError && (
-            <p style={{ margin: "6px 0 0", fontSize: "11px", color: "#ff8a8a" }}>{urlError}</p>
+            <p className="mb-0 mt-1.5 text-ms-sm text-ms-text-danger">{urlError}</p>
           )}
         </div>
 
         {/* Scrollable grid */}
-        <div ref={scrollContainerRef} className="picker-scroll" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "14px 18px 18px" }}>
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden px-[18px] pb-[18px] pt-3.5">
           {fetching && displayItems.length === 0 ? (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "200px" }}>
-              <span style={{ width: "24px", height: "24px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.1)", borderTopColor: "#868CFF", display: "inline-block", animation: "spin 0.75s linear infinite" }} />
+            <div className="flex h-50 items-center justify-center">
+              <span className="ms-giro h-6 w-6 border-2" />
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: "4px" }}>
+            <div className="grid grid-cols-8 gap-1">
               {onUpload && (
                 <button
                   onClick={onUpload}
-                  style={{
-                    aspectRatio: "1", borderRadius: "8px",
-                    border: "1.5px dashed rgba(255,255,255,0.16)",
-                    background: "rgba(255,255,255,0.025)", cursor: "pointer",
-                    display: "flex", flexDirection: "column",
-                    alignItems: "center", justifyContent: "center", gap: "8px",
-                    color: "rgba(255,255,255,0.5)",
-                    transition: "background 150ms, border-color 150ms, color 150ms",
-                    padding: 0,
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.055)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"; e.currentTarget.style.color = "rgba(255,255,255,0.85)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.025)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)"; e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}
+                  className="group flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 rounded-ms-md border-[1.5px] border-dashed border-ms-border bg-ms-bg-hover p-0 text-ms-text-tertiary transition-colors duration-150 hover:border-ms-border-strong hover:bg-ms-bg-component-hover hover:text-ms-text"
                 >
-                  <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "rgba(255,255,255,0.09)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div className="flex h-[30px] w-[30px] items-center justify-center rounded-ms-full bg-ms-bg-component-active">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 5v14M5 12h14" />
                     </svg>
                   </div>
-                  <span style={{ fontSize: "10px", fontWeight: 500 }}>Upload</span>
+                  <span className="text-ms-xs font-medium">Enviar</span>
                 </button>
               )}
 
@@ -579,18 +535,17 @@ export function MediaPickerModal({
                       if (isSelected) { onDeselect?.(item.url); return; }
                       if (!isDisabled) onPickUrl(item.url, item.mediaType);
                     }}
+                    className="relative aspect-square overflow-hidden rounded-ms-md border-2 bg-ms-bg-component p-0"
                     style={{
-                      position: "relative", aspectRatio: "1", borderRadius: "8px", overflow: "hidden",
-                      background: "#171728",
-                      border: isSelected ? "2px solid #868CFF" : "2px solid transparent",
-                      cursor: isDisabled ? "not-allowed" : "pointer", padding: 0,
+                      borderColor: isSelected ? "var(--ms-solid-brand)" : "transparent",
+                      cursor: isDisabled ? "not-allowed" : "pointer",
                       transition: "border-color 110ms, transform 110ms, opacity 110ms",
                       opacity: isDisabled ? 0.35 : 1,
                     }}
                     onMouseEnter={(e) => {
                       if (isDisabled) return;
                       setHoveredItemId(item.id);
-                      if (!isSelected) e.currentTarget.style.borderColor = "rgba(255,255,255,0.5)";
+                      if (!isSelected) e.currentTarget.style.borderColor = "var(--ms-border-strong)";
                       e.currentTarget.style.transform = "scale(1.04)";
                       const v = e.currentTarget.querySelector("video");
                       if (v) v.play().catch(() => {});
@@ -621,8 +576,11 @@ export function MediaPickerModal({
                     )}
                     {item.mediaType === "video" && (
                       <div className="picker-play-icon" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", transition: "opacity 120ms" }}>
-                        <div style={{ width: "26px", height: "26px", borderRadius: "50%", background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <svg width="9" height="9" viewBox="0 0 24 24" fill="white">
+                        <div
+                          className="flex h-[26px] w-[26px] items-center justify-center rounded-ms-full"
+                          style={{ background: "var(--ms-blackA-7-hex)" }}
+                        >
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="var(--ms-whiteA-12-hex)">
                             <polygon points="5 3 19 12 5 21 5 3" />
                           </svg>
                         </div>
@@ -631,9 +589,10 @@ export function MediaPickerModal({
                     {hoveredItemId === item.id && (
                       <div
                         onClick={(e) => { e.stopPropagation(); setPreviewItem(item); }}
-                        style={{ position: "absolute", top: "4px", right: "4px", width: "18px", height: "18px", borderRadius: "4px", background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 2 }}
+                        className="absolute right-1 top-1 z-[2] flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-ms-sm"
+                        style={{ background: "var(--ms-blackA-8-hex)" }}
                       >
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ms-whiteA-11-hex)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                         </svg>
                       </div>
@@ -643,15 +602,15 @@ export function MediaPickerModal({
               })}
 
               {displayItems.length === 0 && !fetching && (
-                <div style={{ gridColumn: "1 / -1", padding: "48px 0", textAlign: "center", color: "rgba(255,255,255,0.22)", fontSize: "13px" }}>
-                  Nothing here yet
+                <div className="col-span-full py-12 text-center text-ms-md text-ms-text-tertiary">
+                  Nada por aqui ainda
                 </div>
               )}
             </div>
           )}
           {loadingMore && (
-            <div style={{ padding: "16px", display: "flex", justifyContent: "center" }}>
-              <span style={{ width: "18px", height: "18px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.1)", borderTopColor: "#868CFF", display: "inline-block", animation: "spin 0.75s linear infinite" }} />
+            <div className="flex justify-center p-4">
+              <span className="ms-giro h-[18px] w-[18px] border-2" />
             </div>
           )}
         </div>
@@ -666,7 +625,8 @@ export function MediaPickerModal({
       {previewItem && createPortal(
         <div
           onClick={(e) => { e.stopPropagation(); setPreviewItem(null); }}
-          style={{ position: "fixed", inset: 0, zIndex: 200000, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center" }}
+          className="fixed inset-0 z-[200000] flex items-center justify-center"
+          style={{ background: "var(--ms-blackA-11-hex)" }}
         >
           {previewItem.mediaType === "video" ? (
             <video
@@ -674,7 +634,7 @@ export function MediaPickerModal({
               controls
               autoPlay
               onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: "10px", boxShadow: "0 24px 80px rgba(0,0,0,0.8)" }}
+              className="max-h-[90vh] max-w-[90vw] rounded-ms-lg"
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
@@ -682,12 +642,13 @@ export function MediaPickerModal({
               src={previewItem.url}
               alt=""
               onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", borderRadius: "10px", boxShadow: "0 24px 80px rgba(0,0,0,0.8)" }}
+              className="max-h-[90vh] max-w-[90vw] rounded-ms-lg object-contain"
             />
           )}
           <button
             onClick={(e) => { e.stopPropagation(); setPreviewItem(null); }}
-            style={{ position: "absolute", top: "20px", right: "20px", width: "32px", height: "32px", borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            aria-label="Fechar"
+            className="flex cursor-pointer items-center justify-center rounded-ms-full border" style={{ background: "var(--ms-whiteA-2-hex)", borderColor: "var(--ms-whiteA-3-hex)", color: "var(--ms-whiteA-10-hex)", position: "absolute", top: "20px", right: "20px", width: "32px", height: "32px" }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
@@ -698,7 +659,8 @@ export function MediaPickerModal({
                 {idx > 0 && (
                   <button
                     onClick={(e) => { e.stopPropagation(); setPreviewItem(displayItems[idx - 1]); }}
-                    style={{ position: "absolute", left: "20px", top: "50%", transform: "translateY(-50%)", width: "40px", height: "40px", borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    aria-label="Anterior"
+                    className="flex cursor-pointer items-center justify-center rounded-ms-full border" style={{ background: "var(--ms-whiteA-2-hex)", borderColor: "var(--ms-whiteA-3-hex)", color: "var(--ms-whiteA-10-hex)", position: "absolute", left: "20px", top: "50%", transform: "translateY(-50%)", width: "40px", height: "40px" }}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                   </button>
@@ -706,7 +668,8 @@ export function MediaPickerModal({
                 {idx < displayItems.length - 1 && (
                   <button
                     onClick={(e) => { e.stopPropagation(); setPreviewItem(displayItems[idx + 1]); }}
-                    style={{ position: "absolute", right: "20px", top: "50%", transform: "translateY(-50%)", width: "40px", height: "40px", borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    aria-label="Próxima"
+                    className="flex cursor-pointer items-center justify-center rounded-ms-full border" style={{ background: "var(--ms-whiteA-2-hex)", borderColor: "var(--ms-whiteA-3-hex)", color: "var(--ms-whiteA-10-hex)", position: "absolute", right: "20px", top: "50%", transform: "translateY(-50%)", width: "40px", height: "40px" }}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                   </button>

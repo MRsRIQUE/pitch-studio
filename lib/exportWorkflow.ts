@@ -23,12 +23,18 @@ function looksLikeAssetUrl(v: unknown): v is string {
     v.startsWith("http://") ||
     v.startsWith("https://") ||
     v.startsWith("data:image/") ||
-    v.startsWith("data:video/")
+    v.startsWith("data:video/") ||
+    v.startsWith("data:audio/")
   );
 }
 
 function extFromUrl(url: string, contentType?: string): string {
   const ct = contentType ?? "";
+  if (ct.includes("audio/webm")) return "weba";
+  if (ct.includes("audio/mp4")) return "m4a";
+  if (ct.includes("audio/mpeg")) return "mp3";
+  if (ct.includes("audio/wav") || ct.includes("audio/x-wav")) return "wav";
+  if (ct.includes("audio/ogg")) return "ogg";
   if (ct.includes("mp4")) return "mp4";
   if (ct.includes("webm")) return "webm";
   if (ct.includes("png")) return "png";

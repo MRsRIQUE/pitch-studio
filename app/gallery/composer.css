@@ -1,0 +1,1776 @@
+/* ============================================================
+   COMPOSER — geometria e brilho
+
+   Porta o `home-v2-chat-input-shell` do bloco 03 da referência. Todos
+   os números saíram do `<style>` do `preview.html` e da tabela de
+   geometria do `INFO.md`, nunca do `className`.
+
+   A repartição é a da referência, e a conta fecha nos dois estados:
+
+     com a faixa     2 + 160 + 10 + 24 + 10 = 206
+     sem a faixa     2 + 160 + 2            = 164   (`--connect-dismissed`)
+
+   A leva 1 tinha realocado os 42px da faixa para o campo de texto,
+   porque tinha cortado os conectores. A faixa voltou, e com ela a
+   repartição: superfície de 160, campo de 72 a 96.
+
+   Uma diferença assumida: aqui é `min-height`, não `height`. O nosso
+   composer tem trilha de anexos e pilha de vários prompts, que a
+   referência não tem; com altura travada e `overflow: clip`, anexar uma
+   imagem recortaria a trilha. Vazio, o shell mede exatamente 164 ou 206.
+   ============================================================ */
+
+.pc-shell {
+  position: relative;
+  width: 100%;
+  max-width: 996px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 2px;
+  border: none;
+  border-radius: var(--ms-radius-2xl);   /* 20px */
+  overflow: clip;
+  /* 164px é o shell sem faixa da referência (`--connect-dismissed`). */
+  min-height: 164px;
+
+  /* Camadas 1 e 2 do brilho. Na referência são dois SVG em data-URI com
+     <radialGradient gradientUnits="userSpaceOnUse"> e uma
+     gradientTransform; a matriz do primeiro é
+     matrix(31.762 -0.25122 0.090755 10.86 650.74 152.74) sobre r=10 —
+     ou seja, uma elipse de 317,6 x 108,6 centrada em (650,74; 152,74),
+     girada 0,45°, que a esta escala não se distingue de uma elipse reta.
+     Reescritas como radial-gradient nativo, em percentual de 996x206,
+     porque data-URI não aceita var() e cor cravada aqui seria o laranja
+     do Miora entrando pela porta dos fundos.
+
+     A licença de cor vale só para o laranja: a primeira elipse da
+     referência é AZUL (`rgba(57,188,248)`, em 650,74/152,74) e continua
+     azul aqui, no degrau mais próximo da rampa do kit, `--ms-blue-8`
+     (#5FB4FF contra o #39BCF8 deles). A segunda é o laranja da marca
+     deles, e essa vira o violeta da nossa.
+     Camada 3: a base chapada. */
+  --pc-glow:
+    radial-gradient(ellipse 31.9% 52.7% at 65.3% 74.1%,
+      hsl(var(--ms-blue-8) / .20) 0%,
+      hsl(var(--ms-blue-8) / .10) 50%,
+      hsl(var(--ms-blue-8) / 0) 100%),
+    radial-gradient(ellipse 30.4% 45.9% at 42.5% 79.0%,
+      hsl(var(--ms-brand-9) / .20) 0%,
+      hsl(var(--ms-brand-9) / 0) 100%),
+    linear-gradient(90deg, var(--ms-bg-component) 0%, var(--ms-bg-component) 100%);
+  background: var(--pc-glow);
+
+  /* `.36s cubic-bezier(.22,1,.36,1)` é o tempo com que a referência
+     encolhe de 206 para 164 ao dispensar a faixa. */
+  transition: min-height .36s cubic-bezier(.22, 1, .36, 1);
+}
+
+/* O wrapper do Libraries.dev mede a mesma caixa do composer. O shell perde
+   apenas o limite próprio para não encolher dentro do novo contêiner. */
+.pc-border-beam {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 996px;
+  border-radius: var(--ms-radius-2xl);
+}
+.pc-border-beam > .pc-shell { max-width: none; }
+.pc-border-beam.is-expanded { height: 100%; min-height: 0; }
+.pc-border-beam.is-expanded > .pc-shell { height: 100%; }
+
+/* O `GALLERY_CSS` legado pinta `.miora-composer` de branco chapado e e
+   injetado num <style> depois desta folha, entao venceria por ordem. A
+   especificidade dupla devolve o brilho ao shell sem que a classe precise
+   sair do elemento — ela ainda estiliza varios filhos. */
+.pc-shell.miora-composer { background: var(--pc-glow); }
+
+/* Camada 4: os três radial-gradients que passeiam em soft-light.
+   Branco a 34%, azul a 18% e a marca a 16% — os mesmos alfas do
+   mesmos alfas do branco, do azul e da marca na referência (0x57, 0x2e
+   e 0x29 sobre 255), com o terceiro no nosso violeta. */
+.pc-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 68% at 20% 42%, hsl(var(--ms-gray-1) / .34), transparent 62%),
+    radial-gradient(36% 58% at 82% 76%, hsl(var(--ms-blue-8) / .18), transparent 68%),
+    radial-gradient(34% 52% at 52% 78%, hsl(var(--ms-brand-9) / .16), transparent 66%);
+  background-size: 185% 185%, 210% 210%, 200% 200%;
+  mix-blend-mode: soft-light;
+  opacity: .72;
+  animation: pc-shell-glow 7s ease-in-out infinite alternate;
+  will-change: background-position, opacity;
+}
+
+.pc-shell[data-glow="off"]::before { display: none; }
+
+.pc-shell > * { position: relative; z-index: 1; }
+
+@keyframes pc-shell-glow {
+  0%   { background-position: -38% 46%, 132% 96%, 50% 136%; opacity: .58; }
+  50%  { background-position:  56% 18%,  80% 42%, 74%  46%; opacity: .76; }
+  100% { background-position: 138%  8%, -22% 20%, 12%  82%; opacity: .64; }
+}
+
+/* ── Superfície branca ────────────────────────────────────── */
+.pc-surface {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  /* `.home-v2-input-surface{height:160px}` — literal. */
+  min-height: 160px;
+  padding: 12px;
+  background: var(--ms-bg);
+  border: none;
+  border-radius: 18px;      /* 20 do shell − 2 de padding */
+}
+
+/* Expandido: a superfície cresce e o shell acompanha. Quem controla a
+   altura externa é o consumidor. */
+.pc-shell[data-expanded="true"] { height: 100%; min-height: 0; }
+.pc-shell[data-expanded="true"] .pc-surface { flex: 1 1 auto; min-height: 0; }
+
+/* ── Campo ────────────────────────────────────────────────── */
+.pc-field {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.pc-textarea {
+  width: 100%;
+  /* `.chat-input__content{min-height:72px;max-height:96px}` — literal. */
+  min-height: 72px;
+  max-height: 96px;
+  padding: 0;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  caret-color: var(--app-v2-brand-solid);
+  color: var(--ms-text);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-md);      /* 13px */
+  line-height: 20px;
+  overflow: auto;
+  scrollbar-width: none;
+  transition: background 180ms ease;
+}
+.pc-textarea::-webkit-scrollbar { display: none; }
+.pc-textarea::placeholder { color: var(--ms-text-placeholder); }
+
+.pc-shell[data-expanded="true"] .pc-textarea { max-height: none; flex: 1 1 auto; }
+
+/* Overlay do typewriter — só existe com o campo vazio. */
+.pc-typewriter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  min-height: 20px;
+  pointer-events: none;
+  z-index: 1;
+}
+.pc-typewriter-text {
+  font-size: var(--ms-text-md);
+  line-height: 20px;
+  color: var(--ms-text-placeholder);
+  white-space: nowrap;
+  overflow: hidden;
+}
+/* A pílula `Tab` que vive dentro do campo (`._quickPromptHintTab`). */
+.pc-tab-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 20px;
+  margin-right: 6px;
+  padding: 0 5px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-md);
+  background: var(--ms-bg);
+  color: var(--ms-text-placeholder);
+  font-size: var(--ms-text-xs);      /* 10px */
+  line-height: 1;
+}
+
+/* ── Barra inferior ───────────────────────────────────────── */
+.pc-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 24px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.pc-toolbar-left,
+.pc-toolbar-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pc-toolbar-right { justify-content: flex-end; flex-shrink: 0; }
+
+/* ── Botão de ícone (24x24) ───────────────────────────────── */
+.pc-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--ms-radius-full);
+  color: var(--ms-icon);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+/* Sem isto o flex esmaga o botão quando a fila não cabe — foi assim que
+   dois botões de 24 viraram 16 no painel de 368. Um controle que encolhe
+   é pior que uma fila que transborda: o transbordo se vê. */
+.pc-icon-btn { flex-shrink: 0; }
+.pc-icon-btn:hover:not(:disabled) { background: var(--ms-bg-hover); }
+.pc-icon-btn:disabled { color: var(--ms-text-disabled); cursor: default; }
+/* Aberto: na referência é a marca a 20% com o ícone sólido. */
+.pc-icon-btn[data-open="true"],
+.pc-icon-btn[data-open="true"]:hover {
+  background: hsl(var(--ms-brand-9) / .2);
+  color: var(--app-v2-brand-solid);
+  border-radius: var(--ms-radius);
+}
+
+/* ── Pílula ───────────────────────────────────────────────── */
+.pc-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 70px;
+  height: 24px;
+  padding: 0 8px;
+  /* `border:1px solid rgba(0,0,0,.08)` na referência — o degrau da rampa
+     alfa do kit que fica mais perto é o grayA-4 (.090). */
+  border: 1px solid var(--ms-grayA-4-hex);
+  border-radius: var(--ms-radius-full);
+  background: var(--ms-bg-component);
+  color: var(--ms-text);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-base);    /* 12px */
+  line-height: 20px;
+  letter-spacing: .24px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 150ms cubic-bezier(.4, 0, .2, 1),
+    box-shadow       150ms cubic-bezier(.4, 0, .2, 1),
+    transform        150ms cubic-bezier(0, 0, .2, 1);
+}
+.pc-pill:hover:not(:disabled) { background: var(--ms-bg-component-hover); }
+.pc-pill:active:not(:disabled) { transform: scale(.97); }
+.pc-pill:disabled { color: var(--ms-text-disabled); cursor: default; }
+/* Estado não-padrão — a referência tinge de marca. */
+.pc-pill[data-custom="true"],
+.pc-pill[data-custom="true"]:hover {
+  background: var(--app-v2-brand-bg);
+  color: var(--app-v2-brand-text);
+  border-color: var(--app-v2-brand-border);
+}
+.pc-pill-sep { color: var(--ms-text-tertiary); }
+
+/* A pílula do agente é a única com largura travada: na referência ela
+   mede 70 e diz `Auto`. O nome do modelo tem 119 e não cabe — é por isso
+   que ele mora no popover, e não na barra. */
+.pc-pill--agente { min-width: 70px; }
+
+/* Na referência o enviar encosta no ditar: 304 → 332, 4px de vão. A
+   barra tem `gap: 8`, então o último passo desconta os outros 4. */
+.pc-toolbar-right > .pc-send,
+.pc-toolbar-right > .pc-send-metal { margin-left: -4px; }
+
+/* ── Segmento de N estados ────────────────────────────────── */
+.pc-segment {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 2px;
+  gap: 2px;
+  border-radius: var(--ms-radius-full);
+  background: var(--ms-bg-component);
+}
+.pc-segment-item {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  border-radius: var(--ms-radius-full);
+  color: var(--ms-text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-sm);      /* 11px */
+  line-height: 1;
+  cursor: pointer;
+  transition: background 150ms cubic-bezier(.4, 0, .2, 1), color 150ms;
+}
+.pc-segment-item:hover:not(:disabled):not([data-active="true"]) { background: var(--ms-bg-hover); }
+.pc-segment-item[data-active="true"] {
+  background: var(--ms-bg);
+  color: var(--ms-text);
+  box-shadow: var(--ms-shadow-sm);
+}
+.pc-segment-item:disabled { color: var(--ms-text-disabled); cursor: default; }
+
+/* ── Contador ─────────────────────────────────────────────── */
+.pc-counter {
+  font-family: var(--font-metric);
+  font-size: var(--ms-text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--ms-text-tertiary);
+  user-select: none;
+  pointer-events: none;
+}
+.pc-counter[data-over="true"] { color: var(--signal-critical); }
+
+/* ── Enviar ───────────────────────────────────────────────── */
+.pc-send-metal {
+  display: inline-flex;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+
+.pc-send-metal > .pc-send { margin-left: 0; }
+
+.pc-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 24px;
+  min-width: 24px;
+  padding: 0 4px;
+  border: none;
+  border-radius: var(--ms-radius-full);
+  background: var(--ms-bg-component);
+  color: var(--ms-text-tertiary);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-base);
+  cursor: not-allowed;
+  flex-shrink: 0;
+  transition: background .15s ease;
+}
+.pc-send svg { display: block; flex: 0 0 auto; }
+/* Na referência o envio é um círculo de 24×24, sem texto. A dica do
+   atalho é nossa, e só ela justifica alargar o botão. */
+.pc-send:not(:disabled):has(.pc-send-hint) { padding: 0 10px 0 8px; }
+.pc-send:not(:disabled) {
+  background: var(--app-v2-brand-solid);
+  color: var(--app-v2-text-on-brand);
+  cursor: pointer;
+}
+.pc-send:hover:not(:disabled) { background: var(--app-v2-brand-solid-hover); }
+.pc-send:disabled svg { opacity: 1; }
+.pc-send-hint {
+  font-family: var(--font-metric);
+  font-size: var(--ms-text-xs);
+  opacity: .72;
+  white-space: nowrap;
+}
+.pc-send-spinner {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--ms-border);
+  border-top-color: var(--app-v2-brand-solid);
+  display: inline-block;
+  animation: pc-spin .75s linear infinite;
+}
+@keyframes pc-spin { to { transform: rotate(360deg); } }
+
+/* ── A faixa (o slot que leva o shell de 164 a 206) ───────── */
+/* `2 + 160 + 10 (gap) + 24 (faixa) + 10 de sobra = 206`. A sobra é o
+   que resta do `height:206px` da referência depois de empilhar os
+   filhos, e é ela que põe a faixa em y=646 num shell que começa em 474. */
+/* `:not(:empty)` porque o consumidor passa um componente que pode
+   devolver `null` — a faixa dispensada. O `<div class="pc-band">` fica
+   na árvore, vazio, e sem isto o shell nunca voltaria aos 164. */
+.pc-shell:has(> .pc-band:not(:empty)) { min-height: 206px; padding-bottom: 10px; }
+.pc-band:empty { display: none; }
+
+.pc-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: calc(100% - 28px);
+  min-height: 24px;
+  height: 24px;
+}
+
+/* ── Popover de parâmetros ────────────────────────────────── */
+/* O raio, a sombra e a entrada vêm de `components/ui/dropdown-menu`,
+   que a fundação já ajustou. Aqui só o que é do composer. */
+.pc-param-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: var(--ms-radius);
+  font-size: var(--ms-text-base);
+  color: var(--ms-text);
+}
+.pc-param-label { color: var(--ms-text-secondary); white-space: nowrap; }
+.pc-param-sep { height: 1px; margin: 8px 0; background: var(--ms-border-subtle); }
+
+/* ── Melhorar: o campo enquanto o texto reescrito chega ───── */
+/* Tinta da marca a 6% marca "isto está sendo reescrito" sem competir
+   com o texto — a regra do kit é sinal só em texto, ícone e tinta baixa. */
+.pc-textarea[data-polishing="true"] {
+  background: hsl(var(--ms-brand-9) / .06);
+  border-radius: var(--ms-radius);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-shell::before { animation: none; }
+  .pc-shell,
+  .pc-pill,
+  .pc-segment-item,
+  .pc-textarea,
+  .pc-icon-btn { transition: none; }
+}
+
+
+/* ============================================================
+   AS ABAS DE CATEGORIA — `home-v2-hero-legacy__tabs`
+
+   Geometria literal do `<style>` do `preview.html`:
+     faixa    height 32, padding 4, gap 4, border-radius 16
+     aba      height 24, padding 0 12, raio 18, 12px/20px, peso 400
+     ativa    cor `--ms-text-on-solid`, peso 500, sem fundo no hover
+     hover    `--app-v2-bg-surface-hover` (#0000000f) em .15s ease
+     indicador top 4, height 24, `--ms-solid`, `--ms-shadow-sm`, raio cheio
+
+   A faixa mede 692 na referência porque divide os 996 do hero com a
+   área de 220 do mascote (996 − 24 de gap − 220 − 60 de margem). Aqui
+   ela acompanha a largura do composer, que é a caixa que ela encima.
+
+   A textura de fundo da referência é um PNG de 20×64 repetido em x, com
+   dois tampões de 40×64 nas pontas. É arte deles, e `miora/` é somente
+   leitura: no lugar dela, a mesma leitura feita com um degradê — banda
+   clara que apaga nos 20px de cada ponta. É a única aproximação desta
+   seção, e está anotada no relatório.
+   ============================================================ */
+
+.pcx-abas {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  max-width: 692px;
+  height: 32px;
+  padding: 4px;
+  margin: 0 auto;
+  border-radius: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  scrollbar-width: none;
+}
+.pcx-abas::-webkit-scrollbar { display: none; }
+
+.pcx-abas-textura {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: 0;
+  height: 100%;
+  border-radius: 16px;
+  background: var(--ms-bg-hover);
+  mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  pointer-events: none;
+}
+
+.pcx-abas-indicador {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 0;
+  height: 24px;
+  z-index: 0;
+  border-radius: var(--ms-radius-full);
+  background: var(--ms-solid);
+  box-shadow: var(--ms-shadow-sm);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    left .3s cubic-bezier(.33, 1, .68, 1),
+    width .3s cubic-bezier(.33, 1, .68, 1),
+    opacity .3s linear;
+}
+.pcx-abas[data-ativa="1"] .pcx-abas-indicador { opacity: 1; }
+
+.pcx-aba {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1 0 auto;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 18px;
+  background: transparent;
+  color: var(--app-v2-text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-base);   /* 12px */
+  font-weight: 400;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.pcx-aba:hover { background: var(--app-v2-bg-surface-hover); }
+.pcx-aba[aria-selected="true"] {
+  color: var(--ms-text-on-solid);
+  font-weight: 500;
+}
+.pcx-aba[aria-selected="true"]:hover { background: transparent; }
+
+.pcx-aba-icone,
+.pcx-aba-rotulo { position: relative; z-index: 1; }
+.pcx-aba-icone { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* ============================================================
+   PÍLULA 4 — MODO DE EXECUÇÃO
+
+   `home-v2-execution-mode-pill`, literal: `min-width:75px`, altura 24,
+   `padding: 0 7px`, raio 30, SEM borda, 12px/20px com `.24px` de
+   espaçamento, e fundo só no hover. O ícone da frente tem 16 e traço
+   1.8; o chevron do fim, 16.
+   ============================================================ */
+
+.pcx-exec-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 75px;
+  height: 24px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 30px;
+  background: transparent;
+  color: var(--ms-text);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-base);
+  line-height: 20px;
+  letter-spacing: .24px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.pcx-exec-pill:hover:not(:disabled) { background: var(--app-v2-bg-surface-hover); }
+.pcx-exec-pill:disabled { color: var(--ms-text-disabled); cursor: default; }
+.pcx-exec-pill > svg:first-child { width: 16px; height: 16px; flex-shrink: 0; }
+.pcx-exec-rotulo { flex-shrink: 0; }
+.pcx-exec-chevron { width: 16px; height: 16px; flex-shrink: 0; color: var(--ms-text-quaternary); }
+
+/* O menu de 138px de `estados/composer-modo-execucao.png`: duas linhas
+   de 32 com ícone, rótulo e o visto no escolhido. */
+.pcx-exec-opcao {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--ms-radius-md);
+  background: transparent;
+  color: var(--ms-text);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-md);
+  cursor: pointer;
+  transition: background .12s ease;
+}
+.pcx-exec-opcao:hover { background: var(--ms-bg-hover); }
+.pcx-exec-opcao-icone { display: flex; flex-shrink: 0; color: var(--ms-icon-secondary); }
+.pcx-exec-opcao-rotulo { flex: 1; text-align: left; font-weight: 500; }
+.pcx-exec-opcao-check { flex-shrink: 0; opacity: 0; color: var(--ms-icon-brand); }
+.pcx-exec-opcao[aria-checked="true"] .pcx-exec-opcao-check { opacity: 1; }
+
+/* ============================================================
+   BOTÃO 3 — CONECTORES
+
+   Na referência o hover deste botão é branco chapado
+   (`.icon-btn--connectors:hover{background:#fff}`), e não o cinza dos
+   vizinhos: ele fica sobre a faixa pastel, onde o cinza sumiria.
+   ============================================================ */
+
+.pc-icon-btn--conectores:hover:not(:disabled) { background: var(--ms-bg); }
+/* Um provedor sem chave é sinal em tinta baixa, não em área: um ponto
+   de 5px no canto do botão, e o motivo no popover. */
+.pc-icon-btn--conectores[data-pendente="true"] { position: relative; }
+.pc-icon-btn--conectores[data-pendente="true"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ms-solid-warning);
+}
+
+.pcx-conector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px;
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-base);
+}
+.pcx-conector-ponto {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--ms-border-strong);
+}
+.pcx-conector-ponto[data-conectado="true"]  { background: var(--ms-solid-success); }
+.pcx-conector-ponto[data-conectado="false"] { background: var(--ms-solid-warning); }
+.pcx-conector-nome { flex: 1; min-width: 0; color: var(--ms-text); }
+.pcx-conector-estado { flex-shrink: 0; color: var(--ms-text-tertiary); }
+
+/* ============================================================
+   O POPOVER DA PÍLULA 5
+
+   Alturas literais de `composer-modelos-custom.png`: `Agent` 36,
+   separador de 1px com 8 de margem, `Multi-modal` 40 (o segmento de 28
+   é quem manda), as linhas de mídia 32, `padding: 8`.
+   ============================================================ */
+
+.pcx-pop-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--ms-radius-md);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-md);
+  color: var(--ms-text);
+}
+.pcx-pop-linha--agente { height: 36px; }
+.pcx-pop-linha--mm { height: 40px; }
+.pcx-pop-rotulo { flex-shrink: 0; color: var(--ms-text-secondary); }
+.pcx-pop-valor {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ms-text-tertiary);
+}
+/* A linha do meio que a aba está usando. É a única marca de estado das
+   duas: sem ela, "Imagem" e "Vídeo" pareceriam intercambiáveis. */
+.pcx-pop-linha[data-ativa="true"] .pcx-pop-rotulo { color: var(--ms-text); font-weight: 500; }
+
+/* A linha que é um interruptor, e não um seletor: mesma altura das
+   outras, com o estado à direita onde as demais põem o valor. */
+.pcx-pop-linha--acao {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background .12s ease;
+}
+.pcx-pop-linha--acao:hover { background: var(--hover-brand-wash); }
+.pcx-pop-linha--acao[aria-checked="true"] .pcx-pop-valor { color: var(--app-v2-brand-text); }
+
+.pcx-pop-sep {
+  height: 1px;
+  margin: 8px 12px;
+  background: var(--ms-border-subtle);
+  opacity: .7;
+}
+
+/* A lista de agentes. Onde a referência põe o multiplicador de cobrança,
+   vai o rótulo real do modelo — mesma posição, dado verdadeiro. */
+.pcx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--ms-radius);
+  background: transparent;
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-base);
+  text-align: left;
+  cursor: pointer;
+  transition: background .12s ease;
+}
+.pcx-item:hover { background: var(--ms-bg-hover); }
+.pcx-item-nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ms-text);
+}
+.pcx-item[data-escolhido="true"] .pcx-item-nome { font-weight: 600; color: var(--ms-text-brand); }
+.pcx-item-marca {
+  flex-shrink: 0;
+  color: var(--ms-text-tertiary);
+  font-size: var(--ms-text-sm);
+}
+
+/* ============================================================
+   O CARTÃO DE CONFIRMAÇÃO DE PARÂMETROS
+
+   Sem captura na referência — só a descrição do i18n. Desenhado com o
+   vocabulário do kit e com a mesma entrada de 150ms dos popovers.
+   ============================================================ */
+
+.pcx-confirma {
+  margin-bottom: 8px;
+  padding: 12px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-xl);
+  background: var(--ms-bg);
+  box-shadow: var(--app-v2-shadow-floating);
+  font-family: var(--font-ui);
+  animation: pcx-confirma-entra 150ms cubic-bezier(.4, 0, .2, 1);
+}
+@keyframes pcx-confirma-entra {
+  from { opacity: 0; transform: scale(.96) translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.pcx-confirma-titulo {
+  margin-bottom: 8px;
+  color: var(--ms-text);
+  font-size: var(--ms-text-md);
+  font-weight: 600;
+}
+.pcx-confirma-lista { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.pcx-confirma-linha { display: flex; align-items: baseline; gap: 8px; font-size: var(--ms-text-base); }
+.pcx-confirma-linha dt { flex-shrink: 0; width: 84px; color: var(--ms-text-tertiary); }
+.pcx-confirma-linha dd { margin: 0; min-width: 0; color: var(--ms-text); }
+
+.pcx-confirma-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.pcx-confirma-btn {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-md);
+  background: var(--ms-bg);
+  color: var(--ms-text);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-base);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.pcx-confirma-btn:hover { background: var(--ms-bg-hover); }
+.pcx-confirma-btn--marca {
+  border-color: transparent;
+  background: var(--app-v2-brand-solid);
+  color: var(--app-v2-text-on-brand);
+}
+.pcx-confirma-btn--marca:hover { background: var(--app-v2-brand-solid-hover); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pcx-abas-indicador,
+  .pcx-exec-pill,
+  .pcx-aba { transition: none; }
+  .pcx-confirma { animation: none; }
+}
+
+/* ============================================================
+   A SOMBRA DO COMPOSER FLUTUANTE
+
+   A referência não tem sombra: o composer dela é inline na página, e na
+   Criar o nosso também é. No Acervo ele flutua fixo sobre a grade, e ali
+   precisa da separação — é a única regra deste arquivo que não sai do
+   `preview.html`.
+
+   O bloco `.miora-composer … !important` de `app/globals.css` saiu, e com
+   ele foi embora a seção de neutralização que vivia aqui.
+   ============================================================ */
+
+.miora-prompt-wrap:not(.is-home-composer) .pc-shell { box-shadow: var(--ms-shadow-md); }
+
+/* ============================================================
+   FEED — o ladrilho de uma geração em voo
+
+   Bloco 09, item 5 do `PARA-O-SEU-PROJETO.md`: o estado de espera é
+   design, não espera. O retângulo já nasce do tamanho final do
+   artefato (quem reserva a caixa é a linha da grade), e o que ele
+   mostra é o brilho varrendo o cinza mais uma pílula de status.
+
+   `wf-media-load-shimmer` da referência é 1.5s ease-in-out infinite,
+   varrendo `background-position` de `200% 0` a `-200% 0` sobre um
+   `linear-gradient(90deg, #ededed 25%, #e4e4e4, #ededed 75%)` com
+   `background-size: 200% 100%`. Os dois cinzas são `--ms-gray-2`
+   (97,64%) e um degrau abaixo; aqui saem dos tokens.
+   ============================================================ */
+
+/* O shimmer saiu por decisão do usuário: no lugar dele entra o loop da nota
+   portada (`components/notas/`). O ladrilho continua sendo a caixa do tamanho
+   final do artefato — quem a reserva é a linha da grade —, e o loop se centra
+   dentro sem opinar sobre o tamanho. Fica o cinza chapado para a caixa
+   continuar legível como espaço reservado. */
+.pgt-tile {
+  background-color: hsl(var(--ms-gray-2));
+}
+
+/* A pílula de status: 85x28 na referência, centrada nos dois eixos. */
+.pgt-status {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 85px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--ms-radius-full);
+  background: var(--ms-bg);
+  box-shadow: var(--ms-shadow-sm);
+  color: var(--ms-text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-sm);      /* 11px */
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.pgt-spinner {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--ms-border-subtle);
+  border-top-color: var(--app-v2-brand-solid);
+  animation: pc-spin .75s linear infinite;
+}
+
+.pgt-cancel {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--ms-radius-full);
+  background: var(--ms-bg);
+  box-shadow: var(--ms-shadow-sm);
+  color: var(--ms-icon-secondary);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.pgt-cancel:hover { background: var(--ms-bg-component-hover); color: var(--ms-text); }
+
+/* O prompt fica na base, em uma linha. Sem véu escuro: o fundo já é
+   claro, e um gradiente preto aqui seria a pele antiga voltando. */
+.pgt-prompt {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 10px;
+  color: var(--ms-text-tertiary);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-sm);
+  line-height: 16px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pgt-spinner { animation-duration: 2s; }
+}
+
+/* ============================================================
+   A VIEW "CRIAR" — o que é do Acervo, e só isso
+
+   O shell, as pílulas, o contador e o envio vêm das folhas acima e são
+   compartilhados com o /chat. O que segue é a parte que só existe aqui:
+   a camada de chips por cima do campo, a trilha de anexos (que é alvo
+   de soltura, não decoração) e a pilha do modo multi.
+
+   Nenhum valor é cravado: tudo sai de `--ms-*` / `--app-v2-*`. Onde a
+   referência põe branco sobre mídia, usamos `--ms-text-on-solid` e a
+   escala `--ms-blackA-*` — é sobre a foto que o texto cai, não sobre a
+   pele escura que estamos tirando.
+   ============================================================ */
+
+/* ── O erro da geração ────────────────────────────────────── */
+.pcx-gen-error {
+  margin-bottom: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--ms-border-danger);
+  border-radius: var(--ms-radius-lg);
+  background: var(--ms-bg-danger);
+  color: var(--ms-text-danger);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-base);
+  line-height: 18px;
+}
+
+/* ── O campo, sob a camada de chips ───────────────────────── */
+/* O texto real fica invisível e quem se vê é `.pcx-overlay-inner`. As
+   duas camadas TÊM de compartilhar a métrica, senão o cursor descola do
+   glifo — por isso as regras das duas nascem juntas, aqui. */
+.pc-shell.composer-criar .pc-textarea { color: transparent; }
+
+.pc-shell.composer-criar--mono .pc-textarea,
+.pc-shell.composer-criar--mono .pcx-overlay-inner {
+  font-family: var(--font-metric);
+  letter-spacing: normal;
+}
+
+/* No modo multi o campo único não existe: quem edita é a pilha. */
+.pc-shell.composer-criar--multi .pc-field { display: none; }
+
+.pcx-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.pcx-overlay-inner {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-md);      /* 13px, o mesmo do .pc-textarea */
+  line-height: 20px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--ms-text);
+  will-change: transform;
+}
+/* O que passou do limite. Vermelho em texto e tinta baixa, nunca em área
+   grande — é a regra do kit. */
+.pcx-excedente {
+  border-radius: var(--ms-radius-sm);
+  background: var(--ms-bg-danger-active);
+  color: var(--ms-text-danger);
+}
+
+/* ── Limpar e expandir, no canto ──────────────────────────── */
+.pcx-corner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--ms-radius);
+  background: transparent;
+  color: var(--ms-icon-tertiary);
+  cursor: pointer;
+  transition: background .14s ease, color .14s ease;
+}
+.pcx-corner:hover { background: var(--ms-bg-hover); color: var(--ms-text); }
+.pcx-corner--limpar { right: 36px; }
+.pcx-corner--limpar:hover { background: var(--ms-bg-danger); color: var(--ms-text-danger); }
+
+/* ── A trilha de anexos ───────────────────────────────────── */
+.pcx-trilha-scroll { max-height: 200px; overflow-y: auto; scrollbar-width: thin; }
+.pcx-trilha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+  padding-bottom: 10px;
+}
+
+.pcx-slot {
+  position: relative;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-md);
+  background: var(--ms-bg-component);
+  transition: border-color 120ms, box-shadow 120ms, opacity 120ms;
+  animation: pcx-slot-in 260ms cubic-bezier(.16, 1, .3, 1) backwards;
+}
+/* Alvo de soltura ativo: a marca, não o lilás — o lilás reprova o
+   contraste mínimo de indicador sobre branco. */
+.pcx-slot[data-estado="alvo"],
+.pcx-slot-add[data-estado="alvo"] {
+  border: 2.5px solid var(--app-v2-brand-solid);
+  box-shadow: 0 0 0 3px hsl(var(--ms-brand-9) / .22);
+}
+/* Citado no prompt por `@`. */
+.pcx-slot[data-estado="citado"] { border: 2.5px solid var(--signal-success); }
+.pcx-slot[data-estado="erro"]   { border-color: var(--ms-border-danger); }
+.pcx-slot[data-arrastando="true"] { opacity: .3; animation: none; }
+.pcx-slot[data-saindo="true"] {
+  animation: none;
+  opacity: 0;
+  transform: translateY(-10px) scale(.92);
+  transition: opacity 170ms, transform 170ms;
+}
+
+@keyframes pcx-slot-in {
+  from { opacity: 0; transform: translateY(6px) scale(.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+.pcx-slot-midia { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+.pcx-slot-audio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--ms-icon-secondary);
+}
+
+/* O véu do hover e o da falha caem SOBRE a mídia; é o único lugar em que
+   preto translúcido é a resposta certa. */
+.pcx-slot-lupa,
+.pcx-slot-veu {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ms-blackA-5-hex);
+  color: var(--ms-icon-on-solid);
+}
+.pcx-slot-lupa { cursor: zoom-in; }
+.pcx-slot-veu[data-erro="true"] { color: var(--ms-bg-danger); }
+
+.pcx-slot-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--ms-blackA-3-hex);
+  border-top-color: var(--ms-icon-on-solid);
+  animation: pc-spin .75s linear infinite;
+}
+
+.pcx-slot-rotulo {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: block;
+  padding: 8px 4px 3px;
+  background: linear-gradient(to top, var(--ms-blackA-7-hex) 0%, transparent 100%);
+  color: var(--ms-text-on-solid);
+  font-family: var(--font-ui);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.pcx-slot-remover {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--ms-blackA-7-hex);
+  color: var(--ms-icon-on-solid);
+  cursor: pointer;
+  transition: background 120ms;
+}
+.pcx-slot-remover:hover { background: var(--ms-blackA-10-hex); }
+
+/* O ladrilho vazio. Continua na trilha porque ele é o ALVO DE SOLTURA
+   daquele slot — o "+" da barra escolhe pelo nome, este mira direto. */
+.pcx-slot-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 2px;
+  width: 64px;
+  height: 64px;
+  padding: 0 4px;
+  border: 1.5px dashed var(--ms-border);
+  border-radius: var(--ms-radius-md);
+  background: var(--ms-bg-component);
+  color: var(--ms-text-secondary);
+  cursor: pointer;
+  transition: border-color 140ms, background 140ms, color 140ms, box-shadow 140ms;
+}
+.pcx-slot-add:hover:not(:disabled) { background: var(--ms-bg-component-hover); }
+.pcx-slot-add:disabled { cursor: default; color: var(--ms-text-disabled); }
+.pcx-slot-add[data-estado="alvo"] {
+  background: hsl(var(--ms-brand-9) / .07);
+  color: var(--app-v2-brand-solid);
+}
+.pcx-slot-add-nome {
+  max-width: 100%;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1.15;
+  text-align: center;
+  /* Quebra em vez de reticências: "ÚLT. QUADRO" não cabe nos 64px numa linha,
+     e um rótulo cortado ("ÚLT. QUA…") não diz qual slot é. */
+  overflow-wrap: break-word;
+}
+.pcx-slot-add-conta {
+  color: var(--ms-text-tertiary);
+  font-family: var(--font-ui);
+  font-size: 8px;
+  line-height: 1.2;
+}
+.pcx-slot-add[data-estado="alvo"] .pcx-slot-add-conta { color: var(--app-v2-brand-solid); }
+
+/* A tira "Multi ligado" saiu junto com o elemento: o campo da
+   referência é texto puro, sempre. A contagem vive na pilha numerada. */
+
+.pcx-pilha {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.pcx-bloco {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  flex-shrink: 0;
+  gap: 8px;
+  padding: 7px 24px 7px 10px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-md);
+  background: var(--ms-bg-hover);
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms;
+}
+.pcx-bloco[data-aberto="true"] {
+  /* Aberto, o contador sai do fluxo e vai para o canto inferior; sem esta
+     folga ele cairia POR CIMA da última linha do prompt. */
+  padding-bottom: 24px;
+  border-color: var(--app-v2-brand-border);
+  background: hsl(var(--ms-brand-9) / .04);
+  cursor: default;
+}
+.pcx-bloco[data-vazio="true"] { opacity: .45; }
+
+.pcx-bloco-num {
+  flex-shrink: 0;
+  min-width: 18px;
+  color: var(--app-v2-brand-solid);
+  font-family: var(--font-metric);
+  font-size: var(--ms-text-xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  line-height: 20px;
+}
+.pcx-bloco[data-vazio="true"] .pcx-bloco-num { color: var(--ms-text-tertiary); }
+
+.pcx-bloco-campo {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--app-v2-brand-solid);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-md);
+  line-height: 20px;
+}
+.composer-criar--mono .pcx-bloco-campo,
+.composer-criar--mono .pcx-bloco-overlay-inner { font-family: var(--font-metric); }
+.pcx-bloco-campo::placeholder { color: var(--ms-text-placeholder); }
+/* Recolhido, o bloco é uma linha de 20px com o texto em `nowrap`. Sem isto
+   o navegador acha que precisa de barra horizontal e a devolve ocupando
+   altura — a linha vira três. Quem mostra o texto inteiro é o bloco aberto. */
+.pcx-bloco-campo { overflow-x: hidden; scrollbar-width: none; }
+.pcx-bloco-campo::-webkit-scrollbar { display: none; }
+
+.pcx-bloco-overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.pcx-bloco-overlay-inner {
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-md);
+  line-height: 20px;
+  color: var(--ms-text);
+  word-break: break-word;
+  will-change: transform;
+}
+
+.pcx-bloco-conta {
+  flex-shrink: 0;
+  color: var(--ms-text-tertiary);
+  font-family: var(--font-metric);
+  font-size: var(--ms-text-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 20px;
+}
+.pcx-bloco-conta[data-over="true"] { color: var(--ms-text-danger); }
+.pcx-bloco-conta[data-solto="true"] { position: absolute; right: 24px; bottom: 6px; }
+
+.pcx-bloco-remover {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: var(--ms-radius-sm);
+  background: none;
+  color: var(--ms-icon-tertiary);
+  font-size: var(--ms-text-base);
+  line-height: 1;
+  cursor: pointer;
+  transition: color 120ms;
+}
+.pcx-bloco-remover:hover:not(:disabled) { color: var(--ms-text); }
+.pcx-bloco-remover:disabled { cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pcx-slot { animation: none; }
+}
+
+/* ============================================================
+   FEED — a barra da seleção em lote
+
+   A referência não tem essa tela: a conta do recon do bloco 07 não tinha
+   nenhum asset, então não há captura de card, de grade nem de seleção em
+   lote. O que segue é a barra que já existia, traduzida para o
+   vocabulário do kit — superfície branca, sombra média, botão de 34px —,
+   sem nenhuma ação nova.
+
+   Ela flutua sobre a grade clara: uma barra escura ali seria a pele do
+   HeliosGen sobrevivendo justamente no lugar mais visível.
+   ============================================================ */
+
+.asb {
+  position: fixed;
+  bottom: 20px;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 8px 16px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-xl);
+  background: var(--ms-bg);
+  box-shadow: var(--ms-shadow-md);
+  font-family: var(--font-ui);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(80px);
+  transition:
+    transform 300ms cubic-bezier(.16, 1, .3, 1),
+    opacity 240ms ease,
+    left 200ms ease-linear;
+}
+.asb[data-aberta="true"] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.asb-conta {
+  padding-right: 6px;
+  color: var(--ms-text-secondary);
+  font-size: var(--ms-text-md);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.asb-sep {
+  flex-shrink: 0;
+  width: 1px;
+  height: 20px;
+  background: var(--ms-border-subtle);
+}
+
+.asb-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--ms-radius-md);
+  background: var(--ms-bg-component);
+  color: var(--ms-text);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 140ms, color 140ms;
+}
+.asb-btn:hover { background: var(--ms-bg-component-hover); }
+.asb-btn--perigo:hover { background: var(--ms-bg-danger); color: var(--ms-text-danger); }
+.asb-btn--icone { width: 34px; padding: 0; justify-content: center; color: var(--ms-icon-secondary); }
+.asb-btn--icone:hover { color: var(--ms-text); }
+.asb-btn[data-aberto="true"],
+.asb-btn[data-aberto="true"]:hover {
+  background: var(--app-v2-brand-bg);
+  color: var(--app-v2-brand-text);
+}
+
+/* ── O seletor de pastas ──────────────────────────────────── */
+.asb-pop {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  z-index: 400;
+  transform: translateX(-50%);
+  min-width: 220px;
+  overflow: hidden;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-lg);
+  background: var(--ms-bg);
+  box-shadow: var(--ms-shadow-lg);
+}
+
+.asb-pop-titulo {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--ms-border-subtle);
+  color: var(--ms-text-tertiary);
+  font-size: var(--ms-text-sm);
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.asb-pop-lista { padding: 6px 0; max-height: 280px; overflow-y: auto; }
+
+.asb-pasta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.asb-pasta:hover { background: var(--ms-bg-hover); }
+
+.asb-pasta-seta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: var(--ms-icon-tertiary);
+  transition: transform 150ms;
+}
+.asb-pasta-seta[data-tem-filhos="true"] { cursor: pointer; }
+.asb-pasta-seta[data-aberta="true"] { transform: rotate(90deg); }
+
+.asb-pasta-icone { flex-shrink: 0; color: var(--ms-icon-tertiary); transition: color 150ms; }
+.asb-pasta-icone[data-marcada="todas"]   { color: var(--app-v2-brand-solid); }
+.asb-pasta-icone[data-marcada="algumas"] { color: var(--app-v2-brand-border); }
+
+.asb-pasta-nome {
+  color: var(--ms-text-secondary);
+  font-size: var(--ms-text-md);
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.asb-pasta-nome[data-marcada="true"] { color: var(--ms-text); }
+
+.asb-pasta-conta {
+  margin-top: 1px;
+  color: var(--ms-text-tertiary);
+  font-size: var(--ms-text-sm);
+}
+
+.asb-caixa {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--ms-border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ms-icon-on-brand);
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms;
+}
+.asb-caixa[data-marcada="todas"] {
+  border-color: var(--app-v2-brand-solid);
+  background: var(--app-v2-brand-solid);
+}
+.asb-caixa[data-marcada="algumas"] {
+  border-color: var(--app-v2-brand-solid);
+  background: var(--app-v2-brand-bg);
+  color: var(--app-v2-brand-solid);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .asb { transition: opacity 240ms ease; }
+}
+
+/* ============================================================
+   O PAINEL DE MENÇÕES — a afordância 2
+
+   Vai num portal porque o `overflow: clip` do shell (o recorte que
+   segura o brilho de 4 camadas dentro da caixa) cortaria qualquer
+   painel desenhado como filho. É a mesma consequência que o INFO.md do
+   bloco 03 anota para o tooltip, e a mesma saída: portal.
+
+   A entrada copia a dos popovers da referência — `opacity 0→1` mais
+   `scale(.96) translateY(4px)` em 150ms `cubic-bezier(.4,0,.2,1)`.
+   ============================================================ */
+
+.pcx-mencoes {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-lg);
+  background: var(--ms-bg);
+  box-shadow: var(--ms-shadow-lg);
+  font-family: var(--font-ui);
+  animation: pcx-pop-in 150ms cubic-bezier(.4, 0, .2, 1);
+}
+
+@keyframes pcx-pop-in {
+  from { opacity: 0; transform: scale(.96) translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.pcx-mencoes-titulo {
+  flex-shrink: 0;
+  padding: 6px 12px 4px;
+  border-bottom: 1px solid var(--ms-border-subtle);
+  color: var(--ms-text-tertiary);
+  font-size: var(--ms-text-xs);
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.pcx-mencoes-lista {
+  flex: 1;
+  min-height: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.pcx-mencao {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--ms-radius);
+  background: transparent;
+  color: var(--ms-text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-md);
+  text-align: left;
+  cursor: pointer;
+  transition: background 80ms, color 80ms;
+}
+.pcx-mencao[data-ativa="true"] {
+  background: var(--ms-bg-brand);
+  color: var(--ms-text-brand);
+}
+
+.pcx-mencao-thumb {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--ms-radius);
+  background: var(--ms-bg-component);
+  object-fit: cover;
+}
+
+.pcx-mencao-nome {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pcx-mencao-enter {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--ms-text-tertiary);
+  font-family: var(--font-metric);
+  font-size: var(--ms-text-xs);
+}
+
+/* ── A prévia do chip ─────────────────────────────────────── */
+.pcx-chip-previa {
+  position: fixed;
+  z-index: 99999;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.pcx-chip-previa-caixa {
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-md);
+  background: var(--ms-bg);
+  box-shadow: var(--ms-shadow-lg);
+  animation: pcx-pop-in 140ms cubic-bezier(.16, 1, .3, 1);
+}
+.pcx-chip-previa-img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 200px;
+  max-height: 160px;
+  object-fit: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pcx-mencoes,
+  .pcx-chip-previa-caixa { animation: none; }
+}
+
+/* ============================================================
+   O HERÓI — `home-v2-hero-legacy`, literal
+
+   `display:flex; align-items:flex-end; gap:24px; max-width:996px;
+   height:170px; margin:-80px auto 0`. Os 20px que o separam do shell
+   são o `gap` do `.home-v2-page__content`.
+
+   O `margin-top` negativo é o que faz o herói subir por cima do rodapé
+   do carrossel — é assim que o mascote se apoia no banner na referência.
+   ============================================================ */
+
+.pcx-heroi {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  width: 100%;
+  max-width: 996px;
+  height: 170px;
+  margin: -80px auto 20px;
+}
+
+/* `width:26%; max-width:220px; height:100%; margin-right:60px` */
+.pcx-heroi-previa {
+  position: relative;
+  flex: 0 0 auto;
+  width: 26%;
+  max-width: 220px;
+  height: 100%;
+  margin-right: 60px;
+  overflow: visible;
+}
+
+/* Duas diferenças em relação ao mascote da referência, e as duas vêm de
+   ele ser um personagem e a nossa marca não ser:
+
+   1. Lá o mascote tem `bottom:-50px`, para o corpo passar da linha e
+      encostar no composer. Meia marca escondida atrás do composer leria
+      como um quadrado cortado, então ela fica apoiada na base da faixa.
+
+   2. Lá as pílulas passam POR CIMA do mascote — dá para ver a "Poster"
+      sobre a orelha dele no `mascote-frame.png` —, e funciona porque ele
+      é cinza e macio. A nossa marca é um bloco de violeta chapado: texto
+      escuro a 50% de opacidade em cima dela não se lê. Em vez de mexer
+      nos valores literais da pílula, a marca fica à ESQUERDA do campo
+      onde elas caem (todas começam em 44,49% da caixa), que é também
+      onde o corpo do mascote está no quadro. */
+.pcx-heroi-mascote {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* O Foguinho é um personagem, então volta a fazer o que o mascote da
+   referência fazia: passa um pouco da base e encosta no composer. Ele
+   recebe o clique (o contêiner não), e fica recuado à esquerda para a
+   cabeça não ficar embaixo das pílulas, que começam em 44,49% da caixa. */
+.pcx-heroi-foguinho {
+  margin-left: -28px;
+  margin-bottom: -14px;
+  pointer-events: auto;
+}
+.pcx-heroi-foguinho:focus-visible {
+  outline: 2px solid var(--app-v2-brand-solid);
+  outline-offset: 2px;
+  border-radius: 24px;
+}
+
+/* `left:-5px; top:60px; width:100%; height:100%; z-index:4` */
+.pcx-heroi-tags {
+  position: absolute;
+  left: -5px;
+  top: 60px;
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+  transition: opacity .12s ease;
+  /* A camada cobre a caixa inteira, por cima do Foguinho: só as pílulas
+     recebem o clique, o vão entre elas deixa passar para o mascote. */
+  pointer-events: none;
+}
+
+/* A pílula fantasma, literal — menos o `pointer-events:none`, que aqui
+   não pode existir: na referência ela é decoração, aqui é a categoria. */
+.pcx-heroi-tag {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3.522px;
+  height: 28px;
+  padding: 7.044px 10.566px;
+  border: .881px solid var(--app-v2-border-subtle);
+  border-radius: 15.849px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--app-v2-bg-surface) 45%, transparent) 0%, transparent 52%),
+    color-mix(in srgb, var(--app-v2-bg-component-hover) 20%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--ms-text);
+  font-family: var(--font-ui);
+  font-size: 10.566px;
+  font-weight: 500;
+  line-height: 17.61px;
+  letter-spacing: .0528px;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  /* As cinco opacidades literais do bundle (.3, 1, .5, 1, .7) chegam pela
+     custom property, e não por `opacity` em linha — assim o hover ainda
+     as vence sem `!important`. */
+  opacity: var(--pcx-tag-op, 1);
+  transition: opacity .15s ease, border-color .15s ease;
+}
+.pcx-heroi-tag:hover { opacity: 1; }
+.pcx-heroi-tag[data-ativa="true"] { border-color: var(--app-v2-brand-solid); }
+
+@media (max-width: 900px) {
+  /* Sem largura para os 220 do mascote, sobra a faixa de abas. */
+  .pcx-heroi { height: auto; margin: 0 auto 20px; }
+  .pcx-heroi-previa { display: none; }
+}
+
+
+/* ============================================================
+   HOVER DE MARCA — acréscimo da frente do Orvalho (leva 3)
+
+   Pedido do usuário: em quatro áreas do app o ponteiro acende a
+   marca. A regra do Maestro vale inteira: o FUNDO continua o
+   cinza da referência; o que acende é ícone, texto e borda.
+
+   Este bloco só ACRESCENTA regra de `:hover`. Nenhum valor que já
+   estava no arquivo foi alterado, e nenhuma regra de repouso foi
+   tocada — a geometria da tabela do INFO.md fica onde estava.
+   ============================================================ */
+
+/* Área 3 do pedido: ícones e pílulas do composer.
+
+   Cada exclusão abaixo protege um estado que JÁ é de marca ou já é
+   um sinal — o botão aberto, a pílula em valor não-padrão, a aba
+   selecionada. Sem elas, o hover apagaria o estado por baixo. */
+
+/* 1 · Os oito botões de afordância da barra. Fundo continua
+   `--ms-bg-hover`; o que muda é o desenho. */
+.pc-icon-btn:hover:not(:disabled):not([data-open="true"]) {
+  color: var(--hover-brand);
+}
+
+/* 2 · A pílula (agente, proporção, quantidade…). Aqui existe borda
+   de verdade, então ela é que recebe `--hover-brand-soft` — não
+   precisa de `outline`. */
+.pc-pill:hover:not(:disabled):not([data-custom="true"]) {
+  color: var(--hover-brand);
+  border-color: var(--hover-brand-soft);
+}
+
+/* 3 · A pílula de modo de execução. */
+.pcx-exec-pill:hover:not(:disabled) { color: var(--hover-brand); }
+
+/* 4 · As abas de categoria. A selecionada não acende: ela já é o
+   estado forte da fileira. */
+.pcx-aba:hover:not([aria-selected="true"]) { color: var(--hover-brand); }

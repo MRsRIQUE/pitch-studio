@@ -1,5 +1,6 @@
 // Shared node type definitions — imported by both Sidebar and NodePickerMenu
 import React from "react";
+import { PRODUCTION_NODES } from "./production";
 import { MessageSquare, Image, Film, Sparkles, Bot, Clapperboard, StickyNote } from "lucide-react";
 
 export type NodeCategory = "generators" | "resources";
@@ -8,6 +9,7 @@ export const NODE_META: Record<
   string,
   { accent: string; bg: string; bigIcon: React.ReactNode }
 > = {
+  ...Object.fromEntries(PRODUCTION_NODES.map(n => [n.type, { accent: "#9875cf", bg: "#211830", bigIcon: <Clapperboard size={18} /> }])),
   promptNode:         { accent: "#01b574", bg: "#05261c",  bigIcon: <MessageSquare size={18} strokeWidth={1.7} /> },
   imageInputNode:     { accent: "#ffb547", bg: "#431407",  bigIcon: <Image         size={18} strokeWidth={1.7} /> },
   videoInputNode:     { accent: "#1b84ff", bg: "#16162b",  bigIcon: <Film          size={18} strokeWidth={1.7} /> },
@@ -25,6 +27,7 @@ export const NODES: Array<{
   label: string;
   description: string;
 }> = [
+    ...PRODUCTION_NODES.map(n => ({ ...n, category: "resources" as const, canReceiveConnection: true, icon: <Clapperboard size={14} /> })),
     /* ── Generators ─────────────────────────────────────────────────────────── */
     {
       type: "assistantNode",
@@ -146,6 +149,7 @@ export function getLastNodeSettings(
 
 // Rough pixel footprint per node type — used for placement + collision detection
 export const NODE_SIZE: Record<string, { w: number; h: number }> = {
+  ...Object.fromEntries(PRODUCTION_NODES.map(n => [n.type, { w: n.type === "scriptNode" || n.type === "smartBreakdownNode" ? 760 : 400, h: 600 }])),
   assistantNode: { w: 280, h: 200 },
   videoGeneratorNode: { w: 320, h: 220 }, // Safe default for 16:9 + controls
   generateNode: { w: 280, h: 280 },       // 1:1 default

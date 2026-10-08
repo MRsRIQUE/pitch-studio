@@ -1,0 +1,557 @@
+/* ============================================================
+   PRODUTOS QUENTES — a aba e a folha de personagem
+
+   A MESMA grade em dois lugares, e é de propósito:
+
+   - no painel da direita da tela de projeto (`.gal__rolagem`), que tem
+     410px e pode ser arrastado de 320 a 820;
+   - na tela própria `/quentes`, com a largura toda.
+
+   Por isso a grade é `auto-fill` sobre a variável `--pq-min` e não colunas
+   fixas: em 320 ela vira uma coluna, em 820 vira quatro, e na tela cheia
+   o cartão cresce em vez de a coluna se multiplicar. `.pq--pagina` muda
+   essa variável e mais nada de estrutura.
+
+   Os tokens são os mesmos do painel vizinho (`galeria-lateral.css`), e o
+   raio de 10px é o `--gal-radius` de lá — declarado de novo aqui porque
+   este bloco também é montado fora daquele painel.
+   ============================================================ */
+
+.pq {
+  --pq-radius: 10px;
+  /* A largura mínima do cartão. É a única medida que separa as duas
+     montagens: no painel de 410px, três colunas de 150; na tela própria,
+     cartões de 210 que crescem até preencher. */
+  --pq-min: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+/* ── Na tela própria ──────────────────────────────────────── */
+
+.pq--pagina {
+  --pq-radius: 14px;
+  gap: 16px;
+}
+.pq--pagina .pq-grade { gap: 16px; }
+.pq--pagina .pq-barra { max-width: 420px; }
+.pq--pagina .pq-busca,
+.pq--pagina .pq-chip { height: 34px; }
+.pq--pagina .pq-btn,
+.pq--pagina .pq-icone { height: 30px; }
+.pq--pagina .pq-icone { width: 30px; }
+.pq--pagina .pq-card__texto strong { font-size: var(--ms-text-base); }
+
+/* ── Busca e filtros ──────────────────────────────────────── */
+
+.pq-barra { display: flex; align-items: center; gap: 6px; }
+
+.pq-busca {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 9px;
+  border-radius: var(--ms-radius-full);
+  background: var(--app-v2-bg-surface-alt, var(--ms-bg-subtle));
+  color: var(--ms-text-tertiary);
+}
+.pq-busca input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-md);
+  color: var(--ms-text);
+}
+.pq-busca input::placeholder { color: var(--ms-text-tertiary); }
+
+.pq-chips { display: flex; align-items: center; gap: 4px; }
+
+.pq-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  border: none;
+  border-radius: var(--ms-radius-full);
+  background: transparent;
+  color: var(--ms-text-tertiary);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-sm);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.pq-chip:hover { color: var(--hover-brand, var(--ms-text)); }
+.pq-chip[aria-selected="true"] { background: var(--ms-bg-brand); color: var(--app-v2-brand-text, var(--ms-text)); }
+/* O contador é dado, não enfeite: diz quantos produtos cada origem tem
+   antes de o usuário clicar e descobrir que uma delas está vazia. */
+.pq-chip span { opacity: .6; font-variant-numeric: tabular-nums; }
+
+/* ── A grade ──────────────────────────────────────────────── */
+
+.pq-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--pq-min), 1fr));
+  gap: 10px;
+}
+
+/* Cartão maior só quando há janela para ele. Abaixo de 900 o mínimo
+   volta a 150, senão `auto-fill` com 210 deixa uma coluna só e cartões da
+   largura inteira da tela. */
+@media (min-width: 900px) {
+  .pq--pagina { --pq-min: 210px; }
+}
+
+.pq-esqueleto {
+  aspect-ratio: 3 / 4;
+  border-radius: var(--pq-radius);
+  background: var(--ms-bg-subtle);
+  animation: pq-pulsa 1.4s ease-in-out infinite;
+}
+@keyframes pq-pulsa { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+
+.pq-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.pq-card__foto {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: var(--pq-radius);
+  /* Fundo claro e não escuro: a foto recortada sai em branco puro, e um
+     ladrilho escuro atrás dela desenharia uma moldura que não existe. */
+  background: var(--ms-bg-subtle);
+}
+.pq-card__foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .35s cubic-bezier(.22, 1, .36, 1);
+}
+.pq-card:hover .pq-card__foto img { transform: scale(1.04); }
+
+/* Recortada, a foto passa a ser produto sobre branco: `cover` cortaria as
+   bordas dele. */
+.pq-card[data-limpa] .pq-card__foto { background: #fff; }
+.pq-card[data-limpa] .pq-card__foto img { object-fit: contain; }
+
+.pq-card__semfoto {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--ms-text-sm);
+  color: var(--ms-text-tertiary);
+}
+
+.pq-card__recortando {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: color-mix(in srgb, var(--app-v2-bg-surface) 78%, transparent);
+  font-size: var(--ms-text-sm);
+  color: var(--ms-text-secondary);
+  backdrop-filter: blur(2px);
+}
+
+.pq-girando { animation: pq-gira 1s linear infinite; }
+@keyframes pq-gira { to { transform: rotate(360deg); } }
+
+.pq-selo {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: var(--ms-radius-full);
+  background: color-mix(in srgb, var(--app-v2-bg-surface) 88%, transparent);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  color: var(--ms-text-secondary);
+}
+.pq-selo[data-origem="vitrine"] { background: var(--ms-bg-brand); color: var(--app-v2-brand-text, var(--ms-text)); }
+.pq-selo--limpa { left: auto; right: 6px; }
+
+.pq-card__texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pq-card__texto strong {
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-md);
+  font-weight: 550;
+  line-height: 1.25;
+  color: var(--ms-text);
+  /* Duas linhas e corta: os nomes vêm do TikTok e passam de 100 caracteres. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pq-card__texto span {
+  display: flex;
+  gap: 4px;
+  font-size: var(--ms-text-sm);
+  color: var(--ms-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.pq-card__texto em { font-style: normal; opacity: .8; }
+
+.pq-card__acoes { display: flex; align-items: center; gap: 5px; }
+
+/* ── Botões ───────────────────────────────────────────────── */
+
+.pq-btn {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius);
+  background: var(--app-v2-bg-surface);
+  color: var(--ms-text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.pq-btn:hover:not(:disabled) { color: var(--hover-brand); border-color: var(--app-v2-brand-border); }
+.pq-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.pq-btn--marca {
+  flex: 0 0 auto;
+  border-color: transparent;
+  background: var(--app-v2-brand-solid);
+  color: var(--app-v2-text-on-brand);
+}
+.pq-btn--marca:hover:not(:disabled) { background: var(--app-v2-brand-solid-hover); color: var(--app-v2-text-on-brand); }
+
+.pq-icone {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius);
+  background: var(--app-v2-bg-surface);
+  color: var(--ms-icon);
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease;
+}
+.pq-icone:hover { color: var(--hover-brand); border-color: var(--app-v2-brand-border); }
+
+/* ── Avisos e vazios ──────────────────────────────────────── */
+
+.pq-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--pq-radius);
+  background: var(--ms-bg-subtle);
+  font-size: var(--ms-text-sm);
+  line-height: 1.4;
+  color: var(--ms-text-secondary);
+}
+.pq-aviso button {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: var(--ms-text-tertiary);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pq-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 18px;
+  text-align: center;
+  color: var(--ms-text-tertiary);
+}
+.pq-vazio p { margin: 0; font-size: var(--ms-text-md); color: var(--ms-text-secondary); }
+.pq-vazio small { font-size: var(--ms-text-sm); line-height: 1.5; }
+.pq-vazio code {
+  padding: 2px 6px;
+  border-radius: var(--ms-radius-sm, 4px);
+  background: var(--ms-bg-subtle);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--ms-text-sm);
+  color: var(--ms-text);
+}
+.pq-vazio .pq-btn { flex: 0 0 auto; }
+
+/* ============================================================
+   A FOLHA DE PERSONAGEM
+
+   Cobre o painel, não a tela: quem está montando a cena continua vendo o
+   grafo atrás, que é onde o resultado vai aparecer. Por isso `absolute`
+   dentro do painel e não um modal de página inteira.
+   ============================================================ */
+
+.pq-folha {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--pq-radius);
+  background: var(--app-v2-bg-surface);
+  box-shadow: 0 8px 30px rgb(0 0 0 / .12);
+  animation: pq-sobe .22s cubic-bezier(.22, 1, .36, 1);
+}
+@keyframes pq-sobe {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Centrada, para quando não há painel para cobrir. VEM DEPOIS de
+   `.pq-folha` de propósito: as duas são uma classe só (0,1,0), então quem
+   ganha é quem vier por último no arquivo. Com o modificador antes da
+   base, o `inset: 0` dela vencia e o `translate(-50%,-50%)` jogava a
+   caixa para fora da tela — medido em x = -220. — a tela própria. O véu
+   é do próprio elemento (`box-shadow` de raio enorme), sem um segundo nó
+   só para escurecer o fundo. */
+.pq-folha--centro {
+  position: fixed;
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(440px, calc(100vw - 32px));
+  max-height: min(620px, calc(100vh - 48px));
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgb(0 0 0 / .22), 0 0 0 100vmax rgb(0 0 0 / .32);
+}
+@keyframes pq-sobe-centro {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+.pq-folha--centro { animation-name: pq-sobe-centro; }
+
+.pq-folha__topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 12px 8px;
+  border-bottom: 1px solid var(--ms-border-subtle);
+}
+.pq-folha__topo strong {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-base);
+  color: var(--ms-text);
+}
+.pq-folha__sub {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: var(--ms-text-sm);
+  color: var(--ms-text-tertiary);
+}
+
+.pq-folha__corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.pq-pessoas { display: flex; flex-direction: column; gap: 6px; }
+
+.pq-pessoa {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--pq-radius);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s ease, background .15s ease;
+}
+.pq-pessoa:hover:not(:disabled) { border-color: var(--app-v2-brand-border); background: var(--hover-brand-wash, transparent); }
+.pq-pessoa:disabled { opacity: .55; cursor: not-allowed; }
+
+.pq-pessoa__retrato {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: var(--ms-radius-full);
+  background: var(--ms-bg-subtle);
+  color: var(--ms-icon);
+}
+.pq-pessoa__retrato img { width: 100%; height: 100%; object-fit: cover; }
+
+.pq-pessoa__texto { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pq-pessoa__texto strong { font-size: var(--ms-text-md); font-weight: 550; color: var(--ms-text); }
+.pq-pessoa__texto span { font-size: var(--ms-text-sm); color: var(--ms-text-tertiary); }
+
+.pq-linha-acao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  border: 1px dashed var(--ms-border-subtle);
+  border-radius: var(--pq-radius);
+  background: transparent;
+  color: var(--ms-text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-md);
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease;
+}
+.pq-linha-acao:hover { color: var(--hover-brand); border-color: var(--app-v2-brand-border); }
+
+/* ── Formulário ───────────────────────────────────────────── */
+
+.pq-form { display: flex; flex-direction: column; gap: 12px; }
+
+.pq-campo { display: flex; flex-direction: column; gap: 4px; }
+.pq-campo > span { font-size: var(--ms-text-sm); color: var(--ms-text-secondary); }
+.pq-campo small { font-size: var(--ms-text-sm); line-height: 1.4; color: var(--ms-text-tertiary); }
+
+.pq-campo input,
+.pq-campo textarea {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius);
+  background: var(--app-v2-bg-surface);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-md);
+  line-height: 1.45;
+  color: var(--ms-text);
+  outline: none;
+  resize: vertical;
+  transition: border-color .15s ease;
+}
+.pq-campo input:focus,
+.pq-campo textarea:focus { border-color: var(--app-v2-brand-border); }
+
+.pq-fotos { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.pq-foto {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  overflow: hidden;
+  border-radius: var(--ms-radius);
+  background: var(--ms-bg-subtle);
+}
+.pq-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pq-foto > button {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  border: none;
+  border-radius: var(--ms-radius-full);
+  background: color-mix(in srgb, var(--app-v2-bg-surface) 85%, transparent);
+  color: var(--ms-text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+.pq-foto:hover > button { opacity: 1; }
+
+.pq-foto--add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--ms-border-subtle);
+  background: transparent;
+  color: var(--ms-icon);
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease;
+}
+.pq-foto--add:hover:not(:disabled) { color: var(--hover-brand); border-color: var(--app-v2-brand-border); }
+.pq-foto--add:disabled { cursor: wait; }
+
+.pq-form__acoes { display: flex; gap: 6px; }
+.pq-form__acoes .pq-btn { height: 30px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pq-card__foto img,
+  .pq-folha { transition: none; animation: none; }
+  .pq-girando, .pq-esqueleto { animation: none; }
+}
+
+/* ============================================================
+   A TELA `/quentes`
+
+   A casca da página. Segue `/estilos`: coluna centrada de 1310px e o
+   título em 16px/500/24 do bloco de Skills — os dois são telas de
+   conteúdo do mesmo nível, e divergir na tipografia do título só faria
+   a barra lateral parecer levar a lugares de produtos diferentes.
+   ============================================================ */
+
+.qt-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1310px;
+  margin: 0 auto;
+}
+
+.qt-header { display: flex; flex-direction: column; gap: 6px; }
+
+.qt-title {
+  margin: 0;
+  font-size: var(--ms-text-xl);
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--ms-text);
+}
+
+.qt-sub {
+  margin: 0;
+  max-width: 60ch;
+  font-size: var(--ms-text-md);
+  line-height: 1.5;
+  color: var(--ms-text-tertiary);
+}

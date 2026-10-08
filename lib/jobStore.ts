@@ -3,9 +3,28 @@ import { join } from "path";
 import { DATA_DIR } from "./guest/paths";
 
 export type JobResult =
-  | { status: "pending"; type?: "image" | "video"; userId?: string }
-  | { status: "done"; imageUrl?: string; imageUrls?: string[]; videoUrl?: string }
-  | { status: "error"; error: string };
+  | {
+      status: "pending";
+      type?: "image" | "video";
+      userId?: string;
+      provider?: "kie" | "higgsfield";
+      statusUrl?: string;
+    }
+  | {
+      status: "done";
+      imageUrl?: string;
+      imageUrls?: string[];
+      videoUrl?: string;
+      userId?: string;
+      provider?: "kie" | "higgsfield";
+    }
+  | {
+      status: "error";
+      error: string;
+      errorCode?: string;
+      userId?: string;
+      provider?: "kie" | "higgsfield";
+    };
 
 // DATA_DIR is the repo in dev and a writable per-user dir in the packaged
 // desktop app (the install dir is read-only there).

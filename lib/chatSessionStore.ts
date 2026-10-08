@@ -18,8 +18,11 @@ if (typeof window !== "undefined") {
 }
 
 export interface StoredMessage {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "tool";
   content: string;
+  toolCalls?: import("./assistantTurno").ChamadaCrua[];
+  toolCallId?: string;
+  artifact?: { tipo: "workflow" | "personagem"; id: string; nome: string };
 }
 
 export interface ChatSession {

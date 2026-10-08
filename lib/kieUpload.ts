@@ -26,6 +26,7 @@ function isRemotelyReachable(url: string): boolean {
 }
 
 const MIME_BY_EXT: Record<string, string> = {
+  mp3: "audio/mpeg", wav: "audio/wav", m4a: "audio/mp4", ogg: "audio/ogg", weba: "audio/webm", flac: "audio/flac", aac: "audio/aac", opus: "audio/opus",
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
   png: "image/png",

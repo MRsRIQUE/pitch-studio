@@ -76,3 +76,18 @@ next-env.d.ts
 # Gerados automaticamente pelo Next 16 (agentRules em next.config.ts)
 /AGENTS.md
 /CLAUDE.md
+
+# Captura de referência do miora.design (53 MB, só leitura, nunca importada
+# pelo app). Já está fora do tsconfig e do eslint; aqui fica fora do commit.
+/miora/
+
+# Andaimes de agente e artefatos de ferramenta desta migração.
+/.maestri/
+/.playwright-cli/
+
+# Backups de edição (.bak) nunca entram no histórico.
+*.bak
+
+# Saídas locais e rascunhos da migração (logs, lotes, capturas).
+/output/
+/.migracao/

@@ -1,0 +1,135 @@
+/* ============================================================
+   A GALERIA SOBRE O GRAFO — montagem na tela de projeto
+
+   Este arquivo não redesenha o painel: ele só o encaixa em `/workflow/<id>`.
+   A geometria e as animações do painel continuam em `galeria-lateral.css`,
+   medidas no BoardUI.
+
+   Duas coisas acontecem aqui:
+
+   1. O painel vira uma caixa flutuante à direita, no espelho exato do painel
+      de chat: os valores de posição, recolhimento e cartão são literais de
+      `components/projeto/painel.css` (`.pj-painel` e `.pj-caixa`) — inset 8,
+      cartão de raio 18 com borda de .5px, e o recolher que desliza a própria
+      largura mais 24px enquanto some, em `.2s cubic-bezier(.4, 0, .2, 1)`.
+      Copiado do painel de chat porque é o desenho de mostrar/esconder que
+      esta tela já tem; nenhum arquivo do Tecla foi tocado.
+
+   2. O cromo da direita recua a largura do painel, em vez de ficar por baixo
+      dele. O Brasa já deixou a alavanca pronta: `--cr-right-gutter`, que a
+      barra de visualização e o painel de atalhos leem, e que ele mesmo usa
+      para afastar tudo quando as Camadas abrem. A pílula do topo é a única
+      peça que não lê essa variável — ela ancora num `right: 12px` literal —,
+      então ela é movida por um seletor escopado aqui. É o único ponto em que
+      este arquivo alcança uma classe do cromo, e nada foi editado lá.
+   ============================================================ */
+
+/* ── O painel, sobre o grafo ──────────────────────────────── */
+
+.gal--sobre-grafo {
+  position: absolute;
+  z-index: 235;
+  top: var(--cr-panel-inset);
+  right: var(--cr-panel-inset);
+  height: calc(100% - var(--cr-panel-inset) * 2);
+
+  /* `.pj-caixa`, literal: a mesma caixa branca do painel de chat. */
+  padding: 12px;
+  border: .5px solid var(--app-v2-border-subtle);
+  border-radius: 18px;
+  background: var(--app-v2-bg-surface);
+  box-shadow: var(--app-v2-shadow-card);
+
+  /* Os 8px de respiro do topo existem no BoardUI porque lá o painel não tem
+     cartão; aqui os 12px do cartão fazem esse papel. */
+  padding-top: 12px;
+
+  transition:
+    transform .2s cubic-bezier(.4, 0, .2, 1),
+    opacity .2s ease;
+}
+
+/* Recolhido: desliza a própria largura mais 24px e some. Espelho do
+   `translate(calc(-100% - 24px))` que o painel de chat faz para a esquerda. */
+.gal--sobre-grafo[data-recolhido="true"] {
+  transform: translate(calc(100% + 24px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── O cromo da direita recua ─────────────────────────────── */
+
+/* `--gal-largura` é publicada na raiz pelo layout; é a largura viva do
+   painel, que muda com o arrasto. A soma é a mesma que o Brasa usa para as
+   Camadas: inset + largura do painel + 12 de folga. */
+.cr-root[data-galeria="aberta"] {
+  --cr-right-gutter: calc(var(--cr-panel-inset) + var(--gal-largura) + 12px);
+}
+
+/* Com as Camadas abertas ao mesmo tempo, as duas larguras se somam: o painel
+   de Camadas passa a viver à esquerda da galeria, e o rodapé à esquerda dos
+   dois. Os 12px de folga entram DUAS vezes, uma por painel — somá-los uma vez
+   só encosta a barra de visualização no painel de Camadas (medi: sobrava
+   0,12px). */
+.cr-root[data-galeria="aberta"][data-camadas="aberto"] {
+  --cr-right-gutter: calc(
+    var(--cr-panel-inset) + var(--gal-largura) + 12px + var(--cr-right-panel-width) + 12px
+  );
+}
+
+/* A pílula do topo (e o painel de Camadas, que é ela expandida) ancora num
+   `right` literal e não lê o gutter. Ela já transiciona `right` em .24s, então
+   basta dar o novo destino. */
+.cr-root[data-galeria="aberta"] .cr-rs {
+  right: calc(var(--cr-panel-inset) + var(--gal-largura) + 12px);
+}
+
+/* ── O botão que reabre ───────────────────────────────────── */
+
+/* Espelho da barra vertical de ferramentas: mesma altura de tela, mesma
+   distância da borda, mesma transição. Some assim que o painel abre — quem
+   fecha de novo é o "Recolher o painel" do cabeçalho dele. */
+.gal-abrir {
+  position: absolute;
+  z-index: 235;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  display: flex;
+  padding: 6px;
+  border: none;
+  border-radius: 18px;
+  background: var(--app-v2-bg-surface);
+  box-shadow: var(--app-v2-shadow-card);
+  cursor: pointer;
+  transition: right .2s cubic-bezier(.4, 0, .2, 1);
+}
+
+.gal-abrir span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  color: var(--app-v2-text-secondary);
+  transition: background-color .15s cubic-bezier(.4, 0, .2, 1);
+}
+
+.gal-abrir:hover span {
+  background: var(--app-v2-bg-surface-hover);
+  color: var(--app-v2-text-primary);
+}
+
+.gal-abrir:focus-visible {
+  outline: 2px solid var(--ms-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gal--sobre-grafo,
+  .gal-abrir,
+  .gal-abrir span {
+    transition: none;
+  }
+}

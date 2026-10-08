@@ -40,4 +40,9 @@ export const MODEL_GROUPS: ModelGroup[] = [
 ];
 
 export const MODELS: Model[] = MODEL_GROUPS.flatMap(g => g.models);
+export const CHAT_MODEL_GROUPS: ModelGroup[] = [
+  { label: "Sua conta ChatGPT", models: [{ id: "codex-chatgpt", label: "Codex · ChatGPT", desc: "Sessão local" }] },
+  ...MODEL_GROUPS,
+];
+export const CHAT_MODELS: Model[] = CHAT_MODEL_GROUPS.flatMap(g => g.models);
 export type ModelId = string;

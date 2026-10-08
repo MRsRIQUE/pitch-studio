@@ -34,6 +34,18 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "pbxt.replicate.delivery" },
       { protocol: "https", hostname: "*.replicate.com" },
       { protocol: "https", hostname: "*.aiquickdraw.com" },
+
+      /* CDN das fotos dos Produtos Quentes (`captured_products` do PitchAI).
+         O caminho normal grava a foto em disco antes de ela virar nó, e um
+         nó nunca deveria apontar para cá — mas isto é rede de segurança, e
+         a razão é séria: `next/image` LANÇA quando o host não está nesta
+         lista, e a exceção derruba a árvore do React Flow inteira. Como o
+         grafo é persistido, um único nó com endereço de fora deixa o
+         projeto IMPOSSÍVEL DE ABRIR, não só feio. Aconteceu em teste.
+         Estas duas linhas fazem esse caso degradar para uma imagem em vez
+         de uma tela de erro. */
+      { protocol: "https", hostname: "*.500fd.com" },
+      { protocol: "https", hostname: "*.ibyteimg.com" },
     ],
   },
 };

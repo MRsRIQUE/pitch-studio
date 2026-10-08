@@ -1,5 +1,6 @@
 import { Node, Edge } from "@xyflow/react";
 import { NodeData } from "./store";
+import { TEXT_PRODUCTION_TYPES, productionText } from "./production";
 
 /** Topological sort — returns node ids in execution order */
 export function topoSort(nodes: Node<NodeData>[], edges: Edge[]): string[] {
@@ -122,6 +123,9 @@ export function resolveInputs(
   for (const edge of incoming) {
     const src = nodes.find((n) => n.id === edge.source);
     if (!src) continue;
+    if (TEXT_PRODUCTION_TYPES.has(src.type ?? "") && edge.targetHandle === "prompt") {
+      result.prompt = productionText(src.data);
+    }
 
     // Prompt sources
     if (src.type === "promptNode") {

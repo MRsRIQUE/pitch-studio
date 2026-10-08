@@ -1,12 +1,36 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { GyroNaCaixa } from "@/components/notas/GyroNaCaixa";
+import GridReveal from "@/components/ui/GridReveal";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
-import { IMAGE_MODELS, VIDEO_MODELS, AZURE_POPULAR_SIZES, validateAzureCustomSize } from "@/lib/modelConfig";
+import Link from "next/link";
+import { CreationHero, CreationSuggestions } from "@/components/CreationHome";
+import { EmptyState } from "@/components/gallery/EmptyState";
+import { AcervoHeader, type AcervoSort, type AcervoWindow } from "@/components/gallery/AcervoHeader";
+import { ComposerIconButton, IconAttach, IconMention, IconPolish } from "@/components/gallery/Composer/ComposerControls";
+import type { Tab, RefImage, PendingGen, DownloadTask, TaggedImage, KlingElement } from "@/components/gallery/tipos";
+import { ComposerShell } from "@/components/gallery/Composer/ComposerShell";
+import { ModelPill, type LinhaMidia } from "@/components/gallery/Composer/ModelPill";
+import { HeroCriar } from "@/components/gallery/Composer/HeroCriar";
+import { BotaoConectores } from "@/components/gallery/Composer/BotaoConectores";
+import { PilulaModoExecucao } from "@/components/gallery/Composer/PilulaModoExecucao";
+import { BotaoDitado } from "@/components/gallery/Composer/BotaoDitado";
+import { CartaoConfirmacao } from "@/components/gallery/Composer/CartaoConfirmacao";
+import { lerModoExecucao, gravarModoExecucao, type ModoExecucao } from "@/lib/modoExecucao";
+import { FRASES_GERAIS, FRASES_POR_CATEGORIA, definirCategoria, type CategoriaId } from "@/lib/categoriaComposer";
+import { type ParamField } from "@/components/gallery/Composer/ParamsPill";
+import { AzureCustomSize } from "@/components/gallery/Composer/AzureCustomSize";
+import { usePolishPrompt } from "@/components/gallery/Composer/usePolishPrompt";
+import { useChatSessionStore } from "@/lib/chatSessionStore";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { PitchMark } from "@/components/PitchLogo";
+import { IMAGE_MODELS, VIDEO_MODELS, parseSegmentMaskIndexes } from "@/lib/modelConfig";
 import { PROVIDERS, getModelProvider, setModelProvider, modelHasProviderChoice } from "@/lib/providers";
 import { useWorkflowStore } from "@/lib/store";
+import "@/app/gallery/composer.css";
 import { generationBlocked } from "@/lib/generationGate";
-import { Maximize2, Minimize2, ShieldAlert, X } from "lucide-react";
+import { Maximize2, Minimize2, ShieldAlert, X } from "@/components/icones";
 
 /** Local stand-in for the removed Supabase user type. */
 type User = { id: string };
@@ -15,10 +39,14 @@ import { useFolderStore } from "@/lib/folderStore";
 import { MediaPickerModal } from "@/components/MediaPickerModal";
 import { useSidebar } from "@/components/ui/sidebar";
 import { QuickAssist } from "@/components/QuickAssist";
-import DotCanvasBackground from "@/components/ui/DotCanvasBackground";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
-import { Button } from "@/components/ui/button";
 import { browserNotify, requestNotificationPermission } from "@/lib/browserNotify";
+import { isSafetyBlocked } from "@/lib/generationError";
+
+class GenerationJobError extends Error {
+  constructor(message: string, readonly code?: string) {
+    super(message);
+  }
+}
 
 function randomUUID(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -42,49 +70,30 @@ function thumbSrc(url: string, snapped: number): string {
   return `/_next/image?url=${encodeURIComponent(url)}&w=${snapped}&q=75`;
 }
 
-interface RefImage {
-  id: string;
-  objectUrl: string;
-  cdnUrl: string | null;
-  uploading: boolean;
-  error: boolean;
+/**
+ * Os rótulos dos slots de referência em português.
+ *
+ * A derivação de `vidSlots` continua falando os nomes da API; a tradução vive
+ * aqui porque a mesma lista alimenta dois consumidores — o menu do "+" e os
+ * ladrilhos da trilha —, e duas traduções paralelas divergiriam em silêncio.
+ * `curto` é a versão que cabe nos 64px do ladrilho.
+ */
+const ROTULO_SLOT: Record<string, { nome: string; curto: string }> = {
+  "Start Frame": { nome: "Primeiro quadro", curto: "1º QUADRO" },
+  "End Frame":   { nome: "Último quadro",   curto: "ÚLT. QUADRO" },
+  "Ref Video":   { nome: "Vídeo de referência", curto: "VÍDEO" },
+  "Audio":       { nome: "Áudio",           curto: "ÁUDIO" },
+  "Image":       { nome: "Imagem",          curto: "IMAGEM" },
+  "Character":   { nome: "Personagem",      curto: "PERSONAGEM" },
+};
+
+function rotuloSlot(label: string): { nome: string; curto: string } {
+  return ROTULO_SLOT[label] ?? { nome: label, curto: label.toUpperCase() };
 }
 
-interface PendingGen {
-  id: string;
-  aspectRatio: string;
-  prompt: string;
-  referenceImageUrls?: string[];
-  error?: string;
-  taskId?: string;
-  createdAt?: string;
-  tab?: Tab;
-  prePending?: boolean;
-  retried?: boolean;
-  folderId?: string | null;
-}
-
-
-interface DownloadTask {
-  id: string;
-  filename: string;
-  status: "preparing" | "ready" | "error";
-}
-
-type Tab = "images" | "videos";
-
-interface TaggedImage {
-  label: string;
-  refId: string;
-  url: string;
-  kind?: "image" | "video" | "audio";
-}
-
-interface KlingElement {
-  id: string;
-  name: string;
-  description: string;
-  imageUrls: string[];
+/** Quantas vagas ainda cabem no slot, com a concordância certa. */
+function restantes(n: number): string {
+  return n === 1 ? "resta 1" : `restam ${n}`;
 }
 
 function resolveGalleryMentions(
@@ -190,7 +199,7 @@ function renderGalleryMentions(
   onMouseDown: (tag: TaggedImage) => void,
 ): React.ReactNode {
   if (!text) return null;
-  if (!tagged.length) return <span style={{ color: "#c9d2ea" }}>{text}</span>;
+  if (!tagged.length) return <span style={{ color: "inherit" }}>{text}</span>;
 
   const sorted = [...tagged].sort((a, b) => b.label.length - a.label.length);
   const parts: React.ReactNode[] = [];
@@ -203,8 +212,8 @@ function renderGalleryMentions(
       const idx = rest.indexOf(`@${tag.label}`);
       if (idx !== -1 && (earliest === null || idx < earliest.idx)) earliest = { idx, tag };
     }
-    if (!earliest) { parts.push(<span key={key++} style={{ color: "#c9d2ea" }}>{rest}</span>); break; }
-    if (earliest.idx > 0) parts.push(<span key={key++} style={{ color: "#c9d2ea" }}>{rest.slice(0, earliest.idx)}</span>);
+    if (!earliest) { parts.push(<span key={key++} style={{ color: "inherit" }}>{rest}</span>); break; }
+    if (earliest.idx > 0) parts.push(<span key={key++} style={{ color: "inherit" }}>{rest.slice(0, earliest.idx)}</span>);
     const tag = earliest.tag;
     parts.push(
       <span
@@ -229,13 +238,6 @@ function renderGalleryMentions(
     rest = rest.slice(earliest.idx + tag.label.length + 1);
   }
   return <>{parts}</>;
-}
-
-function resizeTextarea(el: HTMLTextAreaElement, maxH = 264) {
-  const st = el.scrollTop;
-  el.style.height = "auto";
-  el.style.height = Math.min(el.scrollHeight, maxH) + "px";
-  el.scrollTop = st;
 }
 
 
@@ -291,6 +293,8 @@ interface SavedSettings {
   azureResolution?: string;
   azureCustomWidth?: number;
   azureCustomHeight?: number;
+  segmentTaskId?: string;
+  segmentMaskIndexes?: string;
   promptTextMode?: "text" | "json" | "yaml";
   multiPromptMode?: boolean;
   vidStartFrameUrl?: string | null;
@@ -339,149 +343,56 @@ function saveKlingElements(elements: KlingElement[]) {
   try { localStorage.setItem("nf-kling-elements", JSON.stringify(elements)); } catch { }
 }
 
-// ── Pending generation tile (needs hooks, must be a component) ────────────────
+// ── O ladrilho de uma geração em voo ─────────────────────────────────────────
 
+/**
+ * O estado "Generating" do bloco 09: um retângulo neutro que já ocupa a caixa
+ * final do artefato, para a mídia entrar sem o layout pular. Não é um spinner
+ * centrado numa caixa genérica — é a própria caixa, com o brilho varrendo o
+ * cinza e uma pílula dizendo em que fase está.
+ *
+ * A geometria não vem daqui: quem reserva a largura e a altura é a linha da
+ * grade, que já conhece a proporção pedida. Este componente só preenche.
+ */
 function PendingGenTile({ pg, onCancel }: { pg: PendingGen; onCancel: () => void }) {
   return (
     <>
-      {/* Top radial glow — blue-emerald with slow pulse */}
-      <div style={{
-        position: "absolute", top: "-40%", left: "50%", transform: "translateX(-50%)",
-        width: "180%", height: "80%", pointerEvents: "none",
-        background: "radial-gradient(ellipse at 50% 20%, rgba(20,160,140,0.45) 0%, rgba(30,100,200,0.2) 40%, transparent 70%)",
-        animation: "pendingGlow 3s ease-in-out infinite",
-      }} />
-      {/* Top: phase label + cancel — same row, wraps to next line if too narrow */}
-      <div style={{
-        position: "absolute", top: 8, left: 8, right: 8,
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        flexWrap: "wrap", gap: "6px",
-        zIndex: 5,
-      }}>
-        {/* Phase pill */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: "6px",
-          height: "26px", padding: "0 10px", borderRadius: "999px",
-          background: "rgba(0,0,0,0.58)", backdropFilter: "blur(10px)",
-          border: pg.prePending ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(134, 140, 255,0.25)",
-          pointerEvents: "none", flexShrink: 0,
-        }}>
-          {pg.prePending ? (
-            <svg width="9" height="9" viewBox="0 0 10 10" fill="none" style={{ animation: "spin 0.9s linear infinite", flexShrink: 0 }}>
-              <circle cx="5" cy="5" r="4" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
-              <path d="M5 1 A4 4 0 0 1 9 5" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          ) : (
-            <svg width="9" height="9" viewBox="0 0 10 10" fill="none" style={{ animation: "spin 0.9s linear infinite", flexShrink: 0 }}>
-              <circle cx="5" cy="5" r="4" stroke="rgba(134, 140, 255,0.25)" strokeWidth="1.5" />
-              <path d="M5 1 A4 4 0 0 1 9 5" stroke="#868CFF" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          )}
-          <span style={{ fontSize: "11px", color: pg.prePending ? "#888" : "#868CFF", fontWeight: 500 }}>
-            {pg.prePending ? "Pending" : "Generating…"}
-          </span>
-        </div>
+      {/* O loop da nota portada, no lugar do shimmer. Ele preenche a caixa que
+          a linha da grade já reservou e se centra dentro dela — não define
+          tamanho nenhum, que é o que mantém a mídia entrando sem o layout
+          pular. Sem rótulo: quem fala aqui é a pílula de status abaixo. */}
+      {pg.tab === "videos" ? <GyroNaCaixa /> : <GridReveal estimatedDuration={45000} className="absolute inset-0 h-full rounded-none" style={{ aspectRatio: "auto" }} />}
 
-        {/* Cancel pill — only before generation starts */}
-        {pg.prePending && (
-          <button
-            onClick={onCancel}
-            style={{
-              flexShrink: 0,
-              display: "flex", alignItems: "center", gap: "5px",
-              height: "26px", padding: "0 10px", borderRadius: "999px",
-              background: "rgba(0,0,0,0.58)", backdropFilter: "blur(10px)",
-              border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer",
-              transition: "background 140ms",
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "rgba(0,0,0,0.58)")}
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round">
-              <circle cx="12" cy="12" r="9" />
-              <path d="m6 6 12 12" />
-            </svg>
-            <span style={{ fontSize: "11px", color: "#ccc", fontWeight: 500 }}>Cancel</span>
-          </button>
-        )}
+      {/* A pílula de status, centrada nos dois eixos — 85×28 na referência. */}
+      <div className="pgt-status" role="status">
+        <span className="pgt-spinner" aria-hidden />
+        {pg.prePending ? "Na fila" : "Gerando"}
       </div>
 
-      {/* Bottom: prompt */}
-      {pg.prompt && (
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "24px 10px 10px", background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)" }}>
-          <p style={{ margin: 0, fontSize: "11px", color: "rgba(255,255,255,0.35)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{pg.prompt}</p>
-        </div>
+      {/* Cancelar só existe enquanto o pedido não subiu: depois disso não há
+          o que cancelar, e um botão que não cancela seria mentira. */}
+      {pg.prePending && (
+        <button
+          type="button"
+          className="pgt-cancel"
+          onClick={onCancel}
+          aria-label="Cancelar esta geração"
+          title="Cancelar"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
       )}
+
+      {/* Com várias gerações em voo ao mesmo tempo, o prompt é a única coisa
+          que distingue um ladrilho do outro. */}
+      {pg.prompt && <p className="pgt-prompt">{pg.prompt}</p>}
     </>
   );
 }
 
 // ── Logged-out empty state ────────────────────────────────────────────────────
-
-const CYCLE_NAMES = ["Nano Banana Pro", "GPT Image 2", "Nano Banana 2"];
-const VIDEO_CYCLE_NAMES = ["Seedance 2.0", "Kling 3.0", "Happy Horse"];
-const EMPTY_IMGS = ["/1.webp", "/2.webp", "/3.webp", "/4.webp"];
-
-function EmptyFan({ blur }: { blur?: boolean }) {
-  const configs = [
-    { rot: "-10deg", rounded: false, border: true, mr: "clamp(-36px,-1.5vw,-16px)", z: 4 },
-    { rot: "4deg",   rounded: false, border: true,  mr: "clamp(-36px,-1.5vw,-16px)", z: 3 },
-    { rot: "180deg", rounded: true,  border: true,  mr: "clamp(-36px,-1.5vw,-16px)", z: 2 },
-    { rot: "-4deg",  rounded: false, border: true,  mr: "0",                         z: 1 },
-  ];
-  return (
-    <div style={{ display: "flex", alignItems: "center", position: blur ? "absolute" : undefined, left: blur ? "50%" : undefined, top: blur ? 0 : undefined, transform: blur ? "translateX(-50%)" : undefined, filter: blur ? "blur(32px)" : undefined, opacity: blur ? 0.4 : 1 }}>
-      {configs.map((c, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: c.mr, zIndex: c.z }}>
-          <div style={{ transform: `rotate(${c.rot})${c.rounded ? " scaleY(-1)" : ""}` }}>
-            <div style={{ position: "relative", overflow: "hidden", width: "clamp(64px,min(12vw,16vh),172px)", height: "clamp(64px,min(12vw,16vh),172px)", borderRadius: c.rounded ? "50%" : "12px", border: c.border ? "3px solid rgba(134, 140, 255,0.75)" : undefined, boxShadow: c.border ? "0 0 14px rgba(134, 140, 255,0.35), 0 0 4px rgba(134, 140, 255,0.2)" : undefined }}>
-              <img src={EMPTY_IMGS[i]} alt="" style={{ objectFit: "cover", width: "100%", height: "100%", display: "block" }} />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function GalleryLoggedOut({ tab }: { tab: Tab }) {
-  const [idx, setIdx] = useState(0);
-  const [visible, setVisible] = useState(true);
-  const names = tab === "videos" ? VIDEO_CYCLE_NAMES : CYCLE_NAMES;
-
-  useEffect(() => {
-    setIdx(0);
-    setVisible(true);
-  }, [tab]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setVisible(false);
-      setTimeout(() => {
-        setIdx(i => (i + 1) % names.length);
-        setVisible(true);
-      }, 380);
-    }, 2600);
-    return () => clearInterval(timer);
-  }, [names]);
-
-  return (
-    <div style={{ flex: 1, background: "#0F0F1A", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: "clamp(12px,2.5vh,32px)", alignItems: "center", width: "100%", position: "relative" }}>
-        {tab === "videos" ? <><VideoFan blur /><VideoFan /></> : <><EmptyFan blur /><EmptyFan /></>}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "8px" }}>
-          <div style={{ fontFamily: "var(--font-grotesk, sans-serif)", fontWeight: 700, fontSize: "clamp(20px,min(3vw,4.5vh),36px)", lineHeight: 1, letterSpacing: "-0.56px", textTransform: "uppercase" }}>
-            <p style={{ color: "#fff", margin: 0 }}>Start creating with</p>
-            <p style={{ color: "#868CFF", margin: 0, transition: "opacity 380ms ease, transform 380ms ease", opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(6px)" }}>
-              {names[idx]}
-            </p>
-          </div>
-          <p style={{ fontSize: "clamp(13px,1.2vw,15px)", color: "rgba(255,255,255,0.65)", margin: 0 }}>Describe a scene, character, mood, or style — and watch it come to life</p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Tag renumbering helper ─────────────────────────────────────────────────────
 
@@ -619,6 +530,29 @@ function GalleryInner() {
   const skipNextModelEffect = useRef(false);
 
   const [prompt, setPrompt] = useState<string>(() => loadSettings(tab, selectedFolderId)?.prompt ?? "");
+
+  /* Espelho não reativo do prompt e dos chips.
+     Quatro tratadores da trilha de anexos (`removeImage`, `removeVidRef`,
+     `openPicker`, `handleReorderDrop`) precisavam do texto para renumerar as
+     menções. Lendo `prompt` direto, eles nasciam de novo a cada tecla, e com
+     eles a subárvore inteira da trilha — 182 linhas recriadas por caractere.
+     Lendo o espelho, os quatro ficam estáveis e a trilha sai do caminho da
+     tecla. O espelho é atualizado no efeito, então em qualquer tratador de
+     evento (que só roda depois do commit) ele já está no valor corrente. */
+  const promptRef = useRef(prompt);
+  const taggedImagesRef = useRef<TaggedImage[]>([]);
+
+  /* O modo de execução (pílula 4) e o cartão que ele abre. O valor
+     persistido só é lido depois da hidratação — o servidor não tem
+     `localStorage`, e um valor diferente ali quebraria a hidratação. */
+  const [modoExecucao, setModoExecucao] = useState<ModoExecucao>("auto");
+  const [confirmando, setConfirmando] = useState(false);
+  useEffect(() => { setModoExecucao(lerModoExecucao()); }, []);
+
+  /* A categoria das abas do hero. Mora aqui porque também escolhe as
+     frases do typewriter; quem lê do outro lado (a linha de
+     especialistas) assina o evento de `lib/categoriaComposer`. */
+  const [categoria, setCategoria] = useState<CategoriaId | null>(null);
   const prevFolderIdRef = useRef<string | null>(selectedFolderId);
   const settingsSnapshotRef = useRef<SavedSettings | null>(null);
   const [modelId, setModelId] = useState<string>(() => {
@@ -646,13 +580,10 @@ function GalleryInner() {
   const [mode, setMode] = useState<string>(() => loadSettings(tab, selectedFolderId)?.mode ?? "");
   const [resolution, setResolution] = useState<string>("");
   const [azureResolution, setAzureResolution] = useState<string>(() => loadSettings(tab, selectedFolderId)?.azureResolution ?? "1k");
+  const [segmentTaskId, setSegmentTaskId] = useState<string>(() => loadSettings(tab, selectedFolderId)?.segmentTaskId ?? "");
+  const [segmentMaskIndexes, setSegmentMaskIndexes] = useState<string>(() => loadSettings(tab, selectedFolderId)?.segmentMaskIndexes ?? "1");
   const [sound, setSound] = useState<boolean>(() => loadSettings(tab, selectedFolderId)?.sound ?? false);
   const [seed, setSeed] = useState<number | undefined>(0);
-  const [durPickerOpen, setDurPickerOpen] = useState(false);
-  const [durPickerClosing, setDurPickerClosing] = useState(false);
-  const [durPickerPos, setDurPickerPos] = useState<{ left: number; bottom: number } | null>(null);
-  const durPillRef = useRef<HTMLButtonElement>(null);
-  const durCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pendingGens, setPendingGens] = useState<PendingGen[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -713,6 +644,9 @@ function GalleryInner() {
   const debugMode        = useWorkflowStore((s) => s.debugMode);
   const addToast         = useWorkflowStore((s) => s.addToast);
   const kieKeySet        = useWorkflowStore((s) => s.kieKeySet);
+  /* O botão de conectores e a faixa levam para os ajustes, que é onde a
+     chave de cada provedor realmente mora. */
+  const setSettingsOpen  = useWorkflowStore((s) => s.setSettingsOpen);
   const setKieKeySet     = useWorkflowStore((s) => s.setKieKeySet);
   const [sourceFilter, setSourceFilter] = useState<"generated" | "uploaded">(initialSource);
 
@@ -726,6 +660,14 @@ function GalleryInner() {
     const saved = localStorage.getItem("aiui-gallery-zoom");
     return saved ? parseInt(saved, 10) : 6;
   });
+
+  // ── Filtros do Acervo ──────────────────────────────────────────────────────
+  // Quatro eixos independentes, no desenho do bloco 07 da referência. Todos
+  // derivam de campos que o GalleryItem já carrega — nenhum backend novo.
+  const [acervoQuery, setAcervoQuery] = useState("");
+  const [acervoModel, setAcervoModel] = useState("all");
+  const [acervoSort, setAcervoSort] = useState<AcervoSort>("recent");
+  const [acervoWindow, setAcervoWindow] = useState<AcervoWindow>("all");
   const gridRef = useRef<HTMLDivElement>(null);
   const gridOuterRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -870,9 +812,23 @@ function GalleryInner() {
       return p.includes(`@${label}`) ? [{ label, refId: url, url }] : [];
     });
   });
+
+  /* Mantém os dois espelhos em dia. Roda depois do commit, então qualquer
+     tratador de evento lê o valor corrente. */
+  useEffect(() => { promptRef.current = prompt; }, [prompt]);
+  useEffect(() => { taggedImagesRef.current = taggedImages; }, [taggedImages]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionSelIdx, setMentionSelIdx] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  /* O campo também vive em estado, não só em ref: o composer só entra na
+     árvore depois que a Home de criação decide se aparece, e um efeito que
+     só lê o ref roda antes disso — uma vez, com `null`, e nunca mais. Guardar
+     o elemento em estado faz o efeito rodar de novo quando ele existe. */
+  const [campoPrompt, setCampoPrompt] = useState<HTMLTextAreaElement | null>(null);
+  const fixarCampoPrompt = useCallback((el: HTMLTextAreaElement | null) => {
+    inputRef.current = el;
+    setCampoPrompt(el);
+  }, []);
   const activeBlockRef = useRef<HTMLTextAreaElement | null>(null);
   const activeBlockIdxRef = useRef<number | null>(null);
   const promptBarRef = useRef<HTMLDivElement>(null);
@@ -931,8 +887,8 @@ function GalleryInner() {
       try {
         // Check immediately (no 3s delay) before entering the regular poll loop
         const immediateRes = await fetch(`/api/job-status?taskId=${pending.taskId!}`);
-        const immediateResult = await immediateRes.json() as { status: string; error?: string };
-        if (immediateResult.status === "error") throw new Error(immediateResult.error ?? "Generation failed");
+        const immediateResult = await immediateRes.json() as { status: string; error?: string; errorCode?: string };
+        if (immediateResult.status === "error") throw new GenerationJobError(immediateResult.error ?? "Generation failed", immediateResult.errorCode);
         if (immediateResult.status === "not_found") {
           // Task expired from server memory — image was likely already saved; just remove the spinner
           setPendingGens(prev => prev.filter(p => p.id !== pending.id));
@@ -967,7 +923,8 @@ function GalleryInner() {
         window.dispatchEvent(new Event("credits-refresh"));
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        setPendingGens(prev => prev.map(p => p.id === pending.id ? { ...p, error: msg } : p));
+        const errorCode = e instanceof GenerationJobError ? e.code : undefined;
+        setPendingGens(prev => prev.map(p => p.id === pending.id ? { ...p, error: msg, errorCode } : p));
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1085,6 +1042,8 @@ function GalleryInner() {
     setAspectRatio(savedAR ?? ("defaultRatio" in model ? (model as { defaultRatio: string }).defaultRatio : null) ?? model.ratios[0] ?? "16:9");
     setAzureCustomWidth(saved?.azureCustomWidth);
     setAzureCustomHeight(saved?.azureCustomHeight);
+    setSegmentTaskId(saved?.segmentTaskId ?? "");
+    setSegmentMaskIndexes(saved?.segmentMaskIndexes ?? "1");
     setQuality(saved?.quality ?? "2k");
     setCount(saved?.count ?? 1);
     if ("defaultDuration" in model) setDuration(saved?.duration ?? (model as { defaultDuration: number }).defaultDuration ?? 5);
@@ -1113,29 +1072,8 @@ function GalleryInner() {
     setVidRefVideos((saved?.vidRefVideoUrls ?? []).map(toRef));
     setVidRefAudios((saved?.vidRefAudioUrls ?? []).map(toRef));
     setVidElements(saved?.vidElements ?? []);
-    const restoredPrompt = resolvedPrompt;
-    if (restoredPrompt && inputRef.current) {
-      const el = inputRef.current;
-      requestAnimationFrame(() => requestAnimationFrame(() => resizeTextarea(el)));
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
-
-  // Resize textarea on initial mount if a saved prompt is already loaded
-  useEffect(() => {
-    if (inputRef.current && prompt && !multiPromptMode) {
-      const el = inputRef.current;
-      requestAnimationFrame(() => requestAnimationFrame(() => resizeTextarea(el)));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (inputRef.current && !multiPromptMode) {
-      const maxH = promptExpanded ? window.innerHeight * 0.75 - 220 : 264;
-      requestAnimationFrame(() => { if (inputRef.current) resizeTextarea(inputRef.current, maxH); });
-    }
-  }, [promptExpanded, multiPromptMode]);
 
   useEffect(() => {
     if (skipNextModelEffect.current) { skipNextModelEffect.current = false; return; }
@@ -1146,14 +1084,14 @@ function GalleryInner() {
     if ("defaultMode" in m) setMode(m.defaultMode ?? "");
     if ("defaultResolution" in m) setResolution((m as { defaultResolution: string }).defaultResolution);
     if (!isVideo) {
-      const im = m as { apiInput?: { qualityOptions?: string[] }; azureQualityOptions?: string[] };
+      const im = m as { apiInput?: { qualityOptions?: string[] }; azureQualityOptions?: string[]; defaultQuality?: string };
       const provider = (() => { try { return JSON.parse(localStorage.getItem("aiui-model-providers") ?? "{}")[m.id] ?? "kie"; } catch { return "kie"; } })();
       const base     = (() => { try { return localStorage.getItem("aiui-azure-base-url") ?? ""; } catch { return ""; } })();
       const deploy   = (() => { try { return JSON.parse(localStorage.getItem("aiui-azure-endpoints") ?? "{}")[m.id] ?? ""; } catch { return ""; } })();
       const azure    = provider === "azure" && !!base && !!deploy && !!im.azureQualityOptions;
       const validQ   = azure ? im.azureQualityOptions! : (im.apiInput?.qualityOptions ?? []);
       if (validQ.length) {
-        setQuality(prev => validQ.includes(prev) ? prev : validQ[0]);
+        setQuality(prev => im.defaultQuality && validQ.includes(im.defaultQuality) ? im.defaultQuality : validQ.includes(prev) ? prev : validQ[0]);
       }
     }
     if (isVideo) {
@@ -1238,7 +1176,7 @@ function GalleryInner() {
       .map(r => r.cdnUrl!))];
     const readyCdnUrl = (r: RefImage) => !r.uploading && !r.error && !!r.cdnUrl;
     const s: SavedSettings = {
-      prompt, modelId, aspectRatio, quality, count, duration, mode, sound, refImageUrls, azureResolution, azureCustomWidth, azureCustomHeight, promptTextMode, multiPromptMode,
+      prompt, modelId, aspectRatio, quality, count, duration, mode, sound, refImageUrls, azureResolution, azureCustomWidth, azureCustomHeight, segmentTaskId, segmentMaskIndexes, promptTextMode, multiPromptMode,
       vidStartFrameUrl: vidStartFrame?.cdnUrl ?? null,
       vidEndFrameUrl: vidEndFrame?.cdnUrl ?? null,
       vidResourceUrls: vidResources.filter(readyCdnUrl).map(r => r.cdnUrl!),
@@ -1250,7 +1188,7 @@ function GalleryInner() {
     };
     settingsSnapshotRef.current = s;
     saveSettings(tab, prevFolderIdRef.current, s);
-  }, [tab, prompt, modelId, aspectRatio, quality, count, duration, mode, sound, refImages, azureResolution, azureCustomWidth, azureCustomHeight, promptTextMode, multiPromptMode, vidStartFrame, vidEndFrame, vidResources, vidVideoRef, vidRefVideos, vidRefAudios, vidElements, taggedImages]);
+  }, [tab, prompt, modelId, aspectRatio, quality, count, duration, mode, sound, refImages, azureResolution, azureCustomWidth, azureCustomHeight, segmentTaskId, segmentMaskIndexes, promptTextMode, multiPromptMode, vidStartFrame, vidEndFrame, vidResources, vidVideoRef, vidRefVideos, vidRefAudios, vidElements, taggedImages]);
 
   // Save/restore all settings when switching folders
   useEffect(() => {
@@ -1274,6 +1212,8 @@ function GalleryInner() {
     setAspectRatio(savedAR ?? ("defaultRatio" in model ? (model as { defaultRatio: string }).defaultRatio : null) ?? model.ratios[0] ?? "1:1");
     setAzureCustomWidth(saved?.azureCustomWidth);
     setAzureCustomHeight(saved?.azureCustomHeight);
+    setSegmentTaskId(saved?.segmentTaskId ?? "");
+    setSegmentMaskIndexes(saved?.segmentMaskIndexes ?? "1");
     setQuality(saved?.quality ?? "2k");
     setCount(saved?.count ?? 1);
     if ("defaultDuration" in model) setDuration(saved?.duration ?? (model as { defaultDuration: number }).defaultDuration ?? 5);
@@ -1323,7 +1263,8 @@ function GalleryInner() {
     if (!el) return;
     const ro = new ResizeObserver(([e]) => setContainerWidth(e.contentRect.width));
     ro.observe(el);
-    setContainerWidth(el.getBoundingClientRect().width);
+    const styles = getComputedStyle(el);
+    setContainerWidth(el.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight));
     return () => ro.disconnect();
   // Re-run once the full layout is mounted (after auth loads and user is present)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1351,6 +1292,10 @@ function GalleryInner() {
   const imgModel = IMAGE_MODELS.find(m => m.id === modelId);
   const maxImgs = imgModel?.maxImages ?? 0;
   const canAddImgs = !isVideo && !!imgModel?.supportsImages && refImages.length < maxImgs;
+  const effectiveQuality = !isVideo && imgModel?.oneKOnlyRatios?.includes(aspectRatio) ? "1k" : quality;
+  const parsedSegmentMaskIndexes = parseSegmentMaskIndexes(segmentMaskIndexes);
+  const isSegmentEdit = !isVideo && !!imgModel?.requiresSegmentTask;
+  const segmentReady = !isSegmentEdit || (!!segmentTaskId.trim() && parsedSegmentMaskIndexes.length > 0);
   const promptMaxLength = (() => {
     if (isVideo) {
       const vm = VIDEO_MODELS.find(m => m.id === modelId);
@@ -1399,7 +1344,7 @@ function GalleryInner() {
     }));
   };
 
-  const removeImage = (id: string) => {
+  const removeImage = useCallback((id: string) => {
     const el = document.querySelector(`[data-refimg-id="${id}"]`) as HTMLElement | null;
     if (el) {
       // Synchronous DOM write — zero frame delay, starts before React scheduler
@@ -1410,7 +1355,7 @@ function GalleryInner() {
     // React state as a backup so any re-render in the window doesn't reset the styles
     setRemovingIds(prev => new Set(prev).add(id));
     const removedImg = refImages.find(r => r.id === id);
-    const { newTaggedImages, newPrompt } = removeTagAndRenumber(id, removedImg?.cdnUrl ?? null, taggedImages, prompt);
+    const { newTaggedImages, newPrompt } = removeTagAndRenumber(id, removedImg?.cdnUrl ?? null, taggedImagesRef.current, promptRef.current);
     setTimeout(() => {
       setRemovingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
       setRefImages(prev => {
@@ -1421,7 +1366,7 @@ function GalleryInner() {
       setTaggedImages(newTaggedImages);
       setPrompt(newPrompt);
     }, 190);
-  };
+  }, [refImages]);
 
   // ── Video reference upload ────────────────────────────────────────────────
 
@@ -1515,7 +1460,7 @@ function GalleryInner() {
     }));
   };
 
-  const removeVidRef = (id: string, target: "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo" | "audioRef") => {
+  const removeVidRef = useCallback((id: string, target: "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo" | "audioRef") => {
     let removedUrl: string | null = null;
     if (target === "startFrame") {
       removedUrl = vidStartFrame?.cdnUrl ?? null;
@@ -1536,19 +1481,19 @@ function GalleryInner() {
       removedUrl = vidRefAudios.find(r => r.id === id)?.cdnUrl ?? null;
       setVidRefAudios(prev => prev.filter(r => r.id !== id));
     }
-    const { newTaggedImages, newPrompt } = removeTagAndRenumber(id, removedUrl, taggedImages, prompt);
+    const { newTaggedImages, newPrompt } = removeTagAndRenumber(id, removedUrl, taggedImagesRef.current, promptRef.current);
     setTaggedImages(newTaggedImages);
     setPrompt(newPrompt);
-  };
+  }, [vidEndFrame?.cdnUrl, vidRefAudios, vidRefVideos, vidResources, vidStartFrame?.cdnUrl, vidVideoRef?.cdnUrl]);
 
   // ── Media picker ──────────────────────────────────────────────────────────
 
-  const openPicker = (target: NonNullable<typeof pickerTarget>, uploadKind: "image" | "video") => {
+  const openPicker = useCallback((target: NonNullable<typeof pickerTarget>, uploadKind: "image" | "video") => {
     pickerTargetRef.current = target;
     setPickerTarget(target);
     setPickerUploadKind(uploadKind);
     setPickerOpen(true);
-  };
+  }, []);
 
   const handlePickerSelect = (url: string) => {
     const target = pickerTargetRef.current;
@@ -1622,7 +1567,7 @@ function GalleryInner() {
 
   // ── Generate ──────────────────────────────────────────────────────────────
 
-  const generateOne = async (token: string, promptOverride?: string): Promise<string> => {
+  const generateOne = async (token: string, promptOverride?: string, submissionId?: string): Promise<string> => {
     const effectivePrompt = promptOverride ?? prompt;
     if (!isVideo) {
       const { resolvedPrompt, extraUrls } = resolveGalleryMentions(effectivePrompt, taggedImages);
@@ -1641,7 +1586,8 @@ function GalleryInner() {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          prompt: resolvedPrompt, model: modelId, aspectRatio, quality, imageUrls,
+          prompt: resolvedPrompt, model: modelId, aspectRatio, quality: effectiveQuality, imageUrls,
+          ...(isSegmentEdit ? { segmentTaskId: segmentTaskId.trim(), maskIndexes: parsedSegmentMaskIndexes } : {}),
           ...(isAzure ? {
             azureBaseUrl, azureDeployment, azureQuality: quality, azureResolution,
             ...(aspectRatio === "custom" ? { azureCustomWidth, azureCustomHeight } : {}),
@@ -1752,6 +1698,7 @@ function GalleryInner() {
           ...(referenceVideoUrls?.length  ? { referenceVideoUrls }          : {}),
           ...(referenceAudioUrls?.length  ? { referenceAudioUrls }          : {}),
           ...(vm?.supportsSeeds && seed ? { seed } : {}),
+          ...(vm?.apiInput.useHiggsfield ? { submissionId: submissionId ?? randomUUID() } : {}),
         }),
       });
       const text = await res.text();
@@ -1777,16 +1724,20 @@ function GalleryInner() {
     for (let i = 0; i < 150; i++) {
       await waitOrVisible(3_000);
       const poll = await fetch(`/api/job-status?taskId=${taskId}`);
-      const result = await poll.json() as { status: string; error?: string };
+      const result = await poll.json() as { status: string; error?: string; errorCode?: string };
       if (result.status === "done") return;
-      if (result.status === "error") throw new Error(result.error ?? "Generation failed");
+      if (result.status === "error") throw new GenerationJobError(result.error ?? "Generation failed", result.errorCode);
     }
     throw new Error("Timed out");
   };
 
   const generate = async () => {
-    if (generationBlocked(kieKeySet)) return;
+    if (!(isVideo && vidModel?.apiInput.useHiggsfield) && generationBlocked(kieKeySet)) return;
     if (!prompt.trim() && !isVideo) return;
+    if (!segmentReady) {
+      addToast("O Grok Segment Edit precisa do task_id de origem e de pelo menos um índice de máscara.", "error");
+      return;
+    }
     requestNotificationPermission();
     if (refImages.some(r => r.uploading)) { setGenError("Images still uploading…"); setTimeout(() => setGenError(""), 3_000); return; }
     if (isVideo && [vidStartFrame, vidEndFrame, vidVideoRef, ...vidResources, ...vidRefVideos, ...vidRefAudios].some(r => r?.uploading)) {
@@ -1835,9 +1786,18 @@ function GalleryInner() {
       : [...new Set(refImages.filter(r => r.cdnUrl && !r.error).map(r => r.cdnUrl!))];
     const snapshotFolderId = selectedFolderId;
     const newPendings: PendingGen[] = Array.from({ length: n }, (_, i) => ({
-      id: randomUUID(), aspectRatio, prompt: multiPrompts ? multiPrompts[i] : prompt, referenceImageUrls: snapshotRefUrls, createdAt: new Date().toISOString(), tab, prePending: true, folderId: snapshotFolderId,
+      id: randomUUID(), aspectRatio, prompt: multiPrompts ? multiPrompts[i] : prompt, modelId, quality: effectiveQuality,
+      ...(isSegmentEdit ? { segmentTaskId: segmentTaskId.trim(), maskIndexes: parsedSegmentMaskIndexes } : {}),
+      referenceImageUrls: snapshotRefUrls, createdAt: new Date().toISOString(), tab, prePending: true, folderId: snapshotFolderId,
     }));
     setPendingGens(prev => [...newPendings, ...prev]);
+    if (searchParams.get("view") === "create") {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("view");
+      params.set("source", "generated");
+      setSourceFilter("generated");
+      router.replace(`${pathname}?${params.toString()}`);
+    }
 
     // ── Debug mode: log + simulate, no real API call ────────────────────────
     if (debugMode) {
@@ -1857,8 +1817,9 @@ function GalleryInner() {
       const dbgExtraAudioSet = new Set(dbgTaggedAudioUrls);
       console.log("[Gallery Debug] Generate request:", {
         type: isVideo ? "video" : "image",
-        prompt: dbgPrompt, model: modelId, aspectRatio, quality,
+        prompt: dbgPrompt, model: modelId, aspectRatio, quality: effectiveQuality,
         provider: dbgIsAzure ? "azure" : "kie",
+        ...(isSegmentEdit ? { segmentTaskId: segmentTaskId.trim(), maskIndexes: parsedSegmentMaskIndexes } : {}),
         ...(dbgIsAzure ? {
           azureBaseUrl: dbgAzureBaseUrl, azureDeployment: dbgAzureDeployment, azureQuality: quality, azureResolution,
           ...(aspectRatio === "custom" ? { azureCustomWidth, azureCustomHeight } : {}),
@@ -1904,12 +1865,12 @@ function GalleryInner() {
       const promptByPendingId = new Map(newPendings.map((p, i) => [p.id, multiPrompts ? multiPrompts[i] : undefined]));
       let taskIds: string[];
       try {
-        taskIds = await Promise.all(active.map(p => generateOne(token, promptByPendingId.get(p.id))));
+        taskIds = await Promise.all(active.map(p => generateOne(token, promptByPendingId.get(p.id), p.id)));
       } catch (e: unknown) {
         setSubmitting(false);
         const msg = e instanceof Error ? e.message : String(e);
         setPendingGens(prev => prev.map(p =>
-          activeIds.has(p.id) ? { ...p, error: msg } : p
+          activeIds.has(p.id) ? { ...p, error: msg, errorCode: undefined } : p
         ));
         return;
       }
@@ -1956,7 +1917,8 @@ function GalleryInner() {
           );
         } catch (e: unknown) {
           const msg = e instanceof Error ? e.message : String(e);
-          setPendingGens(prev => prev.map(p => p.id === pending.id ? { ...p, error: msg } : p));
+          const errorCode = e instanceof GenerationJobError ? e.code : undefined;
+          setPendingGens(prev => prev.map(p => p.id === pending.id ? { ...p, error: msg, errorCode } : p));
           browserNotify("Generation failed", msg.slice(0, 100));
         }
       });
@@ -1972,7 +1934,7 @@ function GalleryInner() {
     if (!isVideo) {
       return refImages
         .filter(r => !r.uploading && !r.error && r.cdnUrl)
-        .map((r, i) => ({ ...r, kind: "image" as const, label: `image${i + 1}`, role: `Reference ${i + 1}` }));
+        .map((r, i) => ({ ...r, kind: "image" as const, label: `image${i + 1}`, role: `Referência ${i + 1}` }));
     } else {
       const isVeo = modelId === "veo3" || modelId === "veo3_fast" || modelId === "veo3_lite";
       const assets: (RefImage & { kind: "image" | "video" | "audio"; label: string; role: string })[] = [];
@@ -1985,30 +1947,30 @@ function GalleryInner() {
 
       if (isVeo) {
         if (veoMode === "frames") {
-          if (startOk) imgs.push({ ref: vidStartFrame!, role: "Start Frame" });
-          if (endOk) imgs.push({ ref: vidEndFrame!, role: "End Frame" });
+          if (startOk) imgs.push({ ref: vidStartFrame!, role: "Primeiro quadro" });
+          if (endOk) imgs.push({ ref: vidEndFrame!, role: "Último quadro" });
         } else if (veoMode === "references") {
-          resOk.forEach((r, i) => imgs.push({ ref: r, role: `Reference ${i + 1}` }));
+          resOk.forEach((r, i) => imgs.push({ ref: r, role: `Referência ${i + 1}` }));
         }
       } else {
-        if (startOk) imgs.push({ ref: vidStartFrame!, role: "Start Frame" });
-        if (endOk) imgs.push({ ref: vidEndFrame!, role: "End Frame" });
-        resOk.forEach((r, i) => imgs.push({ ref: r, role: `Reference ${i + 1}` }));
+        if (startOk) imgs.push({ ref: vidStartFrame!, role: "Primeiro quadro" });
+        if (endOk) imgs.push({ ref: vidEndFrame!, role: "Último quadro" });
+        resOk.forEach((r, i) => imgs.push({ ref: r, role: `Referência ${i + 1}` }));
       }
       assets.push(...imgs.map((item, i) => ({ ...item.ref, kind: "image" as const, label: `image${i + 1}`, role: item.role })));
 
       // Videos (hide for Veo)
       if (!isVeo) {
         const vids: { ref: RefImage; role: string }[] = [];
-        if (vidVideoRef?.cdnUrl && !vidVideoRef.uploading && !vidVideoRef.error) vids.push({ ref: vidVideoRef, role: "Reference Video" });
-        vidRefVideos.filter(r => r.cdnUrl && !r.uploading && !r.error).forEach((r, i) => vids.push({ ref: r, role: `Video ${i + 1}` }));
+        if (vidVideoRef?.cdnUrl && !vidVideoRef.uploading && !vidVideoRef.error) vids.push({ ref: vidVideoRef, role: "Vídeo de referência" });
+        vidRefVideos.filter(r => r.cdnUrl && !r.uploading && !r.error).forEach((r, i) => vids.push({ ref: r, role: `Vídeo ${i + 1}` }));
         assets.push(...vids.map((item, i) => ({ ...item.ref, kind: "video" as const, label: `vid${i + 1}`, role: item.role })));
       }
 
       // Audios (hide for Veo)
       if (!isVeo) {
         const auds = vidRefAudios.filter(r => r.cdnUrl && !r.uploading && !r.error);
-        assets.push(...auds.map((r, i) => ({ ...r, kind: "audio" as const, label: `aud${i + 1}`, role: `Audio ${i + 1}` })));
+        assets.push(...auds.map((r, i) => ({ ...r, kind: "audio" as const, label: `aud${i + 1}`, role: `Áudio ${i + 1}` })));
       }
 
       return assets;
@@ -2044,10 +2006,6 @@ function GalleryInner() {
       if (next.length === prev.length && next.every((t, i) => t.refId === prev[i].refId && t.label === prev[i].label)) return prev;
       return next;
     });
-    if (inputRef.current && !multiPromptMode) {
-      const maxH = promptExpanded ? window.innerHeight * 0.75 - 220 : 264;
-      resizeTextarea(inputRef.current, maxH);
-    }
     if (overlayInnerRef.current) {
       const st = inputRef.current?.scrollTop ?? 0;
       overlayInnerRef.current.style.transform = st > 0 ? `translateY(-${st}px)` : "";
@@ -2055,29 +2013,46 @@ function GalleryInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompt, mentionableAssetsKey]);
 
-  const openDurPicker = useCallback(() => {
-    const r = durPillRef.current?.getBoundingClientRect();
-    if (!r) return;
-    setDurPickerPos({ left: r.left, bottom: window.innerHeight - r.top + 6 });
-    setDurPickerOpen(true);
-  }, []);
+  /* O `ComposerShell` é dono do <textarea>, e o contrato dele está congelado
+     porque o /chat depende dele — não há prop para `onSelect` nem para
+     `onScroll`. Os dois são necessários aqui: o primeiro descobre o `@`
+     quando o cursor anda sem que o texto mude, o segundo mantém a camada de
+     chips colada ao texto que rola por baixo. Ligamos os dois no elemento,
+     que é justamente o que o `textareaRef` entrega.
 
-  const closeDurPicker = useCallback(() => {
-    if (durCloseTimer.current) clearTimeout(durCloseTimer.current);
-    setDurPickerOpen(false);
-    setDurPickerClosing(true);
-    durCloseTimer.current = setTimeout(() => setDurPickerClosing(false), 180);
-  }, []);
-
-  // Close duration picker on outside click
+     O `data-prompt-input` entra junto porque é por esse atributo que o menu
+     de menções reconhece o campo ao decidir se um clique caiu fora dele. */
   useEffect(() => {
-    if (!durPickerOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (!durPillRef.current?.contains(e.target as Node)) closeDurPicker();
+    const el = campoPrompt;
+    if (!el) return;
+    el.setAttribute("data-prompt-input", "");
+
+    const lerCursor = () => {
+      const cursor = el.selectionStart ?? el.value.length;
+      const match = el.value.slice(0, cursor).match(/@(\w*)$/);
+      setMentionQuery(match ? match[1] : null);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [durPickerOpen, closeDurPicker]);
+    /* Com o painel aberto, seta, Enter e Esc pertencem a ele: reler o cursor
+       aqui desfaria o que o `onKeyDown` acabou de decidir — um Esc voltaria a
+       abrir o menu que ele mesmo fechou. */
+    const aoSoltarTecla = (e: KeyboardEvent) => {
+      if (atMenuOpen && ["ArrowUp", "ArrowDown", "Enter", "Escape"].includes(e.key)) return;
+      lerCursor();
+    };
+    const acompanharRolagem = () => {
+      if (overlayInnerRef.current)
+        overlayInnerRef.current.style.transform = `translateY(-${el.scrollTop}px)`;
+    };
+
+    el.addEventListener("keyup", aoSoltarTecla);
+    el.addEventListener("click", lerCursor);
+    el.addEventListener("scroll", acompanharRolagem);
+    return () => {
+      el.removeEventListener("keyup", aoSoltarTecla);
+      el.removeEventListener("click", lerCursor);
+      el.removeEventListener("scroll", acompanharRolagem);
+    };
+  }, [campoPrompt, atMenuOpen]);
 
   // Close @ menu on outside click
   useEffect(() => {
@@ -2181,9 +2156,12 @@ function GalleryInner() {
   const ratios = (isVideo ? vidModel?.ratios : imgModel?.ratios) ?? [];
   const supportsQ = !isVideo && !!imgModel?.supportsQuality;
 
-  const qualityOpts: string[] = isAzureProvider
+  const baseQualityOpts: string[] = isAzureProvider
     ? (imgModel!.azureQualityOptions ?? [])
     : (imgModel?.apiInput.qualityOptions ?? ["2k", "4k"]);
+  const qualityOpts = !isVideo && imgModel?.oneKOnlyRatios?.includes(aspectRatio)
+    ? baseQualityOpts.filter(q => q.toLowerCase() === "1k")
+    : baseQualityOpts;
   const azureResolutionOpts: string[] = isAzureProvider ? (imgModel?.azureResolutionOptions ?? []) : [];
   const durations = vidModel?.durations ?? [];
   const vidModes = vidModel?.modes ?? [];
@@ -2198,8 +2176,292 @@ function GalleryInner() {
   const displayVidRefVideos = getDisplayOrder(vidRefVideos, draggingId, reorderOverId);
   const displayVidRefAudios = getDisplayOrder(vidRefAudios, draggingId, reorderOverId);
 
-  const vidRequiresPrompt = isVideo && !!(vidModel?.apiInput.promptMaxLength);
-  const canGenerate = generationBlocked(kieKeySet) ? false : submitting ? false : promptOverLimit ? false : (vidRequiresPrompt || !isVideo) ? prompt.trim().length > 0 : true;
+  /* A derivacao dos slots de referencia de video foi levantada de dentro
+     do JSX da trilha para ca, sem alterar uma linha da logica: agora a
+     trilha (que desenha os cheios) e o botao "+" da barra (que oferece os
+     vazios) leem a MESMA lista. Duas derivacoes paralelas divergiriam, e
+     e justamente aqui que mora a regra de quais slots um modelo aceita
+     dado o que ja esta anexado. */
+  const vidSlots = useMemo(() => {
+    type VidSlot =
+      | { kind: "filled"; target: "startFrame"|"endFrame"|"resource"|"videoRef"|"referenceVideo"|"audioRef"; mediaKind: "image"|"video"|"audio"; label: string; ref: RefImage }
+      | { kind: "add";    target: "startFrame"|"endFrame"|"resource"|"videoRef"|"referenceVideo"|"audioRef"; mediaKind: "image"|"video"|"audio"; label: string; countLeft: number }
+      | { kind: "element-filled"; element: KlingElement }
+      | { kind: "element-add"; countLeft: number };
+    const slots: VidSlot[] = [];
+    const useElems = !!(vidModel?.apiInput.useKlingElements);
+    const isHappyHorse = vidModel?.id === "happyhorse";
+    const isVeo = modelId === "veo3" || modelId === "veo3_fast" || modelId === "veo3_lite";
+    for (const h of vidRefHandles) {
+      if (isVeo) {
+        if (veoMode === "references" && (h === "startFrame" || h === "endFrame")) continue;
+        if (veoMode === "frames" && h === "resource") continue;
+        if (h === "videoRef" || h === "referenceVideo" || h === "audioRef") continue;
+      }
+      if (isHappyHorse && h === "startFrame" && vidResources.length > 0) continue;
+      if (isHappyHorse && h === "resource" && vidStartFrame) continue;
+      const isSeedance = vidModel?.id === "seedance-2" || vidModel?.id === "seedance-2-fast" || vidModel?.id === "minimax-h3";
+      const seedanceHasFrame = !!(vidStartFrame || vidEndFrame);
+      const seedanceHasRef   = vidResources.length > 0 || vidRefVideos.length > 0 || vidRefAudios.length > 0;
+      if (isSeedance && seedanceHasFrame && (h === "resource" || h === "referenceVideo" || h === "audioRef")) continue;
+      if (isSeedance && seedanceHasRef   && (h === "startFrame" || h === "endFrame")) continue;
+      if (h === "startFrame") {
+        if (vidStartFrame) slots.push({ kind: "filled", target: h, mediaKind: "image", label: "Start Frame", ref: vidStartFrame });
+        else               slots.push({ kind: "add",    target: h, mediaKind: "image", label: "Start Frame", countLeft: 1 });
+      } else if (h === "endFrame") {
+        if (vidEndFrame)   slots.push({ kind: "filled", target: h, mediaKind: "image", label: "End Frame", ref: vidEndFrame });
+        else               slots.push({ kind: "add",    target: h, mediaKind: "image", label: "End Frame", countLeft: 1 });
+      } else if (h === "videoRef") {
+        if (vidVideoRef)   slots.push({ kind: "filled", target: h, mediaKind: "video", label: "Ref Video", ref: vidVideoRef });
+        else               slots.push({ kind: "add",    target: h, mediaKind: "video", label: "Ref Video", countLeft: 1 });
+      } else if (h === "resource") {
+        if (useElems) {
+          vidElements.forEach(el => slots.push({ kind: "element-filled", element: el }));
+          if (vidElements.length < 3) slots.push({ kind: "element-add", countLeft: 3 - vidElements.length });
+        } else {
+          const maxRes = vidModel?.maxResources ?? 3;
+          const resLabel = vidModel?.id === "happyhorse" ? "Character" : "Image";
+          displayVidResources.forEach(r => slots.push({ kind: "filled", target: h, mediaKind: "image", label: resLabel, ref: r }));
+          if (vidResources.length < maxRes)
+            slots.push({ kind: "add", target: h, mediaKind: "image", label: resLabel, countLeft: maxRes - vidResources.length });
+        }
+      } else if (h === "referenceVideo") {
+        const maxRefVid = vidModel?.maxReferenceVideos ?? 3;
+        displayVidRefVideos.forEach(r => slots.push({ kind: "filled", target: h, mediaKind: "video", label: "Ref Video", ref: r }));
+        if (vidRefVideos.length < maxRefVid)
+          slots.push({ kind: "add", target: h, mediaKind: "video", label: "Ref Video", countLeft: maxRefVid - vidRefVideos.length });
+      } else if (h === "audioRef") {
+        const maxRefAud = vidModel?.maxReferenceAudios ?? 3;
+        displayVidRefAudios.forEach(r => slots.push({ kind: "filled", target: h, mediaKind: "audio", label: "Audio", ref: r }));
+        if (vidRefAudios.length < maxRefAud)
+          slots.push({ kind: "add", target: h, mediaKind: "audio", label: "Audio", countLeft: maxRefAud - vidRefAudios.length });
+      }
+    }
+    return slots;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVideo, vidRefHandles, vidModel, modelId, veoMode, vidResources, vidStartFrame,
+      vidEndFrame, vidVideoRef, vidElements, vidRefVideos, vidRefAudios,
+      displayVidResources, displayVidRefVideos, displayVidRefAudios]);
+
+  const vidRequiresPrompt = isVideo && !!(vidModel?.apiInput.promptMaxLength) && !vidModel?.promptOptional;
+  const canGenerate = (!(isVideo && vidModel?.apiInput.useHiggsfield) && generationBlocked(kieKeySet)) ? false : submitting ? false : promptOverLimit ? false : !segmentReady ? false : (vidRequiresPrompt || !isVideo) ? prompt.trim().length > 0 : true;
+
+  /* ── O bloco multimodal da pílula 5 ──────────────────────────────────
+     Duas linhas, Imagem e Vídeo, porque são os dois meios que o app tem.
+     A linha do meio que a aba usa mostra o modelo em efeito; a do outro
+     mostra o que ficou guardado lá.
+
+     Escolher um modelo do OUTRO meio troca a aba — e como o efeito de
+     troca de aba restaura o modelo a partir da gaveta daquela aba, o
+     caminho honesto é escrever nela antes de navegar, em vez de brigar
+     com o efeito depois. Desde que o segmentado Imagem/Vídeo saiu da
+     Home, esta é a única porta para o vídeo. */
+  const fixarModeloDaAba = useCallback((destino: Tab, id: string) => {
+    try {
+      const guardado = loadSettings(destino, selectedFolderId) ?? {};
+      localStorage.setItem(settingsKey(destino, selectedFolderId), JSON.stringify({ ...guardado, modelId: id }));
+    } catch { /* modo privado do navegador */ }
+  }, [selectedFolderId]);
+
+  const trocarAba = useCallback((destino: Tab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", destino);
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [router, pathname, searchParams]);
+
+  const linhasDeMidia: LinhaMidia[] = useMemo(() => {
+    const paraOpcao = (m: (typeof IMAGE_MODELS)[number] | (typeof VIDEO_MODELS)[number]) => ({
+      value: m.id,
+      label: m.name,
+      group: "provider" in m ? (m as { provider: string }).provider : undefined,
+      icon: "provider" in m ? <ProviderIcon provider={(m as { provider: string }).provider} /> : undefined,
+    });
+
+    return ([
+      { destino: "images" as Tab, rotulo: "Imagem", lista: IMAGE_MODELS },
+      { destino: "videos" as Tab, rotulo: "Vídeo",  lista: VIDEO_MODELS },
+    ]).map(({ destino, rotulo, lista }) => {
+      const ativa = destino === tab;
+      const guardado = ativa ? modelId : loadSettings(destino, selectedFolderId)?.modelId;
+      const valor = guardado && lista.some(m => m.id === guardado) ? guardado : lista[0].id;
+      return {
+        id: destino,
+        rotulo,
+        ativa,
+        valor,
+        opcoes: lista.map(paraOpcao),
+        onEscolher: (id: string) => {
+          if (ativa) { setModelId(id); return; }
+          fixarModeloDaAba(destino, id);
+          trocarAba(destino);
+        },
+      };
+    });
+  }, [tab, modelId, selectedFolderId, fixarModeloDaAba, trocarAba]);
+
+  /* O que o botão de enviar dispara. Em "Confirmar" ele abre o cartão de
+     parâmetros e espera; em "Direto" gera na hora. É a diferença entre o
+     usuário aprovar cada gasto e o app gastar sozinho, e é a razão de a
+     pílula 4 existir. */
+  const pedirGeracao = () => {
+    if (modoExecucao === "confirmar") { setConfirmando(true); return; }
+    void generate();
+  };
+
+  /* O "melhorar" usa o mesmo modelo do assistente. Um seletor de modelo
+     só para reescrever prompt seria um décimo quarto controle, que é
+     exatamente o que este trabalho está desfazendo. */
+  const { preferredModel, setPreferredModel } = useChatSessionStore();
+  const polishState = usePolishPrompt({ onChange: setPrompt, model: preferredModel });
+
+  /* ── A segunda pílula: os parâmetros que dependem do modelo ────────
+     Declarados aqui porque quem sabe o que o modelo atual aceita é esta
+     função — a pílula só desenha. É o que garante que uma linha nunca
+     apareça para um modelo que não a suporta, e que o resumo da pílula
+     nunca afirme um valor que não está em jogo. */
+  const paramFields: ParamField[] = [];
+  const paramSummary: string[] = [];
+
+  /* Tamanho livre so existe no gpt-image-2 servido pela Azure. */
+  const permiteTamanhoLivre = !isVideo && isAzureProvider && azureResolutionOpts.length > 0;
+
+  if (ratios.length > 0) {
+    paramFields.push({
+      kind: "select", id: "ratio", label: "Proporção", value: aspectRatio,
+      options: [
+        ...ratios.map(r => ({ value: r, label: r })),
+        ...(permiteTamanhoLivre ? [{ value: "custom", label: "Personalizado" }] : []),
+      ],
+      onChange: value => {
+        setAspectRatio(value);
+        if (!isVideo && imgModel?.oneKOnlyRatios?.includes(value)) setQuality("1k");
+      },
+    });
+    paramSummary.push(
+      aspectRatio === "custom" && azureCustomWidth && azureCustomHeight
+        ? `${azureCustomWidth}×${azureCustomHeight}`
+        : aspectRatio
+    );
+  }
+
+  /* A linha do tamanho so aparece com "Personalizado" escolhido — é
+     comportamento condicional, não detalhe do seletor acima. */
+  if (permiteTamanhoLivre && aspectRatio === "custom") {
+    paramFields.push({
+      kind: "custom", id: "azuresize", label: "Tamanho",
+      node: (
+        <AzureCustomSize
+          width={azureCustomWidth}
+          height={azureCustomHeight}
+          onApply={(w, h) => {
+            setAzureCustomWidth(w);
+            setAzureCustomHeight(h);
+            setAspectRatio("custom");
+          }}
+        />
+      ),
+    });
+  }
+
+  if (!isVideo) {
+    if (isSegmentEdit) {
+      paramFields.push({
+        kind: "custom", id: "grok-segments", label: "Segmentação",
+        node: (
+          <div className="grid gap-2 px-2 pb-1">
+            <input
+              value={segmentTaskId}
+              onChange={e => setSegmentTaskId(e.target.value)}
+              placeholder="task_id da KIE.ai"
+              aria-label="Task ID de origem do Grok"
+              className="w-full rounded-ms border border-ms-border-subtle bg-ms-bg-component px-2 py-1.5 text-ms-base text-ms-text outline-none focus-visible:ring-2 focus-visible:ring-ms-ring"
+            />
+            <input
+              value={segmentMaskIndexes}
+              onChange={e => setSegmentMaskIndexes(e.target.value)}
+              placeholder="Índices: 1, 2"
+              aria-label="Índices das máscaras do Grok"
+              className="w-full rounded-ms border border-ms-border-subtle bg-ms-bg-component px-2 py-1.5 text-ms-base text-ms-text outline-none focus-visible:ring-2 focus-visible:ring-ms-ring"
+            />
+            <p className="px-0.5 text-[10px] leading-4 text-ms-text-tertiary">
+              Use o task_id de uma geração Grok Imagine 2.0 ou Segment Map e informe as regiões a editar.
+            </p>
+          </div>
+        ),
+      });
+      paramSummary.push(parsedSegmentMaskIndexes.length > 0 ? `Máscaras ${parsedSegmentMaskIndexes.join(",")}` : "Máscaras");
+    }
+    if (supportsQ && qualityOpts.length > 0) {
+      paramFields.push({
+        kind: "select", id: "quality", label: "Qualidade", value: effectiveQuality,
+        options: qualityOpts.map(q => ({ value: q, label: q.toUpperCase() })),
+        onChange: setQuality,
+      });
+      paramSummary.push(effectiveQuality.toUpperCase());
+    }
+    if (azureResolutionOpts.length > 0) {
+      paramFields.push({
+        kind: "select", id: "azres", label: "Resolução", value: azureResolution,
+        options: azureResolutionOpts.map(r => ({ value: r, label: r.toUpperCase() })),
+        onChange: setAzureResolution,
+      });
+    }
+    if (!multiPromptMode) {
+      paramFields.push({
+        kind: "stepper", id: "count", label: "Quantidade", value: count, min: 1, max: 4,
+        onChange: setCount,
+      });
+      paramSummary.push(`×${count}`);
+    }
+  } else {
+    if (durations.length > 0) {
+      paramFields.push({
+        kind: "steps", id: "duration", label: "Duração", value: duration,
+        steps: durations, suffix: "s", onChange: setDuration,
+      });
+      paramSummary.push(`${duration}s`);
+    }
+    if (vidModes.length > 0) {
+      paramFields.push({
+        kind: "select", id: "mode", label: "Modo", value: mode,
+        options: vidModes.map(m => ({ value: m.value, label: m.label })),
+        onChange: setMode,
+      });
+    }
+    if ((vidModel?.resolutions?.length ?? 0) > 0) {
+      const res = resolution || vidModel!.defaultResolution!;
+      paramFields.push({
+        kind: "select", id: "resolution", label: "Resolução", value: res,
+        options: vidModel!.resolutions!.map(r => ({ value: r, label: r })),
+        onChange: setResolution,
+      });
+      paramSummary.push(res);
+    }
+    if (vidModel?.sound) {
+      paramFields.push({
+        kind: "toggle", id: "sound", label: "Som", value: sound, onChange: setSound,
+      });
+    }
+    if (modelId === "veo3" || modelId === "veo3_fast") {
+      paramFields.push({
+        kind: "choice", id: "veo", label: "Entrada", value: veoMode,
+        options: [{ value: "frames", label: "Quadros" }, { value: "references", label: "Referências" }],
+        onChange: v => setVeoMode(v as "frames" | "references"),
+      });
+    }
+    /* Seed por último: é o parâmetro que ninguém lê de relance, e o único
+       que se consulta só quando se quer repetir uma geração. */
+    if (vidModel?.supportsSeeds) {
+      paramFields.push({
+        kind: "number", id: "seed", label: "Seed", value: seed ?? 0,
+        min: 0, max: 2147483647, onChange: setSeed,
+      });
+    }
+  }
+
+  /* Os slots de referência ainda vazios — é o que o botão "+" oferece.
+     Sai da mesma lista que a trilha usa para desenhar os cheios. */
+  const addSlots = vidSlots.filter(s => s.kind === "add" || s.kind === "element-add");
 
   const handleAddReference = useCallback((url: string) => {
     if (refImages.some(r => r.cdnUrl === url || r.objectUrl === url)) {
@@ -2245,7 +2507,7 @@ function GalleryInner() {
     }
   }, [handleAddReference, modelId]);
 
-  const handleReorderDrop = (targetId: string, listTarget: "refImage" | "resource" | "referenceVideo" | "audioRef") => {
+  const handleReorderDrop = useCallback((targetId: string, listTarget: "refImage" | "resource" | "referenceVideo" | "audioRef") => {
     const dragId = _reorderDragItem?.id;
     _reorderDragItem = null;
     _reorderOverId = null;
@@ -2271,10 +2533,10 @@ function GalleryInner() {
     newArr.splice(targetIdx, 0, moved);
     setter(() => newArr);
 
-    const { newTaggedImages, newPrompt } = reorderAndRenumberTags(oldArr, newArr, "image", taggedImages, prompt);
+    const { newTaggedImages, newPrompt } = reorderAndRenumberTags(oldArr, newArr, "image", taggedImagesRef.current, promptRef.current);
     setTaggedImages(newTaggedImages);
     setPrompt(newPrompt);
-  };
+  }, [refImages, vidRefAudios, vidRefVideos, vidResources]);
 
   const handleCopyPrompt = useCallback((text: string, refUrls?: string[], meta?: { model?: string; aspectRatio?: string; quality?: string; azureResolution?: string }) => {
     const newRefs = (refUrls ?? []).map(url => ({
@@ -2317,7 +2579,7 @@ function GalleryInner() {
       setVidRefAudios([]);
       setVidElements([]);
 
-      let remaining = [...newRefs];
+      const remaining = [...newRefs];
       if (handles.includes("startFrame") && remaining.length > 0) {
         setVidStartFrame(remaining.shift()!);
       }
@@ -2356,9 +2618,7 @@ function GalleryInner() {
     if (meta?.aspectRatio) setAspectRatio(meta.aspectRatio);
     if (meta?.quality) setQuality(meta.quality);
     if (meta?.azureResolution) setAzureResolution(meta.azureResolution);
-    requestAnimationFrame(() => {
-      if (inputRef.current) resizeTextarea(inputRef.current);
-    });
+    requestAnimationFrame(() => inputRef.current?.focus());
   }, [tab, modelId]);
 
   const clearDeletedFromNodes = useCallback((deletedUrls: Set<string>) => {
@@ -2461,7 +2721,7 @@ function GalleryInner() {
     });
   }, [items, selectedIds, hasMore, clearDeletedFromNodes]);
 
-  const GALLERY_GAP = 1;
+  const GALLERY_GAP = 12;
 
   // All folder IDs in the selected folder's subtree (selected + all descendants).
   const selectedFolderIds = useMemo<Set<string> | null>(() => {
@@ -2482,9 +2742,44 @@ function GalleryInner() {
     const bySource = sourceFilter === "generated"
       ? items.filter(item => item.source === "generation")
       : items.filter(item => item.source === "upload");
-    if (!selectedFolderIds) return bySource;
-    return bySource.filter(item => itemFolderMap[item.id]?.some(fid => selectedFolderIds.has(fid)));
-  }, [items, sourceFilter, selectedFolderIds, itemFolderMap]);
+    const byFolder = selectedFolderIds
+      ? bySource.filter(item => itemFolderMap[item.id]?.some(fid => selectedFolderIds.has(fid)))
+      : bySource;
+
+    // Os três filtros do cabeçalho do Acervo. Cada `if` só custa uma passada
+    // quando o eixo está fora do padrão, então a grade sem filtro não paga nada.
+    let result = byFolder;
+    if (acervoModel !== "all") result = result.filter(item => item.model === acervoModel);
+    if (acervoWindow !== "all") {
+      const days = acervoWindow === "7d" ? 7 : acervoWindow === "30d" ? 30 : 90;
+      const cutoff = Date.now() - days * 86_400_000;
+      result = result.filter(item => new Date(item.created_at).getTime() >= cutoff);
+    }
+    const needle = acervoQuery.trim().toLowerCase();
+    if (needle) result = result.filter(item => item.prompt?.toLowerCase().includes(needle));
+    return result;
+  }, [items, sourceFilter, selectedFolderIds, itemFolderMap, acervoModel, acervoWindow, acervoQuery]);
+
+  /** Modelos distintos presentes no acervo carregado — a lista do filtro. */
+  const acervoModels = useMemo(() => {
+    const seen = new Set<string>();
+    for (const item of items) if (item.model) seen.add(item.model);
+    return [...seen].sort((a, b) => a.localeCompare(b));
+  }, [items]);
+
+  /** "Acervo", ou o caminho da pasta aberta. Substitui o breadcrumb que
+      ficava centrado na barra escura — aqui ele é o próprio título. */
+  const acervoTitle = useMemo(() => {
+    if (!selectedFolderId) return "Acervo";
+    const path: string[] = [];
+    let cur: (typeof folders)[0] | undefined = folders.find(f => f.id === selectedFolderId);
+    while (cur) {
+      path.unshift(cur.name);
+      const parentId = cur.parentId;
+      cur = parentId ? folders.find(f => f.id === parentId) : undefined;
+    }
+    return path.length ? `Acervo / ${path.join(" / ")}` : "Acervo";
+  }, [selectedFolderId, folders]);
 
   type GalleryLayoutItem =
     | { kind: "pending"; pg: PendingGen; ratio: number; width: number }
@@ -2529,7 +2824,7 @@ function GalleryInner() {
     const mixed: Dated[] = [
       ...mixedPendings.map(pg => ({ t: pg.createdAt ? new Date(pg.createdAt).getTime() : Date.now(), entry: toPendingEntry(pg) })),
       ...filteredItems.map(item => ({ t: new Date(item.created_at).getTime(), entry: { kind: "gallery" as const, item, ratio: toRatio(item.aspect_ratio, item.mediaType, item.url), width: 0 } })),
-    ].sort((a, b) => b.t - a.t);
+    ].sort((a, b) => (acervoSort === "oldest" ? a.t - b.t : b.t - a.t));
 
     const allItems: GalleryLayoutItem[] = [
       ...activePendings.map(toPendingEntry),
@@ -2565,7 +2860,7 @@ function GalleryInner() {
     }
 
     return rows;
-  }, [containerWidth, zoom, pendingGens, filteredItems, GALLERY_GAP, natRatioVersion, tab, sourceFilter, selectedFolderIds]);
+  }, [containerWidth, zoom, pendingGens, filteredItems, GALLERY_GAP, natRatioVersion, tab, sourceFilter, selectedFolderIds, acervoSort]);
 
   // Fixed-column justified layout: exactly `zoom` items per row, each row fills full width.
   // Last partial row keeps column widths consistent with full rows; empty slots are padded.
@@ -2597,6 +2892,14 @@ function GalleryInner() {
     () => fixedRows.flatMap(r => r.items).filter((i): i is Extract<GalleryLayoutItem, { kind: "gallery" }> => i.kind === "gallery").map(i => i.item),
     [fixedRows],
   );
+
+  const isGalleryEmpty = filteredItems.length === 0 && (
+    sourceFilter !== "generated" ||
+    pendingGens.filter(pg => pg.tab == null || pg.tab === tab).length === 0
+  );
+
+  const isCreationView = searchParams.get("view") === "create";
+  const showCreationHome = isCreationView && !pendingGens.some(pg => !pg.error && (pg.tab == null || pg.tab === tab));
 
   // Fire probes for every uncached item without a stored aspect_ratio.
   // Images: 32px next/image probe (fast). Videos: <video preload="metadata"> probe.
@@ -2659,350 +2962,673 @@ function GalleryInner() {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  if (!authLoaded) return <div style={{ flex: 1, background: "#0F0F1A" }} />;
+  /* A grade fica memoizada porque o custo por tecla do composer é, medido,
+     o número de elementos que a página recria a cada render. Nada aqui
+     depende do texto do prompt: com o elemento estável, o React nem entra
+     nesta subárvore quando só o prompt muda. */
+  const grade = useMemo(() => (
+        <div className="miora-gallery-scroll" ref={gridOuterRef} style={{ flex: 1, overflowY: "auto", paddingBottom: showCreationHome ? 0 : "260px", display: "flex", flexDirection: "column", userSelect: marqueeRect ? "none" : undefined, cursor: marqueeRect ? "crosshair" : undefined }} onMouseDown={e => {
+          if (showCreationHome || e.button !== 0) return;
+          const target = e.target as HTMLElement;
+          if (target.closest("button, .gallery-action-btn, .gallery-checkbox")) return;
+          marqueeStartRef.current = { x: e.clientX, y: e.clientY };
+          preDragSelectedIdsRef.current = new Set(selectedIds);
+        }}>
+          {showCreationHome ? (
+            <CreationHero />
+          ) : loading || containerWidth === 0 ? (
+            /* Skeleton — shown while loading or before container is measured */
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${zoom}, 1fr)`, gap: "1px", padding: "1px", alignItems: "start" }}>
+              {Array.from({ length: zoom * 3 }).map((_, i) => (
+                <div key={i} className="gallery-skeleton" style={{ aspectRatio: i % 3 === 1 ? "4 / 5" : i % 5 === 0 ? "16 / 9" : "1 / 1" }} />
+              ))}
+            </div>
+          ) : isGalleryEmpty ? (
+            <EmptyState />
+          ) : (
+            <div ref={gridRef} className="miora-media-grid">
+              {fixedRows.map((row, rowIdx) => (
+                <div key={rowIdx} style={{ display: "flex", height: row.height, gap: `${GALLERY_GAP}px`, marginBottom: rowIdx < fixedRows.length - 1 ? `${GALLERY_GAP}px` : 0 }}>
+                  {row.items.map((layoutItem) => {
+                if (layoutItem.kind === "pending") {
+                  const pg = layoutItem.pg;
+                  return (
+                    <div key={pg.id} className={pg.error ? "error-pending-tile" : "pgt-tile"} style={{
+                      width: layoutItem.width,
+                      flex: "0 0 auto",
+                      height: "100%",
+                      position: "relative",
+                      overflow: "hidden",
+                      /* O erro tem fundo próprio; a geração em voo é pintada
+                         pelo brilho de `.pgt-tile`, em composer.css. */
+                      background: pg.error ? "var(--ms-bg-danger-subtle)" : undefined,
+                    }}>
+                          {pg.error ? (
+                            <>
+                              {/* Top radial glow */}
+                              <div style={{
+                                position: "absolute", top: "-40%", left: "50%", transform: "translateX(-50%)",
+                                width: "180%", height: "80%", pointerEvents: "none",
+                                background: "radial-gradient(ellipse at 50% 20%, hsl(var(--ms-red-9) / .13) 0%, transparent 70%)",
+                              }} />
+                              {/* Error card body */}
+                              <div style={{
+                                position: "absolute", inset: 0,
+                                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                                gap: "8px", padding: "16px",
+                                zIndex: 1,
+                              }}>
+                                {/* Icon with border ring + glow */}
+                                <div style={{
+                                  width: 40, height: 40, borderRadius: "50%",
+                                  border: "1px solid var(--ms-border-danger)",
+                                  background: "var(--ms-bg-danger)",
+                                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                                }}>
+                                  <ShieldAlert size={18} strokeWidth={1.75} style={{ color: "var(--signal-critical)" }} />
+                                </div>
+                                {/* Tag */}
+                                <span style={{
+                                  fontSize: "10px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase",
+                                  color: "var(--ms-text-danger)",
+                                  background: "var(--ms-bg-danger)",
+                                  padding: "2px 8px", borderRadius: "var(--ms-radius-sm)",
+                                }}>
+                                  {isSafetyBlocked(pg.error, pg.errorCode) ? "Bloqueado por NSFW" : "Falha da API"}
+                                </span>
+                                {/* Error message */}
+                                <div style={{
+                                  fontSize: "11px", color: "var(--ms-text-secondary)", textAlign: "center",
+                                  lineHeight: 1.5, wordBreak: "break-word",
+                                  display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden",
+                                }}>
+                                  {pg.error}
+                                </div>
+                                {/* Credits refunded — only for moderation */}
+                                {isSafetyBlocked(pg.error, pg.errorCode) && (
+                                  <div style={{ fontSize: "10px", color: "var(--ms-text-tertiary)", fontFamily: "var(--font-metric)", marginTop: 2 }}>
+                                    Créditos estornados
+                                  </div>
+                                )}
+                              </div>
+                              {/* Action buttons column */}
+                              <div className="error-tile-actions" style={{ position: "absolute", top: 8, right: 8, display: "flex", flexDirection: "column", gap: 5, zIndex: 5 }}>
+                                <button className="gallery-action-btn" title="Paste prompt & images" onClick={() => handleCopyPrompt(pg.prompt, pg.referenceImageUrls)}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                  </svg>
+                                </button>
+                                <button className="gallery-action-btn" title="Retry" onClick={async () => {
+                                  const newId = randomUUID();
+                                  const newPending: PendingGen = { ...pg, id: newId, createdAt: pg.createdAt ?? new Date().toISOString(), retried: true, error: undefined, errorCode: undefined, taskId: undefined, prePending: false };
+                                  setPendingGens(prev => [...prev.filter(p => p.id !== pg.id), newPending]);
+                                  const token = await getToken();
+                                  if (!token) { setPendingGens(prev => prev.map(p => p.id === newId ? { ...p, error: "Please sign in." } : p)); return; }
+                                  const storedRefs = pg.referenceImageUrls ?? [];
+                                  const retryIsVideo = pg.tab === "videos";
+                                  let taskId: string;
+                                  try {
+                                    if (retryIsVideo) {
+                                      const vm = VIDEO_MODELS.find(m => m.id === modelId);
+                                      const isVeo = !!(vm?.apiInput.useGoogleVeo);
+                                      const res = await fetch("/api/generate-video", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(isVeo ? {
+                                        model: modelId, prompt: pg.prompt, aspect_ratio: pg.aspectRatio, generationType: "TEXT_2_VIDEO",
+                                        imageUrls: storedRefs, enableTranslation: true, enableFallback: false, watermark: "",
+                                      } : {
+                                        videoModel: modelId, prompt: pg.prompt, aspectRatio: pg.aspectRatio, duration, mode, resolution, sound,
+                                        ...(vm?.apiInput.useHiggsfield ? { submissionId: randomUUID() } : {}),
+                                        ...(storedRefs.length > 0 ? { referenceImageUrls: storedRefs } : {}),
+                                      }) });
+                                      const d = await res.json() as { taskId?: string; error?: string };
+                                      if (!res.ok) throw new Error(d.error ?? "Failed");
+                                      taskId = d.taskId!;
+                                    } else {
+                                      const retryModelId = pg.modelId ?? modelId;
+                                      const retryQuality = pg.quality ?? quality;
+                                      const retryModel = IMAGE_MODELS.find(m => m.id === retryModelId);
+                                      const retryIsSegmentEdit = !!retryModel?.requiresSegmentTask;
+                                      const syntheticTagged: TaggedImage[] = storedRefs.map((url, i) => ({ label: `image${i + 1}`, refId: url, url }));
+                                      const { resolvedPrompt, extraUrls } = resolveGalleryMentions(pg.prompt, syntheticTagged);
+                                      const dedupedExtra = new Set(extraUrls);
+                                      const imageUrls = [...extraUrls, ...storedRefs.filter(u => !dedupedExtra.has(u))];
+                                      const azureBaseUrl    = (() => { try { return localStorage.getItem("aiui-azure-base-url") ?? ""; } catch { return ""; } })();
+                                      const azureDeployment = (() => { try { return JSON.parse(localStorage.getItem("aiui-azure-endpoints") ?? "{}")[retryModelId] ?? ""; } catch { return ""; } })();
+                                      const providerForModel = (() => { try { return JSON.parse(localStorage.getItem("aiui-model-providers") ?? "{}")[retryModelId] ?? "kie"; } catch { return "kie"; } })();
+                                      const isAzure = !!(azureBaseUrl && azureDeployment && providerForModel === "azure");
+                                      const isCodex = providerForModel === "codex";
+                                      const res = await fetch("/api/generate", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({
+                                        prompt: resolvedPrompt, model: retryModelId, aspectRatio: pg.aspectRatio, quality: retryQuality, imageUrls,
+                                        ...(retryIsSegmentEdit ? { segmentTaskId: pg.segmentTaskId, maskIndexes: pg.maskIndexes } : {}),
+                                        ...(isAzure ? { azureBaseUrl, azureDeployment, azureQuality: retryQuality } : {}),
+                                        ...(isCodex ? { codexProvider: true } : {}),
+                                      }) });
+                                      const d = await res.json() as { taskId?: string; error?: string };
+                                      if (!res.ok) throw new Error(d.error ?? "Failed");
+                                      taskId = d.taskId!;
+                                    }
+                                    setPendingGens(prev => prev.map(p => p.id === newId ? { ...p, taskId } : p));
+                                  } catch (e: unknown) {
+                                    setPendingGens(prev => prev.map(p => p.id === newId ? { ...p, error: e instanceof Error ? e.message : String(e), errorCode: undefined } : p));
+                                    return;
+                                  }
+                                  try {
+                                    await pollTask(taskId);
+                                    const existingIds = new Set((galleryCache.get(`${tabRef.current}-generation`)?.items ?? []).map((i: GalleryItem) => i.id));
+                                    const fresh = await fetchNewItems(tabRef.current);
+                                    setPendingGens(prev => prev.filter(p => p.id !== newId));
+                                    if (fresh.length > 0) {
+                                      if (newPending.folderId) {
+                                        const existingMap = useFolderStore.getState().itemFolderMap;
+                                        const pendingTime = newPending.createdAt ? new Date(newPending.createdAt).getTime() - 30_000 : 0;
+                                        const untaggedIds = fresh
+                                          .filter(i => new Date(i.created_at).getTime() >= pendingTime)
+                                          .map(i => i.id)
+                                          .filter(id => !existingMap[id]);
+                                        if (untaggedIds.length > 0) assignItemsToFolder(untaggedIds, newPending.folderId);
+                                      }
+                                      const genCacheKey = `${tabRef.current}-generation`;
+                                      setItems(prev => {
+                                        const base = sourceFilterRef.current === "generated" ? prev : (galleryCache.get(genCacheKey)?.items ?? []);
+                                        const merged = mergeByNewest(base, fresh);
+                                        galleryCache.set(genCacheKey, { items: merged, hasMore: true });
+                                        return sourceFilterRef.current === "generated" ? (merged === base ? prev : merged) : prev;
+                                      });
+                                    }
+                                    onGenComplete(newPending.folderId, fresh.filter(i => !existingIds.has(i.id)).map(i => i.id));
+                                    window.dispatchEvent(new Event("credits-refresh"));
+                                  } catch (e: unknown) {
+                                    const errorCode = e instanceof GenerationJobError ? e.code : undefined;
+                                    setPendingGens(prev => prev.map(p => p.id === newId ? { ...p, error: e instanceof Error ? e.message : String(e), errorCode } : p));
+                                  }
+                                }}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                                  </svg>
+                                </button>
+                                <button className="gallery-action-btn gallery-delete-btn" title="Dismiss" onClick={() => setPendingGens(prev => prev.filter(p => p.id !== pg.id))}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                  </svg>
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <PendingGenTile
+                              pg={pg}
+                              onCancel={() => setPendingGens(prev => prev.filter(p => p.id !== pg.id))}
+                            />
+                          )}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={layoutItem.item.id} data-item-id={layoutItem.item.id} style={{ width: layoutItem.width, flex: "0 0 auto", height: "100%", overflow: "hidden", borderRadius: 12, background: selectedIds.has(layoutItem.item.id) ? "var(--ms-bg)" : "transparent", transition: "background 180ms ease" }}>
+                        <GalleryCard
+                          item={layoutItem.item}
+                          displayWidth={layoutItem.width}
+                          onOpen={(thumbUrl) => { setLightboxItem(layoutItem.item); setLightboxThumb(thumbUrl); }}
+                          onAddReference={layoutItem.item.mediaType === "image" && canAddImgs ? handleAddReference : undefined}
+                          onCopyPrompt={handleCopyPrompt}
+                          onDownload={handleDownload}
+                          onDelete={handleDelete}
+                          videoMuted={videoMuted}
+                          onToggleMute={() => setVideoMuted(m => !m)}
+                          onNaturalRatioDiscovered={() => setNatRatioVersion(v => v + 1)}
+                          selected={selectedIds.has(layoutItem.item.id)}
+                          anySelected={anySelected}
+                          onSelect={() => toggleSelect(layoutItem.item.id)}
+                          scrollContainer={gridOuterRef}
+                          isTagged={taggedImages.some(t => t.refId === layoutItem.item.id)}
+                          isNew={newItemIds.has(layoutItem.item.id)}
+                          onMarkSeen={() => setNewItemIds(prev => { const n = new Set(prev); n.delete(layoutItem.item.id); return n; })}
+                        />
+                      </div>
+                    );
+                  })}
+                  {Array.from({ length: row.emptyCount }).map((_, i) => (
+                    <div key={`empty-${i}`} style={{ flex: "0 0 auto", width: row.items[0]?.width ?? 0, height: "100%" }} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+          {loadingMore && (
+            <div style={{ padding: "20px", display: "flex", justifyContent: "center" }}>
+              <span style={{ width: "20px", height: "20px", borderRadius: "50%", border: "2px solid var(--ms-border-subtle)", borderTopColor: "var(--brand-violet)", animation: "spin 0.8s linear infinite" }} />
+            </div>
+          )}
+          <div ref={sentinelRef} style={{ height: "1px", width: "100%" }} />
+
+          {/* ── Rodapé ──
+              Bloco 07: padding-top 48, gap 12, centrado, 12px/20px em
+              --app-v2-text-tertiary, com a figura de 48px à esquerda. O
+              mascote 3D do Miora é IP deles; aqui entra a marca "P".
+              `mt-auto` empurra o rodapé para a base do scroller quando a
+              lista é curta, como na referência. */}
+          {!showCreationHome && !isGalleryEmpty && (
+            <footer className="mx-auto mt-auto flex w-full max-w-[1310px] flex-wrap items-center justify-center gap-3 pt-12 text-ms-base leading-5 text-ms-text-tertiary">
+              <PitchMark size={48} />
+              <span>Tudo que você gera ou envia aparece aqui automaticamente.</span>
+            </footer>
+          )}
+        </div>
+  ), [
+    anySelected, assignItemsToFolder, canAddImgs, containerWidth, duration, fetchNewItems,
+    fixedRows, handleAddReference, handleCopyPrompt, handleDelete, handleDownload,
+    isGalleryEmpty, loading, loadingMore, marqueeRect, mode, modelId, newItemIds,
+    onGenComplete, quality, resolution, selectedIds, showCreationHome, sound,
+    taggedImages, videoMuted, zoom,
+  ]);
+
+  /* A trilha de anexos não lê o prompt: sete alvos de soltura que só
+     mudam quando um anexo entra ou sai. Memoizada, ela sai do caminho
+     da tecla — é a maior subárvore do composer fora do campo. */
+  const trilhaDeAnexos = useMemo(() => (
+              <div className="pcx-trilha-scroll">
+                {!isVideo && imgModel?.supportsImages && (hasRefImgs || canAddImgs) && (
+                  <div className="pcx-trilha" onPointerUp={() => { if (_reorderDragItem?.listTarget === "refImage") { _reorderDragItem = null; _reorderOverId = null; setDraggingId(null); setReorderOverId(null); } }}>
+                    {displayRefImages.map(img => {
+                      const isRemoving = removingIds.has(img.id);
+                      const isHovered = hoveredRefId === img.id;
+                      const isDragging = draggingId === img.id;
+                      const dragKey = `refimg-filled-${img.id}`;
+                      return (
+                        <div
+                          key={img.id}
+                          className="pcx-slot"
+                          data-estado={img.error ? "erro" : dragOverSlotKey === dragKey ? "alvo" : taggedImages.some(t => t.refId === img.id) ? "citado" : undefined}
+                          data-arrastando={isDragging ? "true" : undefined}
+                          data-saindo={isRemoving ? "true" : undefined}
+                          style={{
+                            touchAction: refImages.length > 1 ? "none" : undefined,
+                            cursor: (!img.uploading && !img.error) ? (refImages.length > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in") : "default",
+                          }}
+                          onMouseDown={e => e.preventDefault()}
+                          onPointerDown={() => { if (refImages.length <= 1 || img.uploading || img.error) return; _reorderDragItem = { id: img.id, listTarget: "refImage" }; _reorderOverId = null; setDraggingId(img.id); }}
+                          onPointerEnter={() => { if (!_reorderDragItem || _reorderDragItem.id === img.id || _reorderDragItem.listTarget !== "refImage") return; _reorderOverId = img.id; setReorderOverId(img.id); }}
+                          onPointerUp={e => { const info = _reorderDragItem; if (!info || info.listTarget !== "refImage") return; e.stopPropagation(); if (_reorderOverId) e.preventDefault(); const target = _reorderOverId ?? img.id; handleReorderDrop(target, "refImage"); }}
+                          onMouseEnter={() => { if (!draggingId) setHoveredRefId(img.id); }}
+                          onMouseLeave={() => setHoveredRefId(null)}
+                          onClick={() => { if (_reorderJustDropped) { _reorderJustDropped = false; return; } if (!img.uploading && !img.error && !draggingId) setRefPreview({ url: img.objectUrl, mediaKind: "image" }); }}
+                          onDragOver={e => { if (!e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(dragKey); }}
+                          onDragLeave={() => setDragOverSlotKey(null)}
+                          onDrop={e => handleGalleryItemDrop(e, "refImage", "image")}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={thumbSrc(img.objectUrl, snapWidth(64))} alt="" className="pcx-slot-midia" />
+                          {isHovered && !img.uploading && !img.error && (
+                            <div className="pcx-slot-lupa" onClick={e => { if (_reorderJustDropped || draggingId) { _reorderJustDropped = false; e.stopPropagation(); return; } e.stopPropagation(); setRefPreview({ url: img.objectUrl, mediaKind: "image" }); }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                            </div>
+                          )}
+                          <span className="pcx-slot-rotulo">Imagem</span>
+                          {img.uploading && (
+                            <div className="pcx-slot-veu"><span className="pcx-slot-spinner" /></div>
+                          )}
+                          {img.error && (
+                            <div className="pcx-slot-veu" data-erro="true">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>
+                            </div>
+                          )}
+                          <button type="button" className="pcx-slot-remover" aria-label="Remover esta referência" onClick={e => { e.stopPropagation(); removeImage(img.id); }}>
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {canAddImgs && (
+                      <button
+                        type="button"
+                        className="pcx-slot-add"
+                        data-estado={dragOverSlotKey === "refImage-add" ? "alvo" : undefined}
+                        aria-label="Adicionar imagem de referência"
+                        onClick={() => openPicker("refImage", "image")}
+                        disabled={submitting}
+                        onDragOver={e => { if (!e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey("refImage-add"); }}
+                        onDragLeave={() => setDragOverSlotKey(null)}
+                        onDrop={e => handleGalleryItemDrop(e, "refImage", "image")}
+                      >
+                        <span className="pcx-slot-add-nome">IMAGEM</span>
+                        <span className="pcx-slot-add-conta">{restantes(maxImgs - refImages.length)}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {isVideo && vidRefHandles.length > 0 && (
+                  <div className="pcx-trilha" onPointerUp={() => { if (_reorderDragItem) { _reorderDragItem = null; _reorderOverId = null; setDraggingId(null); setReorderOverId(null); } }}>
+                    {vidSlots.map((slot, idx) => {
+                      if (slot.kind === "element-filled") {
+                        const el = slot.element; const thumb = el.imageUrls[0]; const hovId = `elem-${el.id}`;
+                        return (
+                          <div key={el.id} className="pcx-slot" onMouseEnter={() => setHoveredRefId(hovId)} onMouseLeave={() => setHoveredRefId(null)}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={thumb} alt="" className="pcx-slot-midia" />
+                            {hoveredRefId === hovId && (
+                              <div className="pcx-slot-lupa" onClick={() => setRefPreview({ url: thumb, mediaKind: "image" })}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                              </div>
+                            )}
+                            <span className="pcx-slot-rotulo" title={el.name}>{el.name}</span>
+                            <button type="button" className="pcx-slot-remover" aria-label={`Remover o elemento ${el.name}`} onClick={() => setVidElements(prev => prev.filter(e => e.id !== el.id))}>
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      if (slot.kind === "element-add") {
+                        return (
+                          <button type="button" className="pcx-slot-add" key={`element-add-${idx}`} aria-label="Adicionar um elemento" onClick={() => setElementPickerOpen(true)} disabled={submitting}>
+                            <span className="pcx-slot-add-nome">ELEMENTO</span>
+                            <span className="pcx-slot-add-conta">{restantes(slot.countLeft)}</span>
+                          </button>
+                        );
+                      }
+
+                      if (slot.kind === "filled") {
+                        const r = slot.ref; const hovId = `slot-${r.id}`; const dragKey = `vidfilled-${r.id}`;
+                        const isMultiTarget = slot.target === "resource" || slot.target === "referenceVideo" || slot.target === "audioRef";
+                        const listForSlot = slot.target === "resource" ? vidResources : slot.target === "referenceVideo" ? vidRefVideos : vidRefAudios;
+                        const nome = rotuloSlot(slot.label).nome;
+                        return (
+                          <div
+                            key={r.id}
+                            className="pcx-slot"
+                            data-estado={r.error ? "erro" : dragOverSlotKey === dragKey ? "alvo" : taggedImages.some(t => t.refId === r.id) ? "citado" : undefined}
+                            data-arrastando={draggingId === r.id ? "true" : undefined}
+                            style={{
+                              touchAction: (isMultiTarget && listForSlot.length > 1) ? "none" : undefined,
+                              cursor: (isMultiTarget && listForSlot.length > 1 && !r.uploading && !r.error) ? (draggingId === r.id ? "grabbing" : "grab") : undefined,
+                            }}
+                            onMouseDown={e => e.preventDefault()}
+                            onPointerDown={() => { if (!isMultiTarget || listForSlot.length <= 1 || r.uploading || r.error) return; _reorderDragItem = { id: r.id, listTarget: slot.target as "resource" | "referenceVideo" | "audioRef" }; _reorderOverId = null; setDraggingId(r.id); }}
+                            onPointerEnter={() => { if (!_reorderDragItem || _reorderDragItem.id === r.id || _reorderDragItem.listTarget !== slot.target) return; _reorderOverId = r.id; setReorderOverId(r.id); }}
+                            onPointerUp={e => { const info = _reorderDragItem; if (!info || info.listTarget !== slot.target) return; e.stopPropagation(); if (_reorderOverId) e.preventDefault(); const target = _reorderOverId ?? r.id; handleReorderDrop(target, slot.target as "resource" | "referenceVideo" | "audioRef"); }}
+                            onMouseEnter={() => { if (!draggingId) setHoveredRefId(hovId); }}
+                            onMouseLeave={() => setHoveredRefId(null)}
+                            onDragOver={e => { if (slot.mediaKind === "audio" || !e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(dragKey); }}
+                            onDragLeave={() => setDragOverSlotKey(null)}
+                            onDrop={e => { if (slot.mediaKind !== "audio") handleGalleryItemDrop(e, slot.target as "refImage" | "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo", slot.mediaKind as "image" | "video"); }}
+                          >
+                            {slot.mediaKind === "image" ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={thumbSrc(r.objectUrl, snapWidth(64))} alt="" className="pcx-slot-midia" />
+                            ) : slot.mediaKind === "video" ? (
+                              <video src={r.objectUrl} autoPlay muted loop playsInline className="pcx-slot-midia" />
+                            ) : (
+                              <div className="pcx-slot-audio">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                              </div>
+                            )}
+                            {hoveredRefId === hovId && !r.uploading && !r.error && slot.mediaKind !== "audio" && (
+                              <div className="pcx-slot-lupa" onClick={() => { if (_reorderJustDropped || draggingId) { _reorderJustDropped = false; return; } setRefPreview({ url: r.objectUrl, mediaKind: slot.mediaKind }); }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                              </div>
+                            )}
+                            <span className="pcx-slot-rotulo" title={nome}>{nome}</span>
+                            <button type="button" className="pcx-slot-remover" aria-label={`Remover ${nome}`} onClick={() => removeVidRef(r.id, slot.target)}>
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      const vidAddKey = `vidadd-${slot.target}-${idx}`;
+                      const rot = rotuloSlot(slot.label);
+                      return (
+                        <button
+                          type="button"
+                          className="pcx-slot-add"
+                          key={`${slot.target}-add-${idx}`}
+                          data-estado={dragOverSlotKey === vidAddKey ? "alvo" : undefined}
+                          aria-label={`Anexar ${rot.nome}`}
+                          title={rot.nome}
+                          onClick={() => slot.mediaKind === "audio" ? (vidPickTarget.current = slot.target, vidAudioInputRef.current?.click()) : openPicker(slot.target as "refImage" | "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo", slot.mediaKind as "image" | "video")}
+                          disabled={submitting}
+                          onDragOver={e => { if (slot.mediaKind === "audio" || !e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(vidAddKey); }}
+                          onDragLeave={() => setDragOverSlotKey(null)}
+                          onDrop={e => { if (slot.mediaKind !== "audio") handleGalleryItemDrop(e, slot.target as "refImage" | "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo", slot.mediaKind as "image" | "video"); }}
+                        >
+                          <span className="pcx-slot-add-nome">{rot.curto}</span>
+                          <span className="pcx-slot-add-conta">{restantes(slot.countLeft)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+  ), [
+    canAddImgs, displayRefImages, dragOverSlotKey, draggingId, handleGalleryItemDrop,
+    handleReorderDrop, hasRefImgs, hoveredRefId, imgModel?.supportsImages, isVideo,
+    maxImgs, openPicker, refImages.length, removeImage, removeVidRef, removingIds,
+    submitting, taggedImages, vidRefAudios, vidRefHandles.length, vidRefVideos,
+    vidResources, vidSlots,
+  ]);
+
+  /* A barra da seleção em lote está sempre montada — quem a esconde é o
+     `data-aberta`, não uma condição de render. Eram 170 linhas recriadas
+     a cada tecla sem nenhuma relação com o prompt. */
+  const barraDeSelecao = useMemo(() => (
+        <div
+          className="asb"
+          data-aberta={anySelected ? "true" : undefined}
+          style={{
+            left: isMobile ? "50%" : state === "collapsed" ? "calc(var(--sidebar-width-icon) / 2 + 50%)" : "calc(var(--sidebar-width) / 2 + 50%)",
+          }}
+        >
+          <span className="asb-conta">
+            {selectedIds.size} selecionado{selectedIds.size === 1 ? "" : "s"}
+          </span>
+          <div className="asb-sep" />
+
+          <button type="button" className="asb-btn" onClick={handleDownloadSelected}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Baixar
+          </button>
+
+          <button type="button" className="asb-btn asb-btn--perigo" onClick={handleDeleteSelected}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+            </svg>
+            Remover
+          </button>
+
+          {/* Adicionar às pastas — só existe quando há pasta para receber. */}
+          {folders.length > 0 && (() => {
+            const selectedArr = [...selectedIds];
+            return (
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <button
+                  type="button"
+                  ref={folderPickerBtnRef}
+                  className="asb-btn"
+                  data-aberto={folderPickerOpen ? "true" : undefined}
+                  aria-expanded={folderPickerOpen}
+                  onClick={() => setFolderPickerOpen(o => !o)}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  Adicionar à pasta
+                </button>
+
+                {folderPickerOpen && (
+                  <div ref={folderPickerRef} className="asb-pop">
+                    <div className="asb-pop-titulo">Adicionar à pasta</div>
+
+                    <div className="asb-pop-lista">
+                      {(() => {
+                        const getIds = (id: string) => itemFolderMap[id] ?? [];
+
+                        const renderFolder = (folder: typeof folders[0], depth: number): React.ReactNode => {
+                          const checkedCount = selectedArr.filter(id => getIds(id).includes(folder.id)).length;
+                          const allChecked = checkedCount === selectedArr.length && selectedArr.length > 0;
+                          const someChecked = checkedCount > 0 && !allChecked;
+                          const totalInFolder = items.filter(it => (itemFolderMap[it.id] ?? []).includes(folder.id)).length;
+                          const toAddCount = selectedArr.filter(id => !getIds(id).includes(folder.id)).length;
+                          const children = folders.filter(f => f.parentId === folder.id).sort((a, b) => a.orderIndex - b.orderIndex);
+                          const hasChildren = children.length > 0;
+                          const isExpanded = expandedPickerFolders.has(folder.id);
+
+                          const toggleFolder = () => {
+                            if (allChecked) {
+                              removeItemsFromFolder(selectedArr, folder.id);
+                            } else {
+                              assignItemsToFolder(selectedArr, folder.id);
+                            }
+                          };
+
+                          const toggleExpand = (e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            setExpandedPickerFolders(prev => {
+                              const next = new Set(prev);
+                              if (next.has(folder.id)) next.delete(folder.id);
+                              else next.add(folder.id);
+                              return next;
+                            });
+                          };
+
+                          return (
+                            <React.Fragment key={folder.id}>
+                              <div
+                                className="asb-pasta"
+                                onClick={toggleFolder}
+                                style={{ paddingLeft: `${14 + depth * 18}px` }}
+                              >
+                                <div
+                                  className="asb-pasta-seta"
+                                  data-tem-filhos={hasChildren ? "true" : undefined}
+                                  data-aberta={isExpanded ? "true" : undefined}
+                                  onClick={hasChildren ? toggleExpand : undefined}
+                                >
+                                  {hasChildren && (
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                      <path d="M9 18l6-6-6-6"/>
+                                    </svg>
+                                  )}
+                                </div>
+
+                                <svg
+                                  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+                                  className="asb-pasta-icone"
+                                  data-marcada={allChecked ? "todas" : someChecked ? "algumas" : undefined}
+                                  aria-hidden="true"
+                                >
+                                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                </svg>
+
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div className="asb-pasta-nome" data-marcada={(allChecked || someChecked) ? "true" : undefined}>
+                                    {folder.name}
+                                  </div>
+                                  <div className="asb-pasta-conta">
+                                    {!allChecked && toAddCount > 0
+                                      ? `${totalInFolder} → ${totalInFolder + toAddCount} ${totalInFolder + toAddCount === 1 ? "item" : "itens"}`
+                                      : `${totalInFolder} ${totalInFolder === 1 ? "item" : "itens"}`}
+                                  </div>
+                                </div>
+
+                                <div
+                                  className="asb-caixa"
+                                  role="checkbox"
+                                  aria-checked={allChecked ? true : someChecked ? "mixed" : false}
+                                  aria-label={`Manter a seleção em ${folder.name}`}
+                                  data-marcada={allChecked ? "todas" : someChecked ? "algumas" : undefined}
+                                  onClick={e => { e.stopPropagation(); toggleFolder(); }}
+                                >
+                                  {allChecked && (
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                      <path d="M20 6 9 17l-5-5"/>
+                                    </svg>
+                                  )}
+                                  {someChecked && !allChecked && (
+                                    <svg width="10" height="2" viewBox="0 0 10 2" fill="currentColor" aria-hidden="true">
+                                      <rect width="10" height="2" rx="1"/>
+                                    </svg>
+                                  )}
+                                </div>
+                              </div>
+                              {hasChildren && isExpanded && children.map(child => renderFolder(child, depth + 1))}
+                            </React.Fragment>
+                          );
+                        };
+
+                        const rootFolders = folders.filter(f => f.parentId === null).sort((a, b) => a.orderIndex - b.orderIndex);
+                        return rootFolders.map(f => renderFolder(f, 0));
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="asb-sep" style={{ marginLeft: "2px" }} />
+          <button
+            type="button"
+            className="asb-btn asb-btn--icone"
+            onClick={clearSelection}
+            title="Cancelar seleção"
+            aria-label="Cancelar seleção"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+  ), [
+    anySelected, assignItemsToFolder, expandedPickerFolders, folderPickerOpen, folders,
+    handleDeleteSelected, handleDownloadSelected, isMobile, itemFolderMap, items,
+    removeItemsFromFolder, selectedIds, state,
+  ]);
+
+  if (!authLoaded) return <div style={{ flex: 1, background: "var(--app-v2-bg-page)" }} />;
 
 
   return (
-    <div style={{ flex: 1, background: "#0F0F1A", display: "flex", flexDirection: "column", overflow: "hidden", color: "#fff", position: "relative" }}>
-      <DotCanvasBackground />
+    <div className={`miora-gallery${showCreationHome ? " is-creation-view" : ""}`} style={{ flex: 1, background: "var(--app-v2-bg-page)", display: "flex", flexDirection: "column", overflow: "hidden", color: "var(--app-v2-text-primary)", position: "relative" }}>
 
-      {/* ── Sub-navbar ── */}
-      {user && <div style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 14px",
-        height: "44px",
-        background: "#0F0F1A",
-        borderBottom: "1px solid rgba(255,255,255,0.05)",
-        flexShrink: 0,
-        position: "relative",
-        zIndex: 1,
-      }}>
-        {/* Left: source tabs */}
-        <div style={{ display: "flex", gap: "2px" }}>
-          {(["generated", "uploaded"] as const).map(src => (
-            <button
-              key={src}
-              onClick={() => {
-                setSourceFilter(src);
-                const params = new URLSearchParams(searchParams.toString());
-                params.set("source", src);
-                router.replace(`${pathname}?${params.toString()}`);
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "5px 12px",
-                borderRadius: "8px",
-                border: "none",
-                background: sourceFilter === src ? "rgba(255,255,255,0.08)" : "transparent",
-                color: sourceFilter === src ? "#ffffff" : "rgba(255,255,255,0.38)",
-                fontSize: "13px",
-                fontWeight: sourceFilter === src ? 500 : 400,
-                cursor: "pointer",
-                transition: "background 140ms, color 140ms",
-                fontFamily: "inherit",
-                letterSpacing: "-0.01em",
-              }}
-              onMouseEnter={e => { if (sourceFilter !== src) e.currentTarget.style.color = "rgba(255,255,255,0.65)"; }}
-              onMouseLeave={e => { if (sourceFilter !== src) e.currentTarget.style.color = "rgba(255,255,255,0.38)"; }}
-            >
-              {src === "generated" ? (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" />
-                </svg>
-              ) : (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-              )}
-              {src === "generated" ? "Geradas" : "Enviadas"}
-            </button>
-          ))}
-        </div>
 
-        {/* Center: current folder breadcrumb */}
-        {selectedFolderId && (() => {
-          const path: string[] = [];
-          let cur: (typeof folders)[0] | undefined = folders.find(f => f.id === selectedFolderId);
-          while (cur) {
-            path.unshift(cur.name);
-            const parentId = cur.parentId;
-            cur = parentId ? folders.find(f => f.id === parentId) : undefined;
-          }
-          return (
-            <div style={{
-              position: "absolute",
-              left: "50%",
-              transform: "translateX(-50%)",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              pointerEvents: "none",
-              maxWidth: "40%",
-            }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-              </svg>
-              <span style={{
-                fontSize: "13px",
-                fontWeight: 500,
-                color: "rgba(255,255,255,0.6)",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                letterSpacing: "-0.01em",
-              }}>
-                {path.map((name, i) => (
-                  <span key={i}>
-                    {i > 0 && <span style={{ color: "rgba(255,255,255,0.25)", margin: "0 4px" }}>/</span>}
-                    <span style={{ color: i === path.length - 1 ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.45)" }}>{name}</span>
-                  </span>
-                ))}
-              </span>
-            </div>
-          );
-        })()}
-
-        {/* Right: zoom slider */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35M8 11h6" />
-          </svg>
-          <input
-            type="range"
-            min={4} max={8} step={1}
-            value={12 - zoom}
-            onChange={e => setZoom(12 - Number(e.target.value))}
-            className="gallery-zoom-slider"
-          />
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35M11 8v6M8 11h6" />
-          </svg>
-        </div>
-      </div>}
+      {/* ── Cabeçalho do Acervo ──
+          Substitui a barra escura de 44px por um cabeçalho no chrome do
+          bloco 07 da referência: título no topo do scroller e uma linha
+          de controles de 32px, dentro de um container de 1310px. */}
+      {user && !showCreationHome && (
+        <AcervoHeader
+          title={acervoTitle}
+          count={filteredItems.length}
+          tab={tab}
+          onTabChange={nextTab => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("tab", nextTab);
+            router.replace(`${pathname}?${params.toString()}`);
+          }}
+          source={sourceFilter}
+          onSourceChange={src => {
+            setSourceFilter(src);
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("source", src);
+            router.replace(`${pathname}?${params.toString()}`);
+          }}
+          models={acervoModels}
+          model={acervoModel}
+          onModelChange={setAcervoModel}
+          sort={acervoSort}
+          onSortChange={setAcervoSort}
+          timeWindow={acervoWindow}
+          onTimeWindowChange={setAcervoWindow}
+          query={acervoQuery}
+          onQueryChange={setAcervoQuery}
+          zoom={zoom}
+          onZoomChange={setZoom}
+        />
+      )}
 
       {/* ── Grid ── */}
-      {false ? <GalleryLoggedOut tab={tab} /> : <div ref={gridOuterRef} style={{ flex: 1, overflowY: "auto", paddingBottom: "260px", display: "flex", flexDirection: "column", userSelect: marqueeRect ? "none" : undefined, cursor: marqueeRect ? "crosshair" : undefined }} onMouseDown={e => {
-        if (e.button !== 0) return;
-        const target = e.target as HTMLElement;
-        if (target.closest("button, .gallery-action-btn, .gallery-checkbox")) return;
-        marqueeStartRef.current = { x: e.clientX, y: e.clientY };
-        preDragSelectedIdsRef.current = new Set(selectedIds);
-      }}>
-        {loading || containerWidth === 0 ? (
-          /* Skeleton — shown while loading or before container is measured */
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${zoom}, 1fr)`, gap: "1px", padding: "1px", alignItems: "start" }}>
-            {Array.from({ length: zoom * 3 }).map((_, i) => (
-              <div key={i} className="gallery-skeleton" style={{ aspectRatio: i % 3 === 1 ? "4 / 5" : i % 5 === 0 ? "16 / 9" : "1 / 1" }} />
-            ))}
-          </div>
-        ) : filteredItems.length === 0 && (sourceFilter !== "generated" || pendingGens.filter(pg => pg.tab == null || pg.tab === tab).length === 0) ? (
-          <GalleryLoggedOut tab={tab} />
-        ) : (
-          <div ref={gridRef} style={{ padding: "1px" }}>
-            {fixedRows.map((row, rowIdx) => (
-              <div key={rowIdx} style={{ display: "flex", height: row.height, gap: `${GALLERY_GAP}px`, marginBottom: rowIdx < fixedRows.length - 1 ? `${GALLERY_GAP}px` : 0 }}>
-                {row.items.map((layoutItem) => {
-              if (layoutItem.kind === "pending") {
-                const pg = layoutItem.pg;
-                return (
-                  <div key={pg.id} className={pg.error ? "error-pending-tile" : undefined} style={{
-                    width: layoutItem.width,
-                    flex: "0 0 auto",
-                    height: "100%",
-                    position: "relative",
-                    overflow: "hidden",
-                    background: pg.error ? "#262640" : "#262640",
-                  }}>
-                        {pg.error ? (
-                          <>
-                            {/* Top radial glow */}
-                            <div style={{
-                              position: "absolute", top: "-40%", left: "50%", transform: "translateX(-50%)",
-                              width: "180%", height: "80%", pointerEvents: "none",
-                              background: "radial-gradient(ellipse at 50% 20%, rgba(180,40,40,0.38) 0%, transparent 70%)",
-                            }} />
-                            {/* Error card body */}
-                            <div style={{
-                              position: "absolute", inset: 0,
-                              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                              gap: "8px", padding: "16px",
-                              zIndex: 1,
-                            }}>
-                              {/* Icon with border ring + glow */}
-                              <div style={{
-                                width: 40, height: 40, borderRadius: "50%",
-                                border: "1px solid rgba(255, 138, 138,0.45)",
-                                boxShadow: "0 0 18px 4px rgba(200,50,50,0.35), inset 0 0 8px rgba(255, 138, 138,0.08)",
-                                background: "rgba(30,10,10,0.6)",
-                                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                              }}>
-                                <ShieldAlert size={18} strokeWidth={1.75} style={{ color: "#ff8a8a" }} />
-                              </div>
-                              {/* Tag */}
-                              <span style={{
-                                fontSize: "10px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase",
-                                color: "rgba(255, 138, 138,0.8)",
-                                background: "rgba(120,30,30,0.35)",
-                                padding: "2px 8px", borderRadius: "4px",
-                              }}>
-                                {(pg.error === "moderation_blocked" || pg.error?.includes?.("moderation_blocked") || pg.error?.includes?.("flagged as sensitive") || pg.error?.includes?.("moderation")) ? "Moderation" : "Failed"}
-                              </span>
-                              {/* Error message */}
-                              <div style={{
-                                fontSize: "11px", color: "rgba(255,255,255,0.75)", textAlign: "center",
-                                lineHeight: 1.5, wordBreak: "break-word",
-                                display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden",
-                              }}>
-                                {pg.error}
-                              </div>
-                              {/* Credits refunded — only for moderation */}
-                              {(pg.error === "moderation_blocked" || pg.error?.includes?.("moderation_blocked") || pg.error?.includes?.("flagged as sensitive") || pg.error?.includes?.("moderation")) && (
-                                <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.28)", fontFamily: "monospace", marginTop: 2 }}>
-                                  Credits refunded
-                                </div>
-                              )}
-                            </div>
-                            {/* Action buttons column */}
-                            <div className="error-tile-actions" style={{ position: "absolute", top: 8, right: 8, display: "flex", flexDirection: "column", gap: 5, zIndex: 5 }}>
-                              <button className="gallery-action-btn" title="Paste prompt & images" onClick={() => handleCopyPrompt(pg.prompt, pg.referenceImageUrls)}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                                </svg>
-                              </button>
-                              <button className="gallery-action-btn" title="Retry" onClick={async () => {
-                                const newId = randomUUID();
-                                const newPending: PendingGen = { id: newId, aspectRatio: pg.aspectRatio, prompt: pg.prompt, referenceImageUrls: pg.referenceImageUrls, createdAt: pg.createdAt ?? new Date().toISOString(), tab: pg.tab, retried: true, folderId: pg.folderId };
-                                setPendingGens(prev => [...prev.filter(p => p.id !== pg.id), newPending]);
-                                const token = await getToken();
-                                if (!token) { setPendingGens(prev => prev.map(p => p.id === newId ? { ...p, error: "Please sign in." } : p)); return; }
-                                const storedRefs = pg.referenceImageUrls ?? [];
-                                const retryIsVideo = pg.tab === "videos";
-                                let taskId: string;
-                                try {
-                                  if (retryIsVideo) {
-                                    const vm = VIDEO_MODELS.find(m => m.id === modelId);
-                                    const isVeo = !!(vm?.apiInput.useGoogleVeo);
-                                    const res = await fetch("/api/generate-video", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(isVeo ? {
-                                      model: modelId, prompt: pg.prompt, aspect_ratio: pg.aspectRatio, generationType: "TEXT_2_VIDEO",
-                                      imageUrls: storedRefs, enableTranslation: true, enableFallback: false, watermark: "",
-                                    } : {
-                                      videoModel: modelId, prompt: pg.prompt, aspectRatio: pg.aspectRatio, duration, mode, resolution, sound,
-                                      ...(storedRefs.length > 0 ? { referenceImageUrls: storedRefs } : {}),
-                                    }) });
-                                    const d = await res.json() as { taskId?: string; error?: string };
-                                    if (!res.ok) throw new Error(d.error ?? "Failed");
-                                    taskId = d.taskId!;
-                                  } else {
-                                    const syntheticTagged: TaggedImage[] = storedRefs.map((url, i) => ({ label: `image${i + 1}`, refId: url, url }));
-                                    const { resolvedPrompt, extraUrls } = resolveGalleryMentions(pg.prompt, syntheticTagged);
-                                    const dedupedExtra = new Set(extraUrls);
-                                    const imageUrls = [...extraUrls, ...storedRefs.filter(u => !dedupedExtra.has(u))];
-                                    const azureBaseUrl    = (() => { try { return localStorage.getItem("aiui-azure-base-url") ?? ""; } catch { return ""; } })();
-                                    const azureDeployment = (() => { try { return JSON.parse(localStorage.getItem("aiui-azure-endpoints") ?? "{}")[modelId] ?? ""; } catch { return ""; } })();
-                                    const providerForModel = (() => { try { return JSON.parse(localStorage.getItem("aiui-model-providers") ?? "{}")[modelId] ?? "kie"; } catch { return "kie"; } })();
-                                    const isAzure = !!(azureBaseUrl && azureDeployment && providerForModel === "azure");
-                                    const isCodex = providerForModel === "codex";
-                                    const res = await fetch("/api/generate", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ prompt: resolvedPrompt, model: modelId, aspectRatio: pg.aspectRatio, quality, imageUrls, ...(isAzure ? { azureBaseUrl, azureDeployment, azureQuality: quality } : {}), ...(isCodex ? { codexProvider: true } : {}) }) });
-                                    const d = await res.json() as { taskId?: string; error?: string };
-                                    if (!res.ok) throw new Error(d.error ?? "Failed");
-                                    taskId = d.taskId!;
-                                  }
-                                  setPendingGens(prev => prev.map(p => p.id === newId ? { ...p, taskId } : p));
-                                } catch (e: unknown) {
-                                  setPendingGens(prev => prev.map(p => p.id === newId ? { ...p, error: e instanceof Error ? e.message : String(e) } : p));
-                                  return;
-                                }
-                                try {
-                                  await pollTask(taskId);
-                                  const existingIds = new Set((galleryCache.get(`${tabRef.current}-generation`)?.items ?? []).map((i: GalleryItem) => i.id));
-                                  const fresh = await fetchNewItems(tabRef.current);
-                                  setPendingGens(prev => prev.filter(p => p.id !== newId));
-                                  if (fresh.length > 0) {
-                                    if (newPending.folderId) {
-                                      const existingMap = useFolderStore.getState().itemFolderMap;
-                                      const pendingTime = newPending.createdAt ? new Date(newPending.createdAt).getTime() - 30_000 : 0;
-                                      const untaggedIds = fresh
-                                        .filter(i => new Date(i.created_at).getTime() >= pendingTime)
-                                        .map(i => i.id)
-                                        .filter(id => !existingMap[id]);
-                                      if (untaggedIds.length > 0) assignItemsToFolder(untaggedIds, newPending.folderId);
-                                    }
-                                    const genCacheKey = `${tabRef.current}-generation`;
-                                    setItems(prev => {
-                                      const base = sourceFilterRef.current === "generated" ? prev : (galleryCache.get(genCacheKey)?.items ?? []);
-                                      const merged = mergeByNewest(base, fresh);
-                                      galleryCache.set(genCacheKey, { items: merged, hasMore: true });
-                                      return sourceFilterRef.current === "generated" ? (merged === base ? prev : merged) : prev;
-                                    });
-                                  }
-                                  onGenComplete(newPending.folderId, fresh.filter(i => !existingIds.has(i.id)).map(i => i.id));
-                                  window.dispatchEvent(new Event("credits-refresh"));
-                                } catch (e: unknown) {
-                                  setPendingGens(prev => prev.map(p => p.id === newId ? { ...p, error: e instanceof Error ? e.message : String(e) } : p));
-                                }
-                              }}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
-                                </svg>
-                              </button>
-                              <button className="gallery-action-btn gallery-delete-btn" title="Dismiss" onClick={() => setPendingGens(prev => prev.filter(p => p.id !== pg.id))}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                                </svg>
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <PendingGenTile
-                            pg={pg}
-                            onCancel={() => setPendingGens(prev => prev.filter(p => p.id !== pg.id))}
-                          />
-                        )}
-                      </div>
-                    );
-                  }
-                  return (
-                    <div key={layoutItem.item.id} data-item-id={layoutItem.item.id} style={{ width: layoutItem.width, flex: "0 0 auto", height: "100%", overflow: "hidden", background: selectedIds.has(layoutItem.item.id) ? "#ffffff" : "transparent", transition: "background 180ms ease" }}>
-                      <GalleryCard
-                        item={layoutItem.item}
-                        displayWidth={layoutItem.width}
-                        onOpen={(thumbUrl) => { setLightboxItem(layoutItem.item); setLightboxThumb(thumbUrl); }}
-                        onAddReference={layoutItem.item.mediaType === "image" && canAddImgs ? handleAddReference : undefined}
-                        onCopyPrompt={handleCopyPrompt}
-                        onDownload={handleDownload}
-                        onDelete={handleDelete}
-                        videoMuted={videoMuted}
-                        onToggleMute={() => setVideoMuted(m => !m)}
-                        onNaturalRatioDiscovered={() => setNatRatioVersion(v => v + 1)}
-                        selected={selectedIds.has(layoutItem.item.id)}
-                        anySelected={anySelected}
-                        onSelect={() => toggleSelect(layoutItem.item.id)}
-                        scrollContainer={gridOuterRef}
-                        isTagged={taggedImages.some(t => t.refId === layoutItem.item.id)}
-                        isNew={newItemIds.has(layoutItem.item.id)}
-                        onMarkSeen={() => setNewItemIds(prev => { const n = new Set(prev); n.delete(layoutItem.item.id); return n; })}
-                      />
-                    </div>
-                  );
-                })}
-                {Array.from({ length: row.emptyCount }).map((_, i) => (
-                  <div key={`empty-${i}`} style={{ flex: "0 0 auto", width: row.items[0]?.width ?? 0, height: "100%" }} />
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
-        {loadingMore && (
-          <div style={{ padding: "20px", display: "flex", justifyContent: "center" }}>
-            <span style={{ width: "20px", height: "20px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.1)", borderTopColor: "rgba(255,255,255,0.4)", animation: "spin 0.8s linear infinite" }} />
-          </div>
-        )}
-        <div ref={sentinelRef} style={{ height: "1px", width: "100%" }} />
-      </div>}
+      {grade}
 
       {/* ── Marquee selection overlay ── */}
       {marqueeRect && (
@@ -3012,9 +3638,9 @@ function GalleryInner() {
           top: marqueeRect.y,
           width: marqueeRect.w,
           height: marqueeRect.h,
-          border: "2px solid #868cff",
-          background: "rgba(134, 140, 255,0.08)",
-          borderRadius: 3,
+          border: "2px solid var(--app-v2-brand-solid)",
+          background: "hsl(var(--ms-brand-9) / .08)",
+          borderRadius: "var(--ms-radius-sm)",
           pointerEvents: "none",
           zIndex: 9999,
         }} />
@@ -3036,693 +3662,175 @@ function GalleryInner() {
       <input ref={vidAudioInputRef} type="file" accept="audio/*" multiple style={{ display: "none" }}
         onChange={e => { if (e.target.files && vidPickTarget.current) { handleVidFilePick(e.target.files, vidPickTarget.current); e.target.value = ""; } }} />
 
-      {/* ── Selection toolbar ── */}
-      <div style={{
-        position: "fixed",
-        bottom: "20px",
-        left: isMobile ? "50%" : state === "collapsed" ? "calc(var(--sidebar-width-icon) / 2 + 50%)" : "calc(var(--sidebar-width) / 2 + 50%)",
-        transform: `translateX(-50%) translateY(${anySelected ? "0" : "80px"})`,
-        opacity: anySelected ? 1 : 0,
-        transition: "transform 300ms cubic-bezier(0.16,1,0.3,1), opacity 240ms ease, left 200ms ease-linear",
-        pointerEvents: anySelected ? "auto" : "none",
-        zIndex: 300,
-        display: "flex",
-        alignItems: "center",
-        gap: "6px",
-        padding: "8px 8px 8px 16px",
-        background: "rgba(15, 15, 26,0.92)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        border: "1px solid rgba(255,255,255,0.1)",
-        borderRadius: "16px",
-        boxShadow: "0 8px 40px rgba(0,0,0,0.8), 0 2px 12px rgba(0,0,0,0.5)",
-        fontFamily: "inherit",
-      }}>
-        <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.55)", fontWeight: 500, paddingRight: "6px", whiteSpace: "nowrap" }}>
-          {selectedIds.size} selected
-        </span>
-        <div style={{ width: "1px", height: "20px", background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
-        <button
-          onClick={handleDownloadSelected}
-          style={{
-            display: "flex", alignItems: "center", gap: "7px",
-            padding: "7px 14px", borderRadius: "10px", border: "none",
-            background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.85)",
-            fontSize: "13px", fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
-            transition: "background 140ms",
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.13)")}
-          onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          Download
-        </button>
-        <button
-          onClick={handleDeleteSelected}
-          style={{
-            display: "flex", alignItems: "center", gap: "7px",
-            padding: "7px 14px", borderRadius: "10px", border: "none",
-            background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.85)",
-            fontSize: "13px", fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
-            transition: "background 140ms, color 140ms",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = "rgba(227, 26, 26,0.15)"; e.currentTarget.style.color = "#ff8a8a"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.color = "rgba(255,255,255,0.85)"; }}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-          </svg>
-          Remove
-        </button>
-        {/* Add to folder button + popup */}
-        {folders.length > 0 && (() => {
-          const selectedArr = [...selectedIds];
-          return (
-            <div style={{ position: "relative", flexShrink: 0 }}>
-              <button
-                ref={folderPickerBtnRef}
-                onClick={() => setFolderPickerOpen(o => !o)}
-                style={{
-                  display: "flex", alignItems: "center", gap: "7px",
-                  padding: "7px 14px", borderRadius: "10px", border: "none",
-                  background: folderPickerOpen ? "rgba(134, 140, 255,0.12)" : "rgba(255,255,255,0.07)",
-                  color: folderPickerOpen ? "#868CFF" : "rgba(255,255,255,0.85)",
-                  fontSize: "13px", fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
-                  transition: "background 140ms, color 140ms",
-                }}
-                onMouseEnter={e => { if (!folderPickerOpen) { e.currentTarget.style.background = "rgba(255,255,255,0.13)"; } }}
-                onMouseLeave={e => { if (!folderPickerOpen) { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; } }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                </svg>
-                Add to folder
-              </button>
-
-              {/* Popup */}
-              {folderPickerOpen && (
-                <div
-                  ref={folderPickerRef}
-                  style={{
-                    position: "absolute",
-                    bottom: "calc(100% + 10px)",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    minWidth: "220px",
-                    background: "rgba(14,16,20,0.97)",
-                    backdropFilter: "blur(20px)",
-                    WebkitBackdropFilter: "blur(20px)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: "14px",
-                    boxShadow: "0 16px 48px rgba(0,0,0,0.85), 0 2px 8px rgba(0,0,0,0.4)",
-                    overflow: "hidden",
-                    zIndex: 400,
-                  }}
-                >
-                  {/* Header */}
-                  <div style={{ padding: "10px 14px 8px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                    <span style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>
-                      Add to folder
-                    </span>
-                  </div>
-
-                  {/* Folder rows – tree view */}
-                  <div style={{ padding: "6px 0", maxHeight: "280px", overflowY: "auto" }}>
-                    {(() => {
-                      const getIds = (id: string) => itemFolderMap[id] ?? [];
-
-                      const renderFolder = (folder: typeof folders[0], depth: number): React.ReactNode => {
-                        const checkedCount = selectedArr.filter(id => getIds(id).includes(folder.id)).length;
-                        const allChecked = checkedCount === selectedArr.length && selectedArr.length > 0;
-                        const someChecked = checkedCount > 0 && !allChecked;
-                        const totalInFolder = items.filter(it => (itemFolderMap[it.id] ?? []).includes(folder.id)).length;
-                        const toAddCount = selectedArr.filter(id => !getIds(id).includes(folder.id)).length;
-                        const children = folders.filter(f => f.parentId === folder.id).sort((a, b) => a.orderIndex - b.orderIndex);
-                        const hasChildren = children.length > 0;
-                        const isExpanded = expandedPickerFolders.has(folder.id);
-
-                        const toggleFolder = () => {
-                          if (allChecked) {
-                            removeItemsFromFolder(selectedArr, folder.id);
-                          } else {
-                            assignItemsToFolder(selectedArr, folder.id);
-                          }
-                        };
-
-                        const toggleExpand = (e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          setExpandedPickerFolders(prev => {
-                            const next = new Set(prev);
-                            next.has(folder.id) ? next.delete(folder.id) : next.add(folder.id);
-                            return next;
-                          });
-                        };
-
-                        return (
-                          <React.Fragment key={folder.id}>
-                            <div
-                              onClick={toggleFolder}
-                              style={{
-                                display: "flex", alignItems: "center", gap: "6px",
-                                padding: "8px 14px 8px", paddingLeft: `${14 + depth * 18}px`,
-                                cursor: "pointer", transition: "background 120ms",
-                              }}
-                              onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
-                              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                            >
-                              {/* Expand/collapse chevron */}
-                              <div
-                                onClick={hasChildren ? toggleExpand : undefined}
-                                style={{
-                                  width: "14px", height: "14px", flexShrink: 0, cursor: hasChildren ? "pointer" : "default",
-                                  display: "flex", alignItems: "center", justifyContent: "center",
-                                  color: "rgba(255,255,255,0.3)",
-                                }}
-                              >
-                                {hasChildren && (
-                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                                    style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 150ms" }}>
-                                    <path d="M9 18l6-6-6-6"/>
-                                  </svg>
-                                )}
-                              </div>
-
-                              {/* Folder icon */}
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={allChecked ? "#868CFF" : someChecked ? "rgba(134, 140, 255,0.5)" : "rgba(255,255,255,0.35)"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: "stroke 150ms" }}>
-                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                              </svg>
-
-                              {/* Name + count */}
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: "13px", color: (allChecked || someChecked) ? "#fff" : "rgba(255,255,255,0.75)", fontWeight: 500, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
-                                  {folder.name}
-                                </div>
-                                <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)", marginTop: "1px" }}>
-                                  {!allChecked && toAddCount > 0
-                                    ? `${totalInFolder} → ${totalInFolder + toAddCount} item${totalInFolder + toAddCount !== 1 ? "s" : ""}`
-                                    : `${totalInFolder} item${totalInFolder !== 1 ? "s" : ""}`}
-                                </div>
-                              </div>
-
-                              {/* Checkbox */}
-                              <div
-                                onClick={e => { e.stopPropagation(); toggleFolder(); }}
-                                style={{
-                                  width: "18px", height: "18px", borderRadius: "5px", flexShrink: 0, cursor: "pointer",
-                                  border: `2px solid ${allChecked ? "#fff" : someChecked ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.45)"}`,
-                                  background: allChecked ? "#fff" : someChecked ? "rgba(255,255,255,0.15)" : "transparent",
-                                  display: "flex", alignItems: "center", justifyContent: "center",
-                                  transition: "background 120ms, border-color 120ms",
-                                }}
-                              >
-                                {allChecked && (
-                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0F0F1A" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M20 6 9 17l-5-5"/>
-                                  </svg>
-                                )}
-                                {someChecked && !allChecked && (
-                                  <svg width="10" height="2" viewBox="0 0 10 2" fill="none">
-                                    <rect width="10" height="2" rx="1" fill="#0F0F1A"/>
-                                  </svg>
-                                )}
-                              </div>
-                            </div>
-                            {hasChildren && isExpanded && children.map(child => renderFolder(child, depth + 1))}
-                          </React.Fragment>
-                        );
-                      };
-
-                      const rootFolders = folders.filter(f => f.parentId === null).sort((a, b) => a.orderIndex - b.orderIndex);
-                      return rootFolders.map(f => renderFolder(f, 0));
-                    })()}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        <div style={{ width: "1px", height: "20px", background: "rgba(255,255,255,0.1)", flexShrink: 0, marginLeft: "2px" }} />
-        <button
-          onClick={clearSelection}
-          title="Cancel selection"
-          style={{
-            width: "34px", height: "34px", borderRadius: "10px", border: "none",
-            background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.55)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", flexShrink: 0, transition: "background 140ms, color 140ms",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.13)"; e.currentTarget.style.color = "#fff"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.color = "rgba(255,255,255,0.55)"; }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M18 6 6 18M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
+      {/* ── A barra da seleção em lote ──────────────────────────────────
+           A referência não tem essa tela: a conta usada no recon do bloco 07
+           não tinha nenhum asset, então não há captura de card, de grade nem
+           de seleção em lote. O que se faz aqui é traduzir a barra que já
+           existia para o vocabulário do kit — superfície branca, sombra
+           média, os mesmos botões de 34px —, sem inventar nenhuma ação que
+           não estivesse lá. */}
+      {barraDeSelecao}
 
       {/* ── Prompt bar ── */}
       <div
+        className={`miora-prompt-wrap${showCreationHome ? " is-home-composer" : ""}${promptExpanded ? " is-expanded" : ""}`}
         ref={promptBarRef}
         style={{
           position: "fixed",
-          bottom: "32px",
+          bottom: promptExpanded ? "12.5vh" : "32px",
           left: promptExpanded ? "50%" : (isMobile ? "50%" : state === "collapsed" ? "calc(var(--sidebar-width-icon) / 2 + 50%)" : "calc(var(--sidebar-width) / 2 + 50%)"),
           transform: `translateX(-50%) translateY(${anySelected && !promptExpanded ? "200px" : "0"})`,
           opacity: anySelected && !promptExpanded ? 0 : 1,
           transition: "transform 350ms cubic-bezier(0.4,0,0.2,1), opacity 240ms ease, left 350ms cubic-bezier(0.4,0,0.2,1), width 350ms cubic-bezier(0.4,0,0.2,1), height 350ms cubic-bezier(0.4,0,0.2,1)",
           pointerEvents: anySelected && !promptExpanded ? "none" : "auto",
-          width: promptExpanded ? "75vw" : "min(860px, calc(100vw - 32px))",
+          /* 996px é a largura do shell na referência (`max-width:996px`). */
+          width: promptExpanded ? "min(1100px, calc(100vw - 32px))" : isMobile ? "calc(100vw - 24px)" : `min(996px, calc(100vw - ${state === "collapsed" ? "var(--sidebar-width-icon)" : "var(--sidebar-width)"} - 48px))`,
           height: promptExpanded ? "75vh" : "auto",
           zIndex: 200,
         }}
       >
-
-        {/* Toast */}
-        {genError && (
-          <div style={{
-            marginBottom: "8px",
-            padding: "8px 14px",
-            background: "rgba(255, 138, 138,0.1)",
-            border: "1px solid rgba(255, 138, 138,0.2)",
-            borderRadius: "10px",
-            fontSize: "12px",
-            color: "#ff8a8a",
-          }}>
-            {genError}
-          </div>
+        {/* O herói do bloco 03: as abas de categoria à esquerda e a área do
+            mascote à direita, 20px acima do shell. Só na Home, como lá. */}
+        {isCreationView && (
+          <HeroCriar
+            valor={categoria}
+            onChange={(c) => { setCategoria(c); definirCategoria(c); }}
+          />
         )}
 
-        <div style={{
-          position: "relative",
-          background: "rgba(15, 15, 26,0.55)",
-          backdropFilter: "blur(48px)",
-          WebkitBackdropFilter: "blur(48px)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: "18px",
-          boxShadow: "0 28px 80px rgba(0,0,0,0.9), 0 4px 20px rgba(0,0,0,0.5)",
-          overflow: "hidden",
-          height: promptExpanded ? "100%" : undefined,
-          display: promptExpanded ? "flex" : undefined,
-          flexDirection: promptExpanded ? "column" : undefined,
-        }}>
+        {/* Erro da geração. Sinal em texto e tinta baixa — a regra do kit não
+            deixa cor de sinal ocupar área grande. */}
+        {genError && (
+          <div className="pcx-gen-error" role="alert">{genError}</div>
+        )}
 
-          {/* Clear prompt button */}
-          {(prompt || refImages.length > 0 || taggedImages.length > 0 || vidElements.length > 0 || vidStartFrame || vidEndFrame || vidVideoRef || vidResources.length > 0 || vidRefVideos.length > 0 || vidRefAudios.length > 0) && (
-            <button
-              onClick={() => {
-                refImages.forEach(r => URL.revokeObjectURL(r.objectUrl));
-                setPrompt("");
-                setRefImages([]);
-                setTaggedImages([]);
-                setVidElements([]);
-                setVidStartFrame(null);
-                setVidEndFrame(null);
-                setVidVideoRef(null);
-                setVidResources([]);
-                setVidRefVideos([]);
-                setVidRefAudios([]);
-              }}
-              title="Clear prompt"
-              style={{
-                position: "absolute",
-                top: "10px",
-                right: "46px",
-                width: "26px",
-                height: "26px",
-                borderRadius: "8px",
-                border: "none",
-                background: "rgba(255,255,255,0.06)",
-                color: "rgba(255,255,255,0.35)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                zIndex: 10,
-                transition: "background 140ms, color 140ms",
-                flexShrink: 0,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255, 138, 138,0.15)"; e.currentTarget.style.color = "rgba(255, 138, 138,0.8)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.35)"; }}
-            >
-              <X size={12} strokeWidth={2.5} />
-            </button>
-          )}
+        {/* O cartão que o modo "Confirmar" abre antes de gastar a geração. */}
+        {confirmando && (
+          <CartaoConfirmacao
+            modelo={models.find(m => m.id === modelId)?.name ?? modelId}
+            parametros={paramSummary}
+            referencias={refImages.length + vidElements.length + vidResources.length
+              + vidRefVideos.length + vidRefAudios.length
+              + (vidStartFrame ? 1 : 0) + (vidEndFrame ? 1 : 0) + (vidVideoRef ? 1 : 0)}
+            onCancelar={() => setConfirmando(false)}
+            onConfirmar={() => { setConfirmando(false); void generate(); }}
+          />
+        )}
 
-          {/* Expand / collapse button */}
-          <button
-            onClick={() => setPromptExpanded(v => !v)}
-            title={promptExpanded ? "Collapse prompt" : "Expand prompt"}
-            style={{
-              position: "absolute",
-              top: "10px",
-              right: "12px",
-              width: "26px",
-              height: "26px",
-              borderRadius: "8px",
-              border: "none",
-              background: "rgba(255,255,255,0.06)",
-              color: "rgba(255,255,255,0.35)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              zIndex: 10,
-              transition: "background 140ms, color 140ms",
-              flexShrink: 0,
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "rgba(255,255,255,0.75)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.35)"; }}
-          >
-            {promptExpanded ? (
-              <Minimize2 size={12} strokeWidth={2.2} />
-            ) : (
-              <Maximize2 size={12} strokeWidth={2.2} />
-            )}
-          </button>
+        {/* O shell do bloco 03. É o mesmo componente que o /chat usa: a caixa,
+            o brilho de 4 camadas, o campo, o contador e o botão de envio saem
+            de lá. O que é do Acervo entra pelos slots — e é só isso que muda
+            entre as duas telas. */}
+        <ComposerShell
+          className={
+            "miora-composer composer-criar"
+            + (multiPromptMode ? " composer-criar--multi" : "")
+            + (promptTextMode !== "text" ? " composer-criar--mono" : "")
+          }
+          value={prompt}
+          onChange={(text) => {
+            setPrompt(text);
+            /* O cursor sai do próprio campo: quando o onChange dispara, a
+               posição já é a nova. */
+            if (!isVideo) {
+              const cursor = inputRef.current?.selectionStart ?? text.length;
+              const match = text.slice(0, cursor).match(/@(\w*)$/);
+              setMentionQuery(match ? match[1] : null);
+            }
+          }}
+          onSubmit={pedirGeracao}
+          disabled={!canGenerate}
+          /* Na referência o envio é um círculo de 24×24, sem texto. */
+          submitHint={null}
+          busy={submitting}
+          expanded={promptExpanded}
+          fieldBusy={polishState.polishing}
+          /* A referência liga o typewriter só na Home; no Acervo, com o feed
+             atrás, o texto correndo competiria com as miniaturas. Fora da
+             Home fica o placeholder parado. */
+          placeholder={
+            isCreationView
+              ? (categoria ? FRASES_POR_CATEGORIA[categoria] : FRASES_GERAIS)
+              : isVideo ? "Descreva o vídeo que você imagina…" : "Descreva a cena que você imagina…"
+          }
+          /* O contador é renderizado no `trailing`, antes do "melhorar":
+             no lugar do shell ele ficava entre o ditar e o enviar. */
+          maxLength={null}
+          submitLabel="Gerar"
+          submitOn="mod-enter"
+          textareaRef={fixarCampoPrompt}
+          onKeyDown={e => {
+            /* Com o painel de menções aberto, as setas e o Enter são dele. O
+               `preventDefault` cancela o envio do shell — é o escape que o
+               contrato prevê, não um substituto dele. */
+            if (!atMenuOpen) return;
+            if (e.key === "ArrowDown") { e.preventDefault(); setMentionSelIdx(i => (i + 1) % filteredMentions.length); return; }
+            if (e.key === "ArrowUp") { e.preventDefault(); setMentionSelIdx(i => (i - 1 + filteredMentions.length) % filteredMentions.length); return; }
+            if (e.key === "Enter") { e.preventDefault(); insertMention(filteredMentions[mentionSelIdx]); return; }
+            if (e.key === "Escape") { setMentionQuery(null); }
+          }}
 
-          {/* ── Reference image thumbnails (Always visible, integrated) ── */}
-          <div style={{ maxHeight: "200px", overflowY: "auto", borderBottom: "none" }}>
-            {!isVideo && imgModel?.supportsImages && (hasRefImgs || canAddImgs) && (
-              <div style={{ padding: "14px 16px 0", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-start", paddingBottom: "14px" }} onPointerUp={() => { if (_reorderDragItem?.listTarget === "refImage") { _reorderDragItem = null; _reorderOverId = null; setDraggingId(null); setReorderOverId(null); } }}>
-                {displayRefImages.map(img => {
-                  const isRemoving = removingIds.has(img.id);
-                  const isHovered = hoveredRefId === img.id;
-                  const isDragging = draggingId === img.id;
-                  return (
-                    <div key={img.id} onMouseDown={e => e.preventDefault()} onPointerDown={e => { if (refImages.length <= 1 || img.uploading || img.error) return; _reorderDragItem = { id: img.id, listTarget: "refImage" }; _reorderOverId = null; setDraggingId(img.id); }} onPointerEnter={() => { if (!_reorderDragItem || _reorderDragItem.id === img.id || _reorderDragItem.listTarget !== "refImage") return; _reorderOverId = img.id; setReorderOverId(img.id); }} onPointerUp={e => { const info = _reorderDragItem; if (!info || info.listTarget !== "refImage") return; e.stopPropagation(); if (_reorderOverId) e.preventDefault(); const target = _reorderOverId ?? img.id; handleReorderDrop(target, "refImage"); }} onMouseEnter={() => { if (!draggingId) setHoveredRefId(img.id); }} onMouseLeave={() => setHoveredRefId(null)} onClick={() => { if (_reorderJustDropped) { _reorderJustDropped = false; return; } if (!img.uploading && !img.error && !draggingId) setRefPreview({ url: img.objectUrl, mediaKind: "image" }); }} onDragOver={e => { if (!e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(`refimg-filled-${img.id}`); }} onDragLeave={() => setDragOverSlotKey(null)} onDrop={e => handleGalleryItemDrop(e, "refImage", "image")} style={{ position: "relative", width: "64px", height: "64px", borderRadius: "8px", overflow: "hidden", background: "#171728", flexShrink: 0, touchAction: refImages.length > 1 ? "none" : undefined, transition: "border 120ms, box-shadow 120ms, opacity 120ms", border: img.error ? "1px solid rgba(255, 138, 138,0.4)" : dragOverSlotKey === `refimg-filled-${img.id}` ? "2.5px solid #868CFF" : taggedImages.some(t => t.refId === img.id) ? "2.5px solid #01b574" : "1px solid rgba(255,255,255,0.08)", boxShadow: dragOverSlotKey === `refimg-filled-${img.id}` ? "0 0 0 3px rgba(134, 140, 255,0.25)" : undefined, cursor: (!img.uploading && !img.error) ? (refImages.length > 1 ? (draggingId === img.id ? "grabbing" : "grab") : "zoom-in") : "default", animation: isRemoving ? "none" : (isDragging ? "none" : "refImgIn 260ms cubic-bezier(0.16,1,0.3,1) backwards"), opacity: isDragging ? 0.3 : undefined, ...(isRemoving ? { transition: "opacity 170ms, transform 170ms", opacity: 0, transform: "translateY(-10px) scale(0.92)" } : {}) }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={thumbSrc(img.objectUrl, snapWidth(64))} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                      {isHovered && !img.uploading && !img.error && (
-                        <div onClick={e => { if (_reorderJustDropped || draggingId) { _reorderJustDropped = false; e.stopPropagation(); return; } e.stopPropagation(); setRefPreview({ url: img.objectUrl, mediaKind: "image" }); }} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-in" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></div>
-                      )}
-                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 4px 3px", background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)", textAlign: "center" }}><span style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.04em", color: "rgba(255,255,255,0.85)", textTransform: "uppercase" }}>Image</span></div>
-                      {img.uploading && (<div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ width: "14px", height: "14px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.2)", borderTopColor: "#868CFF", display: "inline-block", animation: "spin 0.75s linear infinite" }} /></div>)}
-                      {img.error && (<div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff8a8a" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg></div>)}
-                      <button onClick={e => { e.stopPropagation(); removeImage(img.id); }} style={{ position: "absolute", top: "3px", right: "3px", width: "16px", height: "16px", borderRadius: "50%", background: "rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.85)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontSize: "10px", zIndex: 2 }}>
-<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
-                    </div>
-                  );
-                })}
-                {canAddImgs && (
-                  <button
-                    onClick={() => openPicker("refImage", "image")}
-                    disabled={submitting}
-                    onDragOver={e => { if (!e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey("refImage-add"); }}
-                    onDragLeave={() => setDragOverSlotKey(null)}
-                    onDrop={e => handleGalleryItemDrop(e, "refImage", "image")}
-                    style={{ width: "64px", height: "64px", borderRadius: "8px", border: dragOverSlotKey === "refImage-add" ? "2.5px solid #868CFF" : "1.5px dashed rgba(255,255,255,0.2)", boxShadow: dragOverSlotKey === "refImage-add" ? "0 0 0 3px rgba(134, 140, 255,0.25)" : undefined, background: dragOverSlotKey === "refImage-add" ? "rgba(134, 140, 255,0.07)" : "rgba(255,255,255,0.03)", cursor: submitting ? "not-allowed" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", color: dragOverSlotKey === "refImage-add" ? "#868CFF" : "rgba(255,255,255,0.45)", flexShrink: 0, transition: "all 140ms" }}>
-                    <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.04em" }}>IMAGE</span>
-                    <span style={{ fontSize: "8px", color: dragOverSlotKey === "refImage-add" ? "#868CFF" : "rgba(255,255,255,0.3)" }}>
-                      {maxImgs - refImages.length} left
-                    </span>
-
-                  </button>
-                )}
-              </div>
-            )}
-            {isVideo && vidRefHandles.length > 0 && (() => {
-              type VidSlot =
-                | { kind: "filled"; target: "startFrame"|"endFrame"|"resource"|"videoRef"|"referenceVideo"|"audioRef"; mediaKind: "image"|"video"|"audio"; label: string; ref: RefImage }
-                | { kind: "add";    target: "startFrame"|"endFrame"|"resource"|"videoRef"|"referenceVideo"|"audioRef"; mediaKind: "image"|"video"|"audio"; label: string; countLeft: number }
-                | { kind: "element-filled"; element: KlingElement }
-                | { kind: "element-add"; countLeft: number };
-              const slots: VidSlot[] = [];
-              const useElems = !!(vidModel?.apiInput.useKlingElements);
-              const isHappyHorse = vidModel?.id === "happyhorse";
-              const isVeo = modelId === "veo3" || modelId === "veo3_fast" || modelId === "veo3_lite";
-              for (const h of vidRefHandles) {
-                if (isVeo) {
-                  if (veoMode === "references" && (h === "startFrame" || h === "endFrame")) continue;
-                  if (veoMode === "frames" && h === "resource") continue;
-                  if (h === "videoRef" || h === "referenceVideo" || h === "audioRef") continue;
-                }
-                if (isHappyHorse && h === "startFrame" && vidResources.length > 0) continue;
-                if (isHappyHorse && h === "resource" && vidStartFrame) continue;
-                const isSeedance = vidModel?.id === "seedance-2" || vidModel?.id === "seedance-2-fast" || vidModel?.id === "minimax-h3";
-                const seedanceHasFrame = !!(vidStartFrame || vidEndFrame);
-                const seedanceHasRef   = vidResources.length > 0 || vidRefVideos.length > 0 || vidRefAudios.length > 0;
-                if (isSeedance && seedanceHasFrame && (h === "resource" || h === "referenceVideo" || h === "audioRef")) continue;
-                if (isSeedance && seedanceHasRef   && (h === "startFrame" || h === "endFrame")) continue;
-                if (h === "startFrame") {
-                  if (vidStartFrame) slots.push({ kind: "filled", target: h, mediaKind: "image", label: "Start Frame", ref: vidStartFrame });
-                  else               slots.push({ kind: "add",    target: h, mediaKind: "image", label: "Start Frame", countLeft: 1 });
-                } else if (h === "endFrame") {
-                  if (vidEndFrame)   slots.push({ kind: "filled", target: h, mediaKind: "image", label: "End Frame", ref: vidEndFrame });
-                  else               slots.push({ kind: "add",    target: h, mediaKind: "image", label: "End Frame", countLeft: 1 });
-                } else if (h === "videoRef") {
-                  if (vidVideoRef)   slots.push({ kind: "filled", target: h, mediaKind: "video", label: "Ref Video", ref: vidVideoRef });
-                  else               slots.push({ kind: "add",    target: h, mediaKind: "video", label: "Ref Video", countLeft: 1 });
-                } else if (h === "resource") {
-                  if (useElems) {
-                    vidElements.forEach(el => slots.push({ kind: "element-filled", element: el }));
-                    if (vidElements.length < 3) slots.push({ kind: "element-add", countLeft: 3 - vidElements.length });
-                  } else {
-                    const maxRes = vidModel?.maxResources ?? 3;
-                    const resLabel = vidModel?.id === "happyhorse" ? "Character" : "Image";
-                    displayVidResources.forEach(r => slots.push({ kind: "filled", target: h, mediaKind: "image", label: resLabel, ref: r }));
-                    if (vidResources.length < maxRes)
-                      slots.push({ kind: "add", target: h, mediaKind: "image", label: resLabel, countLeft: maxRes - vidResources.length });
-                  }
-                } else if (h === "referenceVideo") {
-                  const maxRefVid = vidModel?.maxReferenceVideos ?? 3;
-                  displayVidRefVideos.forEach(r => slots.push({ kind: "filled", target: h, mediaKind: "video", label: "Ref Video", ref: r }));
-                  if (vidRefVideos.length < maxRefVid)
-                    slots.push({ kind: "add", target: h, mediaKind: "video", label: "Ref Video", countLeft: maxRefVid - vidRefVideos.length });
-                } else if (h === "audioRef") {
-                  const maxRefAud = vidModel?.maxReferenceAudios ?? 3;
-                  displayVidRefAudios.forEach(r => slots.push({ kind: "filled", target: h, mediaKind: "audio", label: "Audio", ref: r }));
-                  if (vidRefAudios.length < maxRefAud)
-                    slots.push({ kind: "add", target: h, mediaKind: "audio", label: "Audio", countLeft: maxRefAud - vidRefAudios.length });
-                }
-              }
-              return (
-                <div style={{ padding: "14px 16px 14px", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-start" }} onPointerUp={() => { if (_reorderDragItem) { _reorderDragItem = null; _reorderOverId = null; setDraggingId(null); setReorderOverId(null); } }}>
-                  {slots.map((slot, idx) => {
-                    if (slot.kind === "element-filled") {
-                      const el = slot.element; const thumb = el.imageUrls[0]; const hovId = `elem-${el.id}`;
-                      return (
-                        <div key={el.id} onMouseEnter={() => setHoveredRefId(hovId)} onMouseLeave={() => setHoveredRefId(null)} style={{ position: "relative", width: "64px", height: "64px", borderRadius: "8px", overflow: "hidden", flexShrink: 0, background: "#171728", border: "1px solid rgba(255,255,255,0.12)" }}>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                          {hoveredRefId === hovId && (
-                            <div onClick={() => setRefPreview({ url: thumb, mediaKind: "image" })} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-in", zIndex: 1 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></div>
-                          )}
-                          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 4px 3px", background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)", textAlign: "center" }}><span style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.04em", color: "rgba(255,255,255,0.85)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block", padding: "0 4px" }}>{el.name.toUpperCase()}</span></div>
-                          <button onClick={() => setVidElements(prev => prev.filter(e => e.id !== el.id))} style={{ position: "absolute", top: "3px", right: "3px", width: "16px", height: "16px", borderRadius: "50%", background: "rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.85)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, transition: "background 120ms", zIndex: 2 }}><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-                        </div>
-                        );
-                        }
-                        if (slot.kind === "element-add") {
-                        return (
-                        <button key={`element-add-${idx}`} onClick={() => setElementPickerOpen(true)} disabled={submitting} style={{ width: "64px", height: "64px", borderRadius: "8px", flexShrink: 0, border: "1.5px dashed rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.03)", cursor: submitting ? "not-allowed" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", color: "rgba(255,255,255,0.4)", transition: "all 140ms" }}>
-                        <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.04em" }}>ELEM</span>
-                        <span style={{ fontSize: "8px", color: "rgba(255,255,255,0.3)" }}>{slot.countLeft} left</span>
-                        </button>
-                        );
-                        }
-                        if (slot.kind === "filled") {
-                        const r = slot.ref; const hovId = `slot-${r.id}`; const dragKey = `vidfilled-${r.id}`;
-                        const isMultiTarget = slot.target === "resource" || slot.target === "referenceVideo" || slot.target === "audioRef";
-                        const listForSlot = slot.target === "resource" ? vidResources : slot.target === "referenceVideo" ? vidRefVideos : vidRefAudios;
-                        const isSlotDragging = draggingId === r.id;
-                        return (
-                        <div key={r.id} onMouseDown={e => e.preventDefault()} onPointerDown={e => { if (!isMultiTarget || listForSlot.length <= 1 || r.uploading || r.error) return; _reorderDragItem = { id: r.id, listTarget: slot.target as "resource"|"referenceVideo"|"audioRef" }; _reorderOverId = null; setDraggingId(r.id); }} onPointerEnter={() => { if (!_reorderDragItem || _reorderDragItem.id === r.id || _reorderDragItem.listTarget !== slot.target) return; _reorderOverId = r.id; setReorderOverId(r.id); }} onPointerUp={e => { const info = _reorderDragItem; if (!info || info.listTarget !== slot.target) return; e.stopPropagation(); if (_reorderOverId) e.preventDefault(); const target = _reorderOverId ?? r.id; handleReorderDrop(target, slot.target as "resource"|"referenceVideo"|"audioRef"); }} onMouseEnter={() => { if (!draggingId) setHoveredRefId(hovId); }} onMouseLeave={() => setHoveredRefId(null)} onDragOver={e => { if (slot.mediaKind === "audio" || !e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(dragKey); }} onDragLeave={() => setDragOverSlotKey(null)} onDrop={e => { if (slot.mediaKind !== "audio") handleGalleryItemDrop(e, slot.target as any, slot.mediaKind as "image" | "video"); }} style={{ position: "relative", width: "64px", height: "64px", borderRadius: "8px", overflow: "hidden", flexShrink: 0, background: "#171728", touchAction: (isMultiTarget && listForSlot.length > 1) ? "none" : undefined, transition: "border 120ms, box-shadow 120ms, opacity 120ms", border: r.error ? "1px solid rgba(255, 138, 138,0.4)" : dragOverSlotKey === dragKey ? "2.5px solid #868CFF" : taggedImages.some(t => t.refId === r.id) ? "2.5px solid #01b574" : "1px solid rgba(255,255,255,0.12)", boxShadow: dragOverSlotKey === dragKey ? "0 0 0 3px rgba(134, 140, 255,0.25)" : undefined, opacity: isSlotDragging ? 0.3 : undefined, cursor: (isMultiTarget && listForSlot.length > 1 && !r.uploading && !r.error) ? (draggingId === r.id ? "grabbing" : "grab") : undefined }}>
-                          {slot.mediaKind === "image" ? <img src={thumbSrc(r.objectUrl, snapWidth(64))} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : slot.mediaKind === "video" ? <video src={r.objectUrl} autoPlay muted loop playsInline style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.04)" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>}
-                          {hoveredRefId === hovId && !r.uploading && !r.error && slot.mediaKind !== "audio" && (
-                            <div onClick={() => { if (_reorderJustDropped || draggingId) { _reorderJustDropped = false; return; } setRefPreview({ url: r.objectUrl, mediaKind: slot.mediaKind }); }} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-in", zIndex: 1 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></div>
-                          )}
-                          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 4px 3px", background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)", textAlign: "center" }}><span style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.04em", color: "rgba(255,255,255,0.85)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block", padding: "0 4px" }}>{slot.label.toUpperCase()}</span></div>
-                          <button onClick={() => removeVidRef(r.id, slot.target)} style={{ position: "absolute", top: "3px", right: "3px", width: "16px", height: "16px", borderRadius: "50%", background: "rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.85)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, transition: "background 120ms", zIndex: 2 }}><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-                        </div>
-                        );
-                        }
-                        const vidAddKey = `vidadd-${slot.target}-${idx}`;
-                        return (
-                        <button key={`${slot.target}-add-${idx}`} onClick={() => slot.mediaKind === "audio" ? (vidPickTarget.current = slot.target, vidAudioInputRef.current?.click()) : openPicker(slot.target as any, slot.mediaKind)} disabled={submitting} onDragOver={e => { if (slot.mediaKind === "audio" || !e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(vidAddKey); }} onDragLeave={() => setDragOverSlotKey(null)} onDrop={e => { if (slot.mediaKind !== "audio") handleGalleryItemDrop(e, slot.target as any, slot.mediaKind as "image" | "video"); }} style={{ width: "64px", height: "64px", borderRadius: "8px", flexShrink: 0, border: dragOverSlotKey === vidAddKey ? "2.5px solid #868CFF" : "1.5px dashed rgba(255,255,255,0.2)", boxShadow: dragOverSlotKey === vidAddKey ? "0 0 0 3px rgba(134, 140, 255,0.25)" : undefined, background: dragOverSlotKey === vidAddKey ? "rgba(134, 140, 255,0.07)" : "rgba(255,255,255,0.03)", cursor: submitting ? "not-allowed" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", color: dragOverSlotKey === vidAddKey ? "#868CFF" : "rgba(255,255,255,0.4)", transition: "all 140ms" }}>
-                        <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.04em" }}>{slot.label === "Ref Video" ? "VIDEO" : slot.label === "Audio" ? "AUDIO" : slot.label.toUpperCase()}</span>
-                        <span style={{ fontSize: "8px", color: dragOverSlotKey === vidAddKey ? "#868CFF" : "rgba(255,255,255,0.3)" }}>{slot.countLeft} left</span>
-                        </button>
-                        );
-                  })}
-                </div>
-              );
-            })()}
-          </div>
-
-          {/* ── Prompt input ── */}
-          {/* ── Input + Controls + Generate ── */}
-          <div style={{
-            padding: `${(isVideo && vidRefHandles.length > 0) || (!isVideo && !!imgModel?.supportsImages) ? 0 : 16}px 14px 14px 16px`,
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            flex: promptExpanded ? 1 : undefined,
-          }}>
-            {/* Multi-prompt mode strip */}
-            {multiPromptMode && (
-              <div style={{
-                display: "flex", alignItems: "center", gap: "6px",
-                fontSize: "11px", fontWeight: 500, color: "rgba(255,255,255,0.45)",
-                letterSpacing: "0.02em", marginBottom: "-2px",
-              }}>
-                <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#868CFF", flexShrink: 0 }} />
-                Multi <strong style={{ color: "#868CFF", fontWeight: 600 }}>on</strong>
-                {" · "}
-                {prompt.split(/\n\n+/).filter(p => p.trim()).length} prompt{prompt.split(/\n\n+/).filter(p => p.trim()).length !== 1 ? "s" : ""}
-              </div>
-            )}
-
-            {/* Prompt input with inline mention chips — hidden in multi-prompt mode */}
-            <div style={{ position: "relative", flex: promptExpanded ? "1 1 0" : "none", minHeight: 0, overflow: promptExpanded ? "hidden" : undefined, display: multiPromptMode ? "none" : undefined }}>
-              {/* Transparent textarea — editing layer */}
-              <textarea
-                ref={inputRef}
-                data-prompt-input=""
-                value={prompt}
-                rows={1}
-                onChange={e => {
-                  const text = e.target.value;
-                  const cursor = e.target.selectionStart ?? text.length;
-                  setPrompt(text);
-                  if (!promptExpanded) resizeTextarea(e.target, 264);
-                  if (!isVideo) {
-                    const match = text.slice(0, cursor).match(/@(\w*)$/);
-                    setMentionQuery(match ? match[1] : null);
-                  }
-                }}
-                onSelect={e => {
-                  const ta = e.currentTarget;
-                  const cursor = ta.selectionStart ?? ta.value.length;
-                  const match = ta.value.slice(0, cursor).match(/@(\w*)$/);
-                  setMentionQuery(match ? match[1] : null);
-                }}
-                onScroll={e => {
-                  if (overlayInnerRef.current)
-                    overlayInnerRef.current.style.transform = `translateY(-${e.currentTarget.scrollTop}px)`;
-                }}
-                onKeyDown={e => {
-                  if (atMenuOpen) {
-                    if (e.key === "ArrowDown") { e.preventDefault(); setMentionSelIdx(i => (i + 1) % filteredMentions.length); return; }
-                    if (e.key === "ArrowUp") { e.preventDefault(); setMentionSelIdx(i => (i - 1 + filteredMentions.length) % filteredMentions.length); return; }
-                    if (e.key === "Enter") { e.preventDefault(); insertMention(filteredMentions[mentionSelIdx]); return; }
-                    if (e.key === "Escape") { setMentionQuery(null); return; }
-                  }
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !submitting) { e.preventDefault(); generate(); }
-                }}
-                disabled={submitting}
-                style={{
-                  position: "relative",
-                  display: "block",
-                  width: "100%",
-                  ...(promptExpanded ? { height: "100%", maxHeight: "none" } : { maxHeight: "264px" }),
-                  background: "transparent",
-                  border: "none",
-                  outline: "none",
-                  color: "transparent",
-                  caretColor: "#868CFF",
-                  fontSize: "14.5px",
-                  fontFamily: promptTextMode !== "text" ? "monospace" : "inherit",
-                  lineHeight: "22px",
-                  letterSpacing: promptTextMode !== "text" ? "normal" : "-0.01em",
-                  padding: 0,
-                  resize: "none",
-                  overflowY: "auto",
-                  scrollbarWidth: "none",
-                } as React.CSSProperties}
-              />
-              {/* Chip overlay — visually replaces the transparent text */}
-              <div
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  overflow: "hidden",
-                  pointerEvents: "none",
+          /* ── Acima do campo ─────────────────────────────────────────── */
+          above={<>
+            {/* Limpar e expandir ficam no canto superior, ancorados na
+                superfície branca do shell. */}
+            {(prompt || refImages.length > 0 || taggedImages.length > 0 || vidElements.length > 0 || vidStartFrame || vidEndFrame || vidVideoRef || vidResources.length > 0 || vidRefVideos.length > 0 || vidRefAudios.length > 0) && (
+              <button
+                type="button"
+                className="pcx-corner pcx-corner--limpar"
+                aria-label="Limpar o prompt e os anexos"
+                title="Limpar"
+                onClick={() => {
+                  refImages.forEach(r => URL.revokeObjectURL(r.objectUrl));
+                  setPrompt("");
+                  setRefImages([]);
+                  setTaggedImages([]);
+                  setVidElements([]);
+                  setVidStartFrame(null);
+                  setVidEndFrame(null);
+                  setVidVideoRef(null);
+                  setVidResources([]);
+                  setVidRefVideos([]);
+                  setVidRefAudios([]);
                 }}
               >
-                <div
-                  ref={overlayInnerRef}
-                  style={{
-                    display: "block",
-                    fontSize: "14.5px",
-                    fontFamily: promptTextMode !== "text" ? "monospace" : "inherit",
-                    lineHeight: "22px",
-                    letterSpacing: promptTextMode !== "text" ? "normal" : "-0.01em",
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    willChange: "transform",
-                  }}
-                >
-                  {promptTextMode !== "text" ? (
-                    promptTextMode === "yaml"
-                      ? syntaxHighlightYaml(prompt, taggedImages, (tag, rect) => setChipPreview({ tag, rect }), () => setChipPreview(null), tag => { const idx = prompt.indexOf(`@${tag.label}`); const pos = idx >= 0 ? idx + tag.label.length + 1 : prompt.length; inputRef.current?.focus(); inputRef.current?.setSelectionRange(pos, pos); })
-                      : syntaxHighlightJson(prompt, taggedImages, (tag, rect) => setChipPreview({ tag, rect }), () => setChipPreview(null), tag => { const idx = prompt.indexOf(`@${tag.label}`); const pos = idx >= 0 ? idx + tag.label.length + 1 : prompt.length; inputRef.current?.focus(); inputRef.current?.setSelectionRange(pos, pos); })
-                  ) : promptMaxLength !== null && prompt.length > promptMaxLength ? (
-                    <>
-                      {renderGalleryMentions(
-                        prompt.slice(0, promptMaxLength), taggedImages,
-                        (tag, rect) => setChipPreview({ tag, rect }),
-                        () => setChipPreview(null),
-                        tag => {
-                          const idx = prompt.indexOf(`@${tag.label}`);
-                          const pos = idx >= 0 ? idx + tag.label.length + 1 : prompt.length;
-                          inputRef.current?.focus();
-                          inputRef.current?.setSelectionRange(pos, pos);
-                        },
-                      )}
-                      <span style={{ background: "rgba(227, 26, 26,0.22)", color: "#ff8a8a", borderRadius: 2 }}>
-                        {prompt.slice(promptMaxLength)}
-                      </span>
-                    </>
-                  ) : renderGalleryMentions(
-                    prompt, taggedImages,
-                    (tag, rect) => setChipPreview({ tag, rect }),
-                    () => setChipPreview(null),
-                    tag => {
-                      const idx = prompt.indexOf(`@${tag.label}`);
-                      const pos = idx >= 0 ? idx + tag.label.length + 1 : prompt.length;
-                      inputRef.current?.focus();
-                      inputRef.current?.setSelectionRange(pos, pos);
-                    },
-                  )}
-                </div>
-              </div>
-              {/* Placeholder */}
-              {!prompt && (
-                <div
-                  aria-hidden
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    display: "block",
-                    lineHeight: "22px",
-                    fontSize: "14.5px",
-                    fontFamily: "inherit",
-                    letterSpacing: "-0.01em",
-                    color: "rgba(255,255,255,0.3)",
-                    pointerEvents: "none",
-                  }}
-                >
-                  {isVideo ? "Descreva o vídeo que você imagina…" : "Descreva a cena que você imagina…"}
-                </div>
-              )}
-            </div>
+                <X size={12} strokeWidth={2.5} />
+              </button>
+            )}
 
-            {/* Multi-prompt stack — blocks separated by \n\n */}
+            <button
+              type="button"
+              className="pcx-corner"
+              aria-label={promptExpanded ? "Recolher o campo" : "Expandir o campo"}
+              title={promptExpanded ? "Recolher" : "Expandir"}
+              onClick={() => setPromptExpanded(v => !v)}
+            >
+              {promptExpanded ? <Minimize2 size={12} strokeWidth={2.2} /> : <Maximize2 size={12} strokeWidth={2.2} />}
+            </button>
+
+            {/* ── A trilha de anexos ────────────────────────────────────
+                Continua ladrilho a ladrilho, e isso é deliberado: cada
+                ladrilho é um ALVO DE SOLTURA. Quem arrasta uma imagem da
+                grade para o "Último quadro" precisa acertar aquele slot; um
+                "+" genérico transformaria um gesto preciso num palpite. O
+                que o "+" da barra dobra é a fila de sete BOTÕES, não os
+                alvos. */}
+            {trilhaDeAnexos}
+
+            {/* A tira "Multi ligado · N prompts" saiu. O campo da referência é
+                texto puro, sempre, e ela era uma faixa por cima dele. A
+                contagem não se perde: a pilha numerada abaixo já mostra um
+                bloco por prompt — a mesma leitura, sem cobrir o campo. */}
+
+            {/* A pilha de blocos do modo multi, separados por linha em branco. */}
             {multiPromptMode && (() => {
               const blocks = prompt.split(/\n\n+/).reduce<string[]>((acc, b) => {
-                if (!b.trim() && acc.some(x => !x.trim())) return acc; // max one empty block
+                if (!b.trim() && acc.some(x => !x.trim())) return acc; // no máximo um bloco vazio
                 return [...acc, b];
               }, []);
               let promptIndex = 0;
               return (
-                <div data-prompt-stack="" style={{
-                  display: "flex", flexDirection: "column", gap: "6px",
-                  maxHeight: promptExpanded ? "calc(75vh - 220px)" : "204px", overflowY: "auto", scrollbarWidth: "none",
-                }}>
+                <div data-prompt-stack="" className="pcx-pilha" style={{ maxHeight: promptExpanded ? "calc(75vh - 220px)" : "204px" }}>
                   {blocks.map((block, blockIdx) => {
                     const isNonEmpty = !!block.trim();
                     const displayIdx = isNonEmpty ? ++promptIndex : null;
@@ -3730,6 +3838,9 @@ function GalleryInner() {
                     return (
                       <div
                         key={blockIdx}
+                        className="pcx-bloco"
+                        data-aberto={isExpanded ? "true" : undefined}
+                        data-vazio={isNonEmpty ? undefined : "true"}
                         onClick={(e) => {
                           const next = isExpanded ? null : blockIdx;
                           setExpandedPromptIdx(next);
@@ -3744,23 +3855,8 @@ function GalleryInner() {
                             requestAnimationFrame(() => rowEl.scrollIntoView({ block: "nearest", behavior: "smooth" }));
                           }
                         }}
-                        style={{
-                          position: "relative",
-                          display: "flex", alignItems: "flex-start", gap: "8px",
-                          background: isExpanded ? "rgba(134, 140, 255,0.04)" : "rgba(255,255,255,0.03)",
-                          border: `1px solid ${isExpanded ? "rgba(134, 140, 255,0.18)" : isNonEmpty ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.04)"}`,
-                          borderRadius: "8px", padding: "7px 24px 7px 10px",
-                          opacity: isNonEmpty ? 1 : 0.4,
-                          cursor: isExpanded ? "default" : "pointer",
-                          transition: "background 120ms, border-color 120ms",
-                          flexShrink: 0,
-                        }}
                       >
-                        <span style={{
-                          fontSize: "10px", fontWeight: 700, letterSpacing: "0.06em",
-                          color: isNonEmpty ? "#868CFF" : "rgba(255,255,255,0.25)",
-                          fontFamily: "monospace", lineHeight: "22px", flexShrink: 0, minWidth: "18px",
-                        }}>
+                        <span className="pcx-bloco-num">
                           {displayIdx !== null ? String(displayIdx).padStart(2, '0') : "—"}
                         </span>
                         <div data-block-wrapper="" style={{ flex: 1, position: "relative", minWidth: 0 }}>
@@ -3768,6 +3864,8 @@ function GalleryInner() {
                           value={block}
                           rows={1}
                           data-prompt-input=""
+                          className="pcx-bloco-campo"
+                          aria-label={`Prompt ${displayIdx ?? blocks.length}`}
                           placeholder={blockIdx === 0 && !isNonEmpty ? "Descreva a cena que você imagina…" : undefined}
                           onClick={e => { if (isExpanded) e.stopPropagation(); }}
                           onFocus={e => {
@@ -3801,7 +3899,7 @@ function GalleryInner() {
                             const match = newVal.slice(0, cursor).match(/@(\w*)$/);
                             setMentionQuery(match ? match[1] : null);
                             if (newVal.includes('\n\n')) {
-                              // Double newline → split into a new block
+                              // Linha em branco dupla → abre um bloco novo
                               const splitIdx = newVal.indexOf('\n\n');
                               const before = newVal.slice(0, splitIdx);
                               const after = newVal.slice(splitIdx + 2);
@@ -3839,7 +3937,7 @@ function GalleryInner() {
                             }
                             if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !submitting) { e.preventDefault(); generate(); return; }
                             if (e.key === "Enter" && !isExpanded) {
-                              // Expand collapsed block on Enter instead of inserting newline
+                              // Enter abre o bloco recolhido em vez de inserir quebra
                               e.preventDefault();
                               setExpandedPromptIdx(blockIdx);
                               requestAnimationFrame(() => {
@@ -3870,31 +3968,17 @@ function GalleryInner() {
                             }
                           }}
                           disabled={submitting}
-                          style={{
-                            display: "block", width: "100%",
-                            background: "transparent", border: "none", outline: "none",
-                            color: "transparent",
-                            caretColor: "#868CFF",
-                            fontSize: "13.5px",
-                            fontFamily: promptTextMode !== "text" ? "monospace" : "inherit",
-                            lineHeight: "22px",
-                            letterSpacing: promptTextMode !== "text" ? "normal" : "-0.01em",
-                            padding: 0, resize: "none",
-                            ...(isExpanded
-                              ? { fieldSizing: "content", maxHeight: "330px", overflowY: "auto", scrollbarWidth: "none" }
-                              : { height: "22px", maxHeight: "22px", overflowY: "hidden", whiteSpace: "nowrap" }
-                            ),
-                          } as React.CSSProperties}
+                          style={(isExpanded
+                            ? { fieldSizing: "content", maxHeight: "330px", overflowY: "auto", scrollbarWidth: "none" }
+                            : { height: "20px", maxHeight: "20px", overflowY: "hidden", whiteSpace: "nowrap" }
+                          ) as React.CSSProperties}
                         />
                         {promptTextMode !== "text" ? (
-                          <div aria-hidden style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
+                          <div aria-hidden className="pcx-bloco-overlay">
                             <div
                               data-block-overlay=""
-                              style={{
-                                fontSize: "13.5px", fontFamily: "monospace", lineHeight: "22px",
-                                whiteSpace: isExpanded ? "pre-wrap" : "nowrap",
-                                wordBreak: "break-word",
-                              }}
+                              className="pcx-bloco-overlay-inner"
+                              style={{ whiteSpace: isExpanded ? "pre-wrap" : "nowrap" }}
                             >
                               {promptTextMode === "yaml"
                                 ? syntaxHighlightYaml(block, taggedImages, (tag, rect) => setChipPreview({ tag, rect }), () => setChipPreview(null), tag => { const stack = document.querySelector('[data-prompt-stack]'); const ta = stack?.querySelectorAll<HTMLTextAreaElement>('textarea')[blockIdx]; if (!ta) return; activeBlockRef.current = ta; activeBlockIdxRef.current = blockIdx; const pos = block.indexOf(`@${tag.label}`); ta.focus(); ta.setSelectionRange(pos >= 0 ? pos + tag.label.length + 1 : block.length, pos >= 0 ? pos + tag.label.length + 1 : block.length); })
@@ -3902,16 +3986,11 @@ function GalleryInner() {
                             </div>
                           </div>
                         ) : (
-                          <div aria-hidden style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
+                          <div aria-hidden className="pcx-bloco-overlay">
                             <div
                               data-block-text-overlay=""
-                              style={{
-                                fontSize: "13.5px", fontFamily: "inherit", lineHeight: "22px",
-                                letterSpacing: "-0.01em",
-                                whiteSpace: isExpanded ? "pre-wrap" : "nowrap",
-                                wordBreak: "break-word",
-                                willChange: "transform",
-                              }}
+                              className="pcx-bloco-overlay-inner"
+                              style={{ whiteSpace: isExpanded ? "pre-wrap" : "nowrap" }}
                             >
                               {renderGalleryMentions(
                                 block,
@@ -3934,21 +4013,19 @@ function GalleryInner() {
                         )}
                         </div>
                         {isNonEmpty && promptMaxLength !== null && (
-                          <span style={{
-                            fontSize: "10px", fontWeight: 600,
-                            color: block.length > promptMaxLength ? "#ff8a8a" : "rgba(255,255,255,0.25)",
-                            fontFamily: "monospace", lineHeight: "22px",
-                            fontVariantNumeric: "tabular-nums",
-                            ...(isExpanded
-                              ? { position: "absolute", bottom: "6px", right: "24px" }
-                              : { flexShrink: 0 }
-                            ),
-                          } as React.CSSProperties}>
+                          <span
+                            className="pcx-bloco-conta"
+                            data-over={block.length > promptMaxLength ? "true" : undefined}
+                            data-solto={isExpanded ? "true" : undefined}
+                          >
                             {block.length}/{promptMaxLength}
                           </span>
                         )}
                         {blocks.length > 1 && (
                           <button
+                            type="button"
+                            className="pcx-bloco-remover"
+                            aria-label={`Remover o prompt ${displayIdx ?? blockIdx + 1}`}
                             onClick={e => {
                               e.stopPropagation();
                               const updated = blocks.filter((_, i) => i !== blockIdx);
@@ -3960,20 +4037,6 @@ function GalleryInner() {
                               });
                             }}
                             disabled={submitting}
-                            style={{
-                              position: "absolute", top: "50%", right: "5px",
-                              transform: "translateY(-50%)",
-                              width: "16px", height: "16px",
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              background: "none", border: "none", padding: 0,
-                              color: "rgba(255,255,255,0.3)",
-                              cursor: submitting ? "not-allowed" : "pointer",
-                              borderRadius: "4px",
-                              fontSize: "12px", lineHeight: 1,
-                              transition: "color 120ms",
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.75)")}
-                            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
                           >
                             ×
                           </button>
@@ -3984,505 +4047,261 @@ function GalleryInner() {
                 </div>
               );
             })()}
+          </>}
 
-            {/* Bottom row: controls + generate button — always stays at the bottom, never moves on expand */}
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px", marginTop: promptExpanded ? "auto" : "4px" }}>
-              {/* Controls group */}
-              <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "7px", flexWrap: "wrap" }}>
-                {/* Model picker */}
-                <CustomDropdown
-                  value={modelId}
-                  onChange={setModelId}
-                  disabled={submitting}
-                  options={models.map(m => ({
-                    value: m.id,
-                    label: m.name,
-                    group: ("provider" in m ? (m as { provider: string }).provider : undefined),
-                    providerIcon: "provider" in m ? <ProviderIcon provider={(m as { provider: string }).provider} /> : undefined,
-                  }))}
-                  showChevron
-                />
-
-                {/* Backend picker — only for models with more than one backend to choose from */}
-                {modelHasProviderChoice(modelId) && (
-                  <CustomDropdown
-                    value={providerId}
-                    onChange={(v) => setModelProvider(modelId, v as (typeof PROVIDERS)[number]["id"])}
-                    disabled={submitting}
-                    options={PROVIDERS.map(p => ({ value: p.id, label: p.label, providerIcon: <ProviderBackendIcon id={p.id} /> }))}
-                    showChevron
-                  />
+          /* ── Sobre o campo: a camada de chips ────────────────────────
+             O texto do `textarea` fica transparente e quem se vê é esta
+             camada, que redesenha o mesmo texto com as menções viradas
+             chip. As duas precisam ter a MESMA métrica, então a fonte
+             das duas sai de `composer.css`, não daqui. */
+          overlay={<>
+            <div aria-hidden className="pcx-overlay">
+              <div ref={overlayInnerRef} className="pcx-overlay-inner">
+                {promptTextMode !== "text" ? (
+                  promptTextMode === "yaml"
+                    ? syntaxHighlightYaml(prompt, taggedImages, (tag, rect) => setChipPreview({ tag, rect }), () => setChipPreview(null), tag => { const idx = prompt.indexOf(`@${tag.label}`); const pos = idx >= 0 ? idx + tag.label.length + 1 : prompt.length; inputRef.current?.focus(); inputRef.current?.setSelectionRange(pos, pos); })
+                    : syntaxHighlightJson(prompt, taggedImages, (tag, rect) => setChipPreview({ tag, rect }), () => setChipPreview(null), tag => { const idx = prompt.indexOf(`@${tag.label}`); const pos = idx >= 0 ? idx + tag.label.length + 1 : prompt.length; inputRef.current?.focus(); inputRef.current?.setSelectionRange(pos, pos); })
+                ) : promptMaxLength !== null && prompt.length > promptMaxLength ? (
+                  <>
+                    {renderGalleryMentions(
+                      prompt.slice(0, promptMaxLength), taggedImages,
+                      (tag, rect) => setChipPreview({ tag, rect }),
+                      () => setChipPreview(null),
+                      tag => {
+                        const idx = prompt.indexOf(`@${tag.label}`);
+                        const pos = idx >= 0 ? idx + tag.label.length + 1 : prompt.length;
+                        inputRef.current?.focus();
+                        inputRef.current?.setSelectionRange(pos, pos);
+                      },
+                    )}
+                    <span className="pcx-excedente">{prompt.slice(promptMaxLength)}</span>
+                  </>
+                ) : renderGalleryMentions(
+                  prompt, taggedImages,
+                  (tag, rect) => setChipPreview({ tag, rect }),
+                  () => setChipPreview(null),
+                  tag => {
+                    const idx = prompt.indexOf(`@${tag.label}`);
+                    const pos = idx >= 0 ? idx + tag.label.length + 1 : prompt.length;
+                    inputRef.current?.focus();
+                    inputRef.current?.setSelectionRange(pos, pos);
+                  },
                 )}
-
-                {/* Quality */}
-                {supportsQ && (
-                  <CustomDropdown
-                    value={quality}
-                    onChange={setQuality}
-                    disabled={submitting}
-                    options={qualityOpts.map(q => ({ value: q, label: q.toUpperCase() }))}
-                    icon={<DiamondIcon />}
-                  />
-                )}
-
-                {/* Azure Resolution (gpt-image-2 + Azure provider only) */}
-                {azureResolutionOpts.length > 0 && (
-                  <CustomDropdown
-                    value={azureResolution}
-                    onChange={setAzureResolution}
-                    disabled={submitting}
-                    options={azureResolutionOpts.map(r => ({ value: r, label: r.toUpperCase() }))}
-                    icon={<DiamondIcon />}
-                  />
-                )}
-
-                {/* Aspect ratio */}
-                {ratios.length > 0 && (
-                  <AspectRatioDropdown
-                    value={aspectRatio}
-                    onChange={setAspectRatio}
-                    disabled={submitting}
-                    ratios={ratios}
-                    allowCustom={isAzureProvider && azureResolutionOpts.length > 0}
-                    customWidth={azureCustomWidth}
-                    customHeight={azureCustomHeight}
-                    onApplyCustom={(w, h) => {
-                      setAzureCustomWidth(w);
-                      setAzureCustomHeight(h);
-                      setAspectRatio("custom");
-                    }}
-                  />
-                )}
-
-                {/* Duration (video) — stepper + slider pill */}
-                {isVideo && durations.length > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", height: "36px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", flexShrink: 0, overflow: "hidden" }}>
-                    <button
-                      type="button"
-                      onClick={e => { e.stopPropagation(); const i = Math.max(0, durations.indexOf(duration)); if (i > 0) setDuration(durations[i - 1]); }}
-                      disabled={submitting || Math.max(0, durations.indexOf(duration)) <= 0}
-                      style={{
-                        width: "26px", height: "36px", flexShrink: 0,
-                        border: "none", borderRight: "1px solid rgba(255,255,255,0.1)",
-                        background: "transparent", color: "rgba(255,255,255,0.75)", fontSize: "14px", lineHeight: 1,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        cursor: (submitting || Math.max(0, durations.indexOf(duration)) <= 0) ? "not-allowed" : "pointer",
-                        opacity: Math.max(0, durations.indexOf(duration)) <= 0 ? 0.35 : 1,
-                        padding: 0,
-                      }}
-                    >−</button>
-                    <button
-                      ref={durPillRef}
-                      onClick={() => durPickerOpen ? closeDurPicker() : openDurPicker()}
-                      disabled={submitting}
-                      style={{
-                        display: "flex", alignItems: "center", gap: "5px",
-                        height: "36px", padding: "0 9px",
-                        border: "none",
-                        background: durPickerOpen ? "rgba(255,255,255,0.08)" : "transparent",
-                        color: "#fff", fontSize: "13px", fontFamily: "inherit",
-                        cursor: submitting ? "not-allowed" : "pointer",
-                        transition: "background 140ms",
-                        flexShrink: 0,
-                      }}>
-                      <span style={{ fontVariantNumeric: "tabular-nums", display: "inline-block", width: "2ch", textAlign: "right" }}>{duration}</span><span>s</span>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="2.5" strokeLinecap="round" style={{ transition: "transform 180ms cubic-bezier(0.16,1,0.3,1)", transform: durPickerOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
-                        <polyline points="6 9 12 15 18 9"/>
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={e => { e.stopPropagation(); const i = Math.max(0, durations.indexOf(duration)); if (i < durations.length - 1) setDuration(durations[i + 1]); }}
-                      disabled={submitting || Math.max(0, durations.indexOf(duration)) >= durations.length - 1}
-                      style={{
-                        width: "26px", height: "36px", flexShrink: 0,
-                        border: "none", borderLeft: "1px solid rgba(255,255,255,0.1)",
-                        background: "transparent", color: "rgba(255,255,255,0.75)", fontSize: "14px", lineHeight: 1,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        cursor: (submitting || Math.max(0, durations.indexOf(duration)) >= durations.length - 1) ? "not-allowed" : "pointer",
-                        opacity: Math.max(0, durations.indexOf(duration)) >= durations.length - 1 ? 0.35 : 1,
-                        padding: 0,
-                      }}
-                    >+</button>
-                  </div>
-                )}
-
-                {/* Mode (video) */}
-                {isVideo && vidModes.length > 0 && (
-                  <CustomDropdown
-                    value={mode}
-                    onChange={setMode}
-                    disabled={submitting}
-                    options={vidModes.map(m => ({ value: m.value, label: m.label }))}
-                  />
-                )}
-
-                {/* Resolution (video) */}
-                {isVideo && (vidModel?.resolutions?.length ?? 0) > 0 && (
-                  <CustomDropdown
-                    value={resolution || vidModel!.defaultResolution!}
-                    onChange={setResolution}
-                    disabled={submitting}
-                    options={vidModel!.resolutions!.map(r => ({ value: r, label: r }))}
-                  />
-                )}
-
-                {/* Sound toggle (video) */}
-                {isVideo && vidModel?.sound && (
-                  <button
-                    onClick={() => setSound(s => !s)}
-                    disabled={submitting}
-                    style={{
-                      display: "flex", alignItems: "center", gap: "7px",
-                      height: "36px", padding: "0 12px",
-                      borderRadius: "8px",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      background: sound ? "rgba(169, 173, 255,0.12)" : "rgba(255,255,255,0.05)",
-                      color: sound ? "#A9ADFF" : "rgba(255,255,255,0.55)",
-                      fontSize: "13px", fontFamily: "inherit",
-                      cursor: submitting ? "not-allowed" : "pointer",
-                      transition: "background 150ms, color 150ms, border-color 150ms",
-                      flexShrink: 0,
-                    }}>
-                    {/* Toggle pill */}
-                    <span style={{
-                      width: "28px", height: "16px", borderRadius: "8px",
-                      background: sound ? "#A9ADFF" : "rgba(255,255,255,0.18)",
-                      position: "relative", flexShrink: 0,
-                      transition: "background 150ms",
-                    }}>
-                      <span style={{
-                        position: "absolute", top: "2px",
-                        left: sound ? "14px" : "2px",
-                        width: "12px", height: "12px", borderRadius: "50%",
-                        background: sound ? "#1e1040" : "#ffffff",
-                        transition: "left 150ms",
-                      }} />
-                    </span>
-                    Sound
-                  </button>
-                )}
-
-                {/* Veo mode toggle (frames vs references) */}
-                {isVideo && (modelId === "veo3" || modelId === "veo3_fast") && (
-                  <button
-                    onClick={() => setVeoMode(m => m === "frames" ? "references" : "frames")}
-                    disabled={submitting}
-                    style={{
-                      display: "flex", alignItems: "center", gap: "7px",
-                      height: "36px", padding: "0 12px",
-                      borderRadius: "8px",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      background: veoMode === "references" ? "rgba(255, 181, 71,0.12)" : "rgba(255,255,255,0.05)",
-                      color: veoMode === "references" ? "#ffb547" : "rgba(255,255,255,0.55)",
-                      fontSize: "13px", fontFamily: "inherit",
-                      cursor: submitting ? "not-allowed" : "pointer",
-                      transition: "background 150ms, color 150ms, border-color 150ms",
-                      flexShrink: 0,
-                    }}>
-                    <span style={{
-                      width: "28px", height: "16px", borderRadius: "8px",
-                      background: veoMode === "references" ? "#ffb547" : "rgba(255,255,255,0.18)",
-                      position: "relative", flexShrink: 0,
-                      transition: "background 150ms",
-                    }}>
-                      <span style={{
-                        position: "absolute", top: "2px",
-                        left: veoMode === "references" ? "14px" : "2px",
-                        width: "12px", height: "12px", borderRadius: "50%",
-                        background: veoMode === "references" ? "#401010" : "#ffffff",
-                        transition: "left 150ms",
-                      }} />
-                    </span>
-                    {veoMode === "references" ? "References" : "Frames"}
-                  </button>
-                )}
-
-                {/* Seed (video, models that support it) */}
-                {isVideo && vidModel?.supportsSeeds && (
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: "6px",
-                    height: "36px", padding: "0 11px",
-                    borderRadius: "8px",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    background: "rgba(255,255,255,0.05)",
-                    flexShrink: 0,
-                  }}>
-                    <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.45)", userSelect: "none", whiteSpace: "nowrap" }}>Seed</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={2147483647}
-                      placeholder="—"
-                      value={seed ?? 0}
-                      onChange={(e) => setSeed(e.target.value === "" ? 0 : Math.max(0, Math.min(2147483647, parseInt(e.target.value, 10))))}
-                      disabled={submitting}
-                      className="seed-input"
-                      style={{
-                        width: "72px", background: "transparent", border: "none", outline: "none",
-                        color: "#fff", fontSize: "12px", fontFamily: "inherit",
-                        textAlign: "right", fontVariantNumeric: "tabular-nums",
-                        cursor: submitting ? "not-allowed" : "text",
-                        MozAppearance: "textfield", appearance: "textfield",
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* Count stepper (image only, hidden in multi-prompt mode) */}
-                {!isVideo && !multiPromptMode && (
-                  <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    height: "36px",
-                    borderRadius: "8px",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    background: "rgba(255,255,255,0.05)",
-                    overflow: "hidden",
-                    flexShrink: 0,
-                  }}>
-                    <button
-                      onClick={() => setCount(c => Math.max(1, c - 1))}
-                      disabled={submitting || count <= 1}
-                      style={{
-                        width: "34px", height: "100%", border: "none", background: "transparent",
-                        color: count <= 1 ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.55)",
-                        cursor: submitting || count <= 1 ? "not-allowed" : "pointer",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: "16px", fontFamily: "inherit", transition: "color 140ms",
-                      }}
-                    >−</button>
-                    <span style={{
-                      fontSize: "12.5px", color: "#ffffff",
-                      minWidth: "30px", textAlign: "center",
-                      fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em",
-                    }}>
-                      {count}/4
-                    </span>
-                    <button
-                      onClick={() => setCount(c => Math.min(4, c + 1))}
-                      disabled={submitting || count >= 4}
-                      style={{
-                        width: "34px", height: "100%", border: "none", background: "transparent",
-                        color: count >= 4 ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.55)",
-                        cursor: submitting || count >= 4 ? "not-allowed" : "pointer",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: "16px", fontFamily: "inherit", transition: "color 140ms",
-                      }}
-                    >+</button>
-                  </div>
-                )}
-
-                {/* Multi-prompt toggle */}
-                <button
-                  onClick={() => {
-                    setMultiPromptMode(m => {
-                      if (m) {
-                        // switching OFF — resize the single textarea once it's visible again
-                        requestAnimationFrame(() => {
-                          if (inputRef.current) resizeTextarea(inputRef.current);
-                        });
-                      }
-                      return !m;
-                    });
-                    setExpandedPromptIdx(null);
-                  }}
-                  disabled={submitting}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "7px",
-                    height: "36px", padding: "0 12px",
-                    borderRadius: "8px",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    background: multiPromptMode ? "rgba(134, 140, 255,0.12)" : "rgba(255,255,255,0.05)",
-                    color: multiPromptMode ? "#868CFF" : "rgba(255,255,255,0.55)",
-                    fontSize: "13px", fontFamily: "inherit",
-                    cursor: submitting ? "not-allowed" : "pointer",
-                    transition: "background 150ms, color 150ms",
-                    flexShrink: 0,
-                  }}>
-                  <span style={{
-                    width: "28px", height: "16px", borderRadius: "8px",
-                    background: multiPromptMode ? "#868CFF" : "rgba(255,255,255,0.18)",
-                    position: "relative", flexShrink: 0,
-                    transition: "background 150ms",
-                  }}>
-                    <span style={{
-                      position: "absolute", top: "2px",
-                      left: multiPromptMode ? "14px" : "2px",
-                      width: "12px", height: "12px", borderRadius: "50%",
-                      background: multiPromptMode ? "#1C1B3F" : "#ffffff",
-                      transition: "left 150ms",
-                    }} />
-                  </span>
-                  Multi
-                </button>
-
-                {/* Text / JSON / YAML mode toggle */}
-                <button
-                  onClick={() => {
-                    if (promptTextMode !== "text") {
-                      setPromptTextMode("text");
-                    } else {
-                      // Auto-detect format
-                      try {
-                        const formatted = JSON.stringify(JSON.parse(prompt), null, 2);
-                        setPrompt(formatted);
-                        requestAnimationFrame(() => { if (inputRef.current) resizeTextarea(inputRef.current); });
-                        setPromptTextMode("json");
-                      } catch {
-                        // Not JSON — check for YAML patterns
-                        const looksLikeYaml = /^(\s*[\w\-./]+\s*:|---|\s*-\s)/m.test(prompt);
-                        setPromptTextMode(looksLikeYaml ? "yaml" : "json");
-                      }
-                    }
-                  }}
-                  disabled={submitting}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "7px",
-                    height: "36px", padding: "0 12px",
-                    borderRadius: "8px",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    background: promptTextMode !== "text" ? "rgba(134, 140, 255,0.12)" : "rgba(255,255,255,0.05)",
-                    color: promptTextMode !== "text" ? "#868CFF" : "rgba(255,255,255,0.55)",
-                    fontSize: "13px", fontFamily: "inherit",
-                    cursor: submitting ? "not-allowed" : "pointer",
-                    transition: "background 150ms, color 150ms, border-color 150ms",
-                    flexShrink: 0,
-                  }}>
-                  <span style={{
-                    width: "28px", height: "16px", borderRadius: "8px",
-                    background: promptTextMode !== "text" ? "#868CFF" : "rgba(255,255,255,0.18)",
-                    position: "relative", flexShrink: 0,
-                    transition: "background 150ms",
-                  }}>
-                    <span style={{
-                      position: "absolute", top: "2px",
-                      left: promptTextMode !== "text" ? "14px" : "2px",
-                      width: "12px", height: "12px", borderRadius: "50%",
-                      background: promptTextMode !== "text" ? "#1C1B3F" : "#ffffff",
-                      transition: "left 150ms",
-                    }} />
-                  </span>
-                  JSON/YAML
-                </button>
-              </div>{/* end controls group */}
-
-              {/* Character count + Generate button */}
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
-                {promptMaxLength !== null && !multiPromptMode && (
-                  <div
-                    aria-hidden
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 600,
-                      fontVariantNumeric: "tabular-nums",
-                      color: promptOverLimit ? "#ff8a8a" : "rgba(255,255,255,0.3)",
-                      pointerEvents: "none",
-                      userSelect: "none",
-                    }}
-                  >
-                    {prompt.length.toLocaleString()}/{promptMaxLength.toLocaleString()}
-                  </div>
-                )}
-
-                <Button
-                  onClick={generate}
-                  disabled={!canGenerate}
-                  variant="outline"
-                  size="sm"
-                  className="border-none bg-[rgba(134, 140, 255,0.25)] text-[rgba(134, 140, 255,0.9)] hover:bg-[rgba(134, 140, 255,0.38)] hover:text-[rgba(134, 140, 255,0.9)] disabled:bg-[rgba(134, 140, 255,0.1)] disabled:text-[rgba(134, 140, 255,0.3)]"
-                >
-                  {submitting ? (
-                    <span style={{
-                      width: "11px", height: "11px", borderRadius: "50%",
-                      border: "2px solid rgba(134, 140, 255,0.25)", borderTopColor: "rgba(134, 140, 255,0.9)",
-                      display: "inline-block", animation: "spin 0.75s linear infinite",
-                    }} />
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" data-icon="inline-start">
-                      <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" />
-                      <path d="m21.854 2.147-10.94 10.939" />
-                    </svg>
-                  )}
-                  {!submitting && (
-                    <KbdGroup data-icon="inline-end" className="gap-0.5">
-                      <Kbd>⌘</Kbd>
-                      <Kbd>↵</Kbd>
-                    </KbdGroup>
-                  )}
-                </Button>
               </div>
-            </div>{/* end bottom row */}
-          </div>
-        </div>
+            </div>
+          </>}
+
+          /* ── A fila esquerda ────────────────────────────────────────
+               A ordem é a da referência, lida da esquerda para a direita:
+               1 anexar, 2 referências, 3 conectores — os três no mesmo
+               grupo de ícones — e a pílula 4, o modo de execução, logo
+               depois. Os números 5 a 8 estão na fila direita. */
+          leading={<>
+            {/* 1 — anexar: a porta única dos 7 slots de referência */}
+            {isVideo && addSlots.length > 1 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="pc-icon-btn" aria-label="Anexar referência" disabled={submitting}>
+                  <IconAttach />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="start" sideOffset={10} className="min-w-[220px]">
+                  {addSlots.map((slot, i) => (
+                    <button
+                      key={`add-${i}`}
+                      type="button"
+                      className="flex h-8 w-full items-center justify-between gap-4 rounded-ms px-2 text-ms-base text-ms-text transition-colors hover:bg-ms-bg-hover"
+                      onClick={() => {
+                        if (slot.kind === "element-add") { setElementPickerOpen(true); return; }
+                        if (slot.mediaKind === "audio") { vidPickTarget.current = slot.target; vidAudioInputRef.current?.click(); return; }
+                        openPicker(slot.target as "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo", slot.mediaKind as "image" | "video");
+                      }}
+                    >
+                      <span className="truncate">{slot.kind === "element-add" ? "Elemento" : rotuloSlot(slot.label).nome}</span>
+                      <span className="shrink-0 tabular-nums text-ms-text-tertiary">{slot.countLeft}</span>
+                    </button>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              /* Um slot só: abre o seletor direto. Menu de um item é
+                 atrito puro. */
+              <ComposerIconButton
+                label={isVideo && addSlots[0] ? `Anexar: ${addSlots[0].kind === "element-add" ? "elemento" : rotuloSlot(addSlots[0].label).nome}` : "Anexar imagem de referência"}
+                disabled={submitting || (isVideo ? addSlots.length === 0 : !imgModel?.supportsImages)}
+                onClick={() => {
+                  const unico = isVideo ? addSlots[0] : null;
+                  if (!unico) { openPicker("refImage", "image"); return; }
+                  if (unico.kind === "element-add") { setElementPickerOpen(true); return; }
+                  if (unico.mediaKind === "audio") { vidPickTarget.current = unico.target; vidAudioInputRef.current?.click(); return; }
+                  openPicker(unico.target as "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo", unico.mediaKind as "image" | "video");
+                }}
+              >
+                <IconAttach />
+              </ComposerIconButton>
+            )}
+
+            {/* 2 — referências: o painel de menções, que já existe */}
+            <ComposerIconButton
+              label="Mencionar uma referência"
+              open={mentionQuery !== null}
+              disabled={submitting || (taggedImages.length === 0 && refImages.length === 0)}
+              onClick={() => {
+                const el = inputRef.current;
+                if (!el) return;
+                const at = el.selectionStart ?? prompt.length;
+                setPrompt(prompt.slice(0, at) + "@" + prompt.slice(at));
+                setMentionQuery("");
+                requestAnimationFrame(() => {
+                  el.focus();
+                  el.setSelectionRange(at + 1, at + 1);
+                });
+              }}
+            >
+              <IconMention />
+            </ComposerIconButton>
+
+            {/* 3 — conectores: os três provedores, com o estado real da chave */}
+            <BotaoConectores aoAbrirAjustes={() => setSettingsOpen(true)} />
+
+            {/* 4 — modo de execução: gerar direto ou confirmar os parâmetros */}
+            <PilulaModoExecucao
+              valor={modoExecucao}
+              disabled={submitting}
+              onChange={(m) => { setModoExecucao(m); gravarModoExecucao(m); }}
+            />
+
+            {/* O contador é nosso, não da referência. Fica na ponta da fila
+                esquerda, onde sobra espaço: entre o ditar e o enviar ele era
+                um buraco de 63px no meio dos três botões que a referência
+                mantém encostados. */}
+            {promptMaxLength !== null && !multiPromptMode && (
+              <div className="pc-counter" data-over={prompt.length > promptMaxLength ? "true" : undefined} aria-hidden>
+                {prompt.length.toLocaleString("pt-BR")}/{promptMaxLength.toLocaleString("pt-BR")}
+              </div>
+            )}
+          </>}
+
+          /* ── A fila direita ─────────────────────────────────────────
+               5 modo agente, 6 melhorar, 7 ditado, 8 gerar — a ordem da
+               referência. Entre a 5 e a 6 entram os três controles que
+               são só nossos (parâmetros, formato do texto e multi), na
+               mesma forma de pílula, porque é onde eles pertencem: são
+               seletores de valor, como a 5. */
+          trailing={<>
+            {/* 5 — modo agente: quem raciocina e quem desenha */}
+            <ModelPill
+              value={modelId}
+              onChange={setModelId}
+              disabled={submitting}
+              padrao={models[0].id}
+              midias={linhasDeMidia}
+              agente={preferredModel}
+              onAgenteChange={setPreferredModel}
+              backend={modelHasProviderChoice(modelId) ? {
+                value: providerId,
+                onChange: (v: string) => setModelProvider(modelId, v as (typeof PROVIDERS)[number]["id"]),
+                options: PROVIDERS.map(p => ({ value: p.id, label: p.label, icon: <ProviderBackendIcon id={p.id} /> })),
+              } : null}
+
+              /* Os três que eram pílula na barra. A referência tem 8
+                 controles e nós tínhamos 11; sob a v2 a fidelidade vence,
+                 e a referência dobra tudo atrás do `Auto`. Continuam
+                 existindo e funcionando, só não ocupam a barra. */
+              parametros={paramFields}
+              formato={{
+                valor: promptTextMode,
+                opcoes: [
+                  { valor: "text", rotulo: "Txt" },
+                  { valor: "json", rotulo: "JSON" },
+                  { valor: "yaml", rotulo: "YAML" },
+                ],
+                onChange: (next: string) => {
+                  if (next === "json" && promptTextMode === "text") {
+                    /* Ao entrar em JSON, formata o que já der para formatar. */
+                    try {
+                      setPrompt(JSON.stringify(JSON.parse(prompt), null, 2));
+                    } catch { /* não era JSON válido — entra assim mesmo */ }
+                  }
+                  setPromptTextMode(next as typeof promptTextMode);
+                },
+              }}
+              multi={{
+                ligado: multiPromptMode,
+                onChange: (v: boolean) => { setMultiPromptMode(v); setExpandedPromptIdx(null); },
+              }}
+            />
+
+            {/* 6 — melhorar: reescreve o prompt, com o texto em streaming */}
+            <ComposerIconButton
+              label={polishState.polishing ? "Interromper a reescrita" : "Melhorar o prompt"}
+              open={polishState.polishing}
+              disabled={submitting || (!polishState.polishing && prompt.trim().length === 0)}
+              onClick={() => (polishState.polishing ? polishState.cancel() : polishState.polish(prompt))}
+            >
+              <IconPolish />
+            </ComposerIconButton>
+
+            {/* Desfazer só existe quando há o que desfazer. */}
+            {polishState.canUndo && !polishState.polishing && (
+              <button
+                type="button"
+                onClick={polishState.undo}
+                className="h-6 rounded-ms-full px-2 text-ms-sm text-ms-text-secondary transition-colors hover:bg-ms-bg-hover"
+              >
+                Desfazer
+              </button>
+            )}
+            {polishState.error && (
+              <span className="truncate text-ms-sm text-ms-text-danger">{polishState.error}</span>
+            )}
+
+            {/* 7 — ditado: a Web Speech API do próprio navegador */}
+            <BotaoDitado
+              disabled={submitting}
+              onTexto={(trecho) => setPrompt(p => (p ? `${p} ${trecho}` : trecho))}
+            />
+          </>}
+        />
       </div>
+
+      {showCreationHome && <CreationSuggestions />}
 
       <style>{GALLERY_CSS}</style>
 
-      {/* ── @ image picker menu ── */}
+      {/* ── O painel de menções — a afordância 2 da barra ────────────────
+           Ele é ancorado no shell do composer e desenhado num portal, porque
+           o `overflow: clip` do shell (o recorte que segura o brilho de 4
+           camadas) cortaria qualquer painel filho. */}
       {atMenuOpen && promptBarRef.current && createPortal(
         <div
           data-at-menu=""
+          className="pcx-mencoes"
           style={{
-            position: "fixed",
             left: promptBarRef.current.getBoundingClientRect().left,
             bottom: Math.max(8, window.innerHeight - promptBarRef.current.getBoundingClientRect().top + 6),
             width: promptBarRef.current.getBoundingClientRect().width,
             maxHeight: `${promptBarRef.current.getBoundingClientRect().top - 16}px`,
-            background: "#0F0F1A",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: "14px",
-            boxShadow: "0 8px 48px rgba(0,0,0,0.75), 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            zIndex: 9999,
-            animation: "dropIn 130ms cubic-bezier(0.16,1,0.3,1)",
           }}
           onMouseDown={e => e.preventDefault()}
         >
-          <div style={{ padding: "6px 12px 4px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0 }}>
-            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>
-              {isVideo ? "Reference assets" : "Gallery images"}
-            </span>
+          <div className="pcx-mencoes-titulo">
+            {isVideo ? "Referências anexadas" : "Imagens do acervo"}
           </div>
-          <div style={{ maxHeight: "280px", overflowY: "auto", padding: "4px", flex: 1, minHeight: 0 }}>
+          <div className="pcx-mencoes-lista">
             {filteredMentions.map((ref, idx) => (
               <button
                 key={ref.id}
+                type="button"
+                className="pcx-mencao"
+                data-ativa={idx === mentionSelIdx ? "true" : undefined}
                 onClick={() => insertMention(ref)}
                 onMouseEnter={() => setMentionSelIdx(idx)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  width: "100%",
-                  padding: "7px 10px",
-                  borderRadius: "9px",
-                  border: "none",
-                  background: idx === mentionSelIdx ? "rgba(1, 181, 116,0.07)" : "transparent",
-                  color: idx === mentionSelIdx ? "#868CFF" : "rgba(255,255,255,0.65)",
-                  fontSize: "13px",
-                  fontFamily: "inherit",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "background 80ms",
-                  letterSpacing: "-0.01em",
-                }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={thumbSrc(ref.objectUrl, snapWidth(128))}
-                  alt=""
-                  style={{ width: "30px", height: "30px", borderRadius: "6px", objectFit: "cover", flexShrink: 0, background: "#171728" }}
-                />
-                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {(ref as any).role} ({(ref as any).label})
+                <img src={thumbSrc(ref.objectUrl, snapWidth(128))} alt="" className="pcx-mencao-thumb" />
+                <span className="pcx-mencao-nome">
+                  {ref.role} ({ref.label})
                 </span>
-
-                {idx === mentionSelIdx && (
-                  <span style={{ marginLeft: "auto", fontSize: "10px", color: "rgba(255,255,255,0.2)", flexShrink: 0 }}>↵</span>
-                )}
+                {idx === mentionSelIdx && <span className="pcx-mencao-enter" aria-hidden>↵</span>}
               </button>
             ))}
           </div>
@@ -4490,12 +4309,13 @@ function GalleryInner() {
         document.body,
       )}
 
-      {/* ── Chip hover preview ── */}
+      {/* ── A prévia do chip, no hover ───────────────────────────────── */}
       {chipPreview && createPortal(
-        /* Outer: positioning only — no animation so transform stays stable */
+        /* A camada de fora só posiciona; sem animação, para o `transform`
+           não brigar com o `translateX(-50%)`. */
         <div
+          className="pcx-chip-previa"
           style={{
-            position: "fixed",
             left: Math.max(110, Math.min(
               chipPreview.rect.left + chipPreview.rect.width / 2,
               window.innerWidth - 110,
@@ -4503,31 +4323,18 @@ function GalleryInner() {
             ...(chipPreview.rect.top > 190
               ? { bottom: window.innerHeight - chipPreview.rect.top + 8 }
               : { top: chipPreview.rect.bottom + 8 }),
-            transform: "translateX(-50%)",
-            zIndex: 99999,
-            pointerEvents: "none",
           }}
         >
-          {/* Inner: animation + scroll so popup never overflows viewport */}
           <div
+            className="pcx-chip-previa-caixa"
             style={{
-              borderRadius: "10px",
-              overflowY: "auto",
-              overflowX: "hidden",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.65), 0 2px 8px rgba(0,0,0,0.4)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              animation: "dropIn 140ms cubic-bezier(0.16,1,0.3,1)",
               maxHeight: chipPreview.rect.top > 190
                 ? `${Math.min(200, chipPreview.rect.top - 16)}px`
                 : `${Math.min(200, window.innerHeight - chipPreview.rect.bottom - 16)}px`,
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={thumbSrc(chipPreview.tag.url, snapWidth(256))}
-              alt=""
-              style={{ display: "block", maxWidth: "200px", maxHeight: "160px", width: "auto", height: "auto", objectFit: "contain" }}
-            />
+            <img src={thumbSrc(chipPreview.tag.url, snapWidth(256))} alt="" className="pcx-chip-previa-img" />
           </div>
         </div>,
         document.body,
@@ -4562,7 +4369,7 @@ function GalleryInner() {
           onClick={() => setRefPreview(null)}
           style={{
             position: "fixed", inset: 0, zIndex: 99000,
-            background: "rgba(0,0,0,0.82)",
+            background: "var(--ms-blackA-10-hex)",
             display: "flex", alignItems: "center", justifyContent: "center",
             animation: "fadeIn 150ms ease",
           }}
@@ -4572,8 +4379,8 @@ function GalleryInner() {
             style={{
               position: "relative",
               maxWidth: "90vw", maxHeight: "90vh",
-              borderRadius: "12px", overflow: "hidden",
-              boxShadow: "0 24px 80px rgba(0,0,0,0.8)",
+              borderRadius: "var(--ms-radius-lg)", overflow: "hidden",
+              boxShadow: "var(--ms-shadow-lg)",
               animation: "dropIn 160ms cubic-bezier(0.16,1,0.3,1)",
             }}
           >
@@ -4597,8 +4404,8 @@ function GalleryInner() {
               style={{
                 position: "absolute", top: "10px", right: "10px",
                 width: "32px", height: "32px", borderRadius: "50%",
-                background: "rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.15)",
-                color: "rgba(255,255,255,0.9)", cursor: "pointer",
+                background: "var(--ms-blackA-7-hex)", border: "none",
+                color: "var(--ms-icon-on-solid)", cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 padding: 0,
               }}
@@ -4612,41 +4419,6 @@ function GalleryInner() {
       )}
 
       {/* Duration picker popover — portal so it escapes overflow/transform ancestors */}
-      {(durPickerOpen || durPickerClosing) && durPickerPos && createPortal(
-        <div
-          onMouseDown={e => e.stopPropagation()}
-          className={durPickerClosing ? "dur-picker-out" : "dur-picker-in"}
-          style={{
-            position: "fixed",
-            left: durPickerPos.left,
-            bottom: durPickerPos.bottom,
-            zIndex: 9200,
-            background: "rgba(18,20,22,0.98)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: "12px",
-            padding: "12px 14px",
-            boxShadow: "0 12px 40px rgba(0,0,0,0.7)",
-            minWidth: "220px",
-            transformOrigin: "bottom left",
-          }}>
-          <p style={{ margin: "0 0 10px", fontSize: "12px", fontWeight: 600, color: "#fff" }}>Duration</p>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 12px", borderRadius: "8px", background: "#171728" }}>
-            <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)", fontVariantNumeric: "tabular-nums", minWidth: "24px" }}>{duration}s</span>
-            <div style={{ width: "1px", height: "14px", background: "#2A2A2A", flexShrink: 0 }} />
-            <input
-              type="range"
-              min={0}
-              max={durations.length - 1}
-              step={1}
-              value={Math.max(0, durations.indexOf(duration))}
-              onChange={e => setDuration(durations[parseInt(e.target.value)])}
-              className="dur-slider"
-              style={{ flex: 1 }}
-            />
-          </div>
-        </div>,
-        document.body,
-      )}
 
       <MediaPickerModal
         open={pickerOpen}
@@ -4692,14 +4464,12 @@ function GalleryInner() {
           alignItems: "center",
           gap: "8px",
           padding: "10px 14px",
-          borderRadius: "12px",
-          background: "rgba(16,18,20,0.97)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          border: "1px solid rgba(255, 138, 138,0.25)",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
-          fontSize: "13px",
-          color: "#ff8a8a",
+          borderRadius: "var(--ms-radius-lg)",
+          background: "var(--ms-bg)",
+          border: "1px solid var(--ms-border-danger)",
+          boxShadow: "var(--ms-shadow-md)",
+          fontSize: "var(--ms-text-md)",
+          color: "var(--ms-text-danger)",
           fontFamily: "inherit",
           letterSpacing: "-0.01em",
           animation: "dropIn 160ms cubic-bezier(0.16,1,0.3,1)",
@@ -4718,20 +4488,10 @@ function GalleryInner() {
 
 export default function GalleryPage() {
   return (
-    <Suspense fallback={<div style={{ flex: 1, background: "#0F0F1A" }} />}>
+    <Suspense fallback={<div style={{ flex: 1, background: "var(--app-v2-bg-page)" }} />}>
       <GalleryInner />
     </Suspense>
   );
-}
-
-// ── CustomDropdown ────────────────────────────────────────────────────────────
-
-interface DropOption {
-  value: string;
-  label: string;
-  group?: string;
-  preview?: React.ReactNode;
-  providerIcon?: React.ReactNode;
 }
 
 // ── Element picker modal ─────────────────────────────────────────────────────
@@ -5046,499 +4806,6 @@ function ElementPickerModal({
   );
 }
 
-function CustomDropdown({
-  value,
-  onChange,
-  disabled,
-  options,
-  icon,
-  showChevron = true,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  disabled?: boolean;
-  options: DropOption[];
-  icon?: React.ReactNode;
-  showChevron?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ left: 0, bottom: 0, minW: 0 });
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const dropRef = useRef<HTMLDivElement>(null);
-
-  const selectedOpt = options.find(o => o.value === value);
-  const label = selectedOpt?.label ?? value;
-  const triggerIcon = selectedOpt?.providerIcon ?? icon;
-
-  const openDrop = () => {
-    if (disabled || !triggerRef.current) return;
-    const r = triggerRef.current.getBoundingClientRect();
-    setPos({ left: r.left, bottom: window.innerHeight - r.top + 6, minW: r.width });
-    setOpen(true);
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        !triggerRef.current?.contains(e.target as Node) &&
-        !dropRef.current?.contains(e.target as Node)
-      ) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  // Group options by group field
-  const groups = options.reduce<Record<string, DropOption[]>>((acc, o) => {
-    const g = o.group ?? "";
-    (acc[g] ??= []).push(o);
-    return acc;
-  }, {});
-  const groupKeys = Object.keys(groups);
-  const hasGroups = groupKeys.some(k => k !== "");
-
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        onClick={() => open ? setOpen(false) : openDrop()}
-        disabled={disabled}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          height: "36px",
-          padding: "0 12px",
-          borderRadius: "8px",
-          border: open
-            ? "1px solid rgba(255,255,255,0.18)"
-            : "1px solid rgba(255,255,255,0.1)",
-          background: open
-            ? "rgba(255,255,255,0.08)"
-            : "rgba(255,255,255,0.05)",
-          flexShrink: 0,
-          cursor: disabled ? "not-allowed" : "pointer",
-          fontFamily: "inherit",
-          transition: "border-color 140ms, background 140ms",
-          userSelect: "none",
-        }}
-        onMouseEnter={e => {
-          if (!disabled && !open) {
-            e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)";
-            e.currentTarget.style.background = "rgba(255,255,255,0.07)";
-          }
-        }}
-        onMouseLeave={e => {
-          if (!open) {
-            e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
-            e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-          }
-        }}
-      >
-        {triggerIcon && (
-          <span style={{ display: "flex", alignItems: "center", color: selectedOpt?.providerIcon ? "#868CFF" : "white", flexShrink: 0 }}>
-            {triggerIcon}
-          </span>
-        )}
-        <span style={{ fontSize: "13px", color: "#ffffff", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>
-          {label}
-        </span>
-        {showChevron && (
-          <svg
-            width="10" height="10" viewBox="0 0 24 24" fill="none"
-            stroke="rgba(255,255,255,0.35)" strokeWidth="2.5" strokeLinecap="round"
-            style={{ flexShrink: 0, transition: "transform 140ms", transform: open ? "rotate(180deg)" : "none" }}
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        )}
-      </button>
-
-      {open && createPortal(
-        <div
-          ref={dropRef}
-          data-custom-dropdown-portal=""
-          style={{
-            position: "fixed",
-            left: pos.left,
-            bottom: pos.bottom,
-            minWidth: Math.max(pos.minW, 160),
-            background: "#0F0F1A",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: "14px",
-            boxShadow: "0 8px 48px rgba(0,0,0,0.75), 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
-            overflow: "hidden",
-            zIndex: 9999,
-            animation: "dropIn 130ms cubic-bezier(0.16,1,0.3,1)",
-          }}
-        >
-          <div style={{ padding: "5px", maxHeight: "300px", overflowY: "auto" }}>
-            {hasGroups ? (
-              groupKeys.map((gk, gi) => (
-                <div key={gk}>
-                  {gi > 0 && (
-                    <div style={{ height: "1px", background: "rgba(255,255,255,0.06)", margin: "4px 8px" }} />
-                  )}
-                  {gk && (
-                    <div style={{
-                      padding: "5px 10px 3px",
-                      fontSize: "10px",
-                      color: "rgba(255,255,255,0.22)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.09em",
-                      fontWeight: 500,
-                    }}>
-                      {gk}
-                    </div>
-                  )}
-                  {groups[gk].map(opt => (
-                    <DropItem
-                      key={opt.value}
-                      label={opt.label}
-                      active={opt.value === value}
-                      onClick={() => { onChange(opt.value); setOpen(false); }}
-                      preview={opt.preview}
-                      providerIcon={opt.providerIcon}
-                    />
-                  ))}
-                </div>
-              ))
-            ) : (
-              options.map(opt => (
-                <DropItem
-                  key={opt.value}
-                  label={opt.label}
-                  active={opt.value === value}
-                  onClick={() => { onChange(opt.value); setOpen(false); }}
-                  preview={opt.preview}
-                  providerIcon={opt.providerIcon}
-                />
-              ))
-            )}
-          </div>
-        </div>,
-        document.body,
-      )}
-    </>
-  );
-}
-
-// ── AspectRatioDropdown ─────────────────────────────────────────────────────────
-// Like CustomDropdown, but for Azure gpt-image-2 it also offers a "Custom…" entry
-// that opens an inline width/height subpanel (Azure's popular-sizes + manual entry).
-
-function AspectRatioDropdown({
-  value,
-  onChange,
-  disabled,
-  ratios,
-  allowCustom,
-  customWidth,
-  customHeight,
-  onApplyCustom,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  disabled?: boolean;
-  ratios: string[];
-  allowCustom: boolean;
-  customWidth?: number;
-  customHeight?: number;
-  onApplyCustom: (w: number, h: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"list" | "custom">("list");
-  const [pos, setPos] = useState({ left: 0, bottom: 0, minW: 0 });
-  const [widthDraft, setWidthDraft] = useState(1024);
-  const [heightDraft, setHeightDraft] = useState(1024);
-  const [customError, setCustomError] = useState<string | null>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const dropRef = useRef<HTMLDivElement>(null);
-
-  const label = value === "custom" ? `${customWidth ?? 1024}×${customHeight ?? 1024}` : value;
-
-  const openDrop = () => {
-    if (disabled || !triggerRef.current) return;
-    const r = triggerRef.current.getBoundingClientRect();
-    setPos({ left: r.left, bottom: window.innerHeight - r.top + 6, minW: r.width });
-    setView("list");
-    setOpen(true);
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        !triggerRef.current?.contains(e.target as Node) &&
-        !dropRef.current?.contains(e.target as Node)
-      ) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    minWidth: 0,
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: "8px",
-    padding: "6px 8px",
-    fontSize: "12px",
-    color: "#ffffff",
-    fontFamily: "inherit",
-  };
-
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        onClick={() => open ? setOpen(false) : openDrop()}
-        disabled={disabled}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          height: "36px",
-          padding: "0 12px",
-          borderRadius: "8px",
-          border: open ? "1px solid rgba(255,255,255,0.18)" : "1px solid rgba(255,255,255,0.1)",
-          background: open ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)",
-          flexShrink: 0,
-          cursor: disabled ? "not-allowed" : "pointer",
-          fontFamily: "inherit",
-          transition: "border-color 140ms, background 140ms",
-          userSelect: "none",
-        }}
-        onMouseEnter={e => {
-          if (!disabled && !open) {
-            e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)";
-            e.currentTarget.style.background = "rgba(255,255,255,0.07)";
-          }
-        }}
-        onMouseLeave={e => {
-          if (!open) {
-            e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
-            e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-          }
-        }}
-      >
-        {value !== "custom" && (
-          <span style={{ display: "flex", alignItems: "center", color: "white", flexShrink: 0 }}>
-            <RatioTriggerPreview ratio={value} />
-          </span>
-        )}
-        <span style={{ fontSize: "13px", color: "#ffffff", whiteSpace: "nowrap", letterSpacing: "-0.01em", fontVariantNumeric: "tabular-nums" }}>
-          {label}
-        </span>
-        <svg
-          width="10" height="10" viewBox="0 0 24 24" fill="none"
-          stroke="rgba(255,255,255,0.35)" strokeWidth="2.5" strokeLinecap="round"
-          style={{ flexShrink: 0, transition: "transform 140ms", transform: open ? "rotate(180deg)" : "none" }}
-        >
-          <path d="M6 9l6 6 6-6" />
-        </svg>
-      </button>
-
-      {open && createPortal(
-        <div
-          ref={dropRef}
-          data-custom-dropdown-portal=""
-          style={{
-            position: "fixed",
-            left: pos.left,
-            bottom: pos.bottom,
-            minWidth: view === "custom" ? 240 : Math.max(pos.minW, 160),
-            background: "#0F0F1A",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: "14px",
-            boxShadow: "0 8px 48px rgba(0,0,0,0.75), 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
-            overflow: "hidden",
-            zIndex: 9999,
-            animation: "dropIn 130ms cubic-bezier(0.16,1,0.3,1)",
-          }}
-        >
-          {view === "list" ? (
-            <div style={{ padding: "5px", maxHeight: "300px", overflowY: "auto" }}>
-              {ratios.map(r => (
-                <DropItem
-                  key={r}
-                  label={r}
-                  active={r === value}
-                  onClick={() => { onChange(r); setOpen(false); }}
-                  preview={<RatioPreview ratio={r} />}
-                />
-              ))}
-              {allowCustom && (
-                <>
-                  <div style={{ height: "1px", background: "rgba(255,255,255,0.06)", margin: "4px 8px" }} />
-                  <DropItem
-                    label="Custom…"
-                    active={value === "custom"}
-                    onClick={() => {
-                      setWidthDraft(customWidth ?? 1024);
-                      setHeightDraft(customHeight ?? 1024);
-                      setCustomError(null);
-                      setView("custom");
-                    }}
-                  />
-                </>
-              )}
-            </div>
-          ) : (
-            <div style={{ padding: "10px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                <button
-                  onClick={() => setView("list")}
-                  style={{ display: "flex", alignItems: "center", gap: "4px", background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: "11px", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
-                >
-                  <span aria-hidden>‹</span> Back
-                </button>
-                <span style={{ fontSize: "9px", color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600 }}>
-                  Custom size
-                </span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
-                <input
-                  type="number"
-                  value={widthDraft}
-                  onChange={e => setWidthDraft(Number(e.target.value))}
-                  placeholder="Width"
-                  style={inputStyle}
-                />
-                <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "11px", flexShrink: 0 }}>×</span>
-                <input
-                  type="number"
-                  value={heightDraft}
-                  onChange={e => setHeightDraft(Number(e.target.value))}
-                  placeholder="Height"
-                  style={inputStyle}
-                />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px", marginBottom: "8px" }}>
-                {AZURE_POPULAR_SIZES.map(p => (
-                  <button
-                    key={p.label}
-                    onClick={() => { setWidthDraft(p.width); setHeightDraft(p.height); setCustomError(null); }}
-                    style={{
-                      textAlign: "left",
-                      fontSize: "10px",
-                      color: "rgba(255,255,255,0.55)",
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.06)",
-                      borderRadius: "6px",
-                      padding: "5px 7px",
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.background = "rgba(255,255,255,0.07)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.55)"; e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-              {customError && (
-                <div style={{ fontSize: "10px", color: "#ff8a8a", marginBottom: "8px", lineHeight: 1.4 }}>
-                  {customError}
-                </div>
-              )}
-              <button
-                onClick={() => {
-                  const err = validateAzureCustomSize(widthDraft, heightDraft);
-                  if (err) { setCustomError(err); return; }
-                  onApplyCustom(widthDraft, heightDraft);
-                  setOpen(false);
-                }}
-                style={{
-                  width: "100%",
-                  textAlign: "center",
-                  fontSize: "12px",
-                  fontWeight: 500,
-                  color: "#fff",
-                  background: "rgba(255,255,255,0.1)",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "7px",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.16)")}
-                onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
-              >
-                Apply
-              </button>
-            </div>
-          )}
-        </div>,
-        document.body,
-      )}
-    </>
-  );
-}
-
-function DropItem({ label, active, onClick, preview, providerIcon }: { label: string; active: boolean; onClick: () => void; preview?: React.ReactNode; providerIcon?: React.ReactNode }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        width: "100%",
-        padding: "7px 10px",
-        borderRadius: "9px",
-        border: "none",
-        background: active
-          ? "rgba(255,255,255,0.09)"
-          : hovered ? "rgba(255,255,255,0.06)" : "transparent",
-        color: active ? "#ffffff" : hovered ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.55)",
-        fontSize: "13px",
-        fontWeight: active ? 500 : 400,
-        cursor: "pointer",
-        textAlign: "left",
-        transition: "background 100ms, color 100ms",
-        fontFamily: "inherit",
-        letterSpacing: "-0.01em",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {providerIcon && (
-        <span style={{ display: "flex", alignItems: "center", color: "#868CFF", flexShrink: 0, opacity: active ? 1 : 0.7 }}>
-          {providerIcon}
-        </span>
-      )}
-      {preview}
-      {label}
-    </button>
-  );
-}
-
-function RatioPreview({ ratio }: { ratio: string }) {
-  const [ws, hs] = ratio.split(":");
-  const w = parseFloat(ws), h = parseFloat(hs);
-  if (!w || !h) return null;
-  const maxW = 36, maxH = 22;
-  let rw = maxW, rh = (h / w) * maxW;
-  if (rh > maxH) { rh = maxH; rw = (w / h) * maxH; }
-  return (
-    <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "44px", flexShrink: 0 }}>
-      <span style={{
-        display: "inline-block",
-        width: `${Math.round(rw)}px`,
-        height: `${Math.round(rh)}px`,
-        border: "1.5px solid rgba(255,255,255,0.75)",
-        borderRadius: "5px",
-        flexShrink: 0,
-      }} />
-    </span>
-  );
-}
-
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
 /** Backend brand mark for the Kie.ai/Azure Foundry/Codex CLI picker — distinct from ProviderIcon's model-brand icons. */
@@ -5620,7 +4887,7 @@ function ProviderIcon({ provider }: { provider: string }) {
           </g>
           <defs>
             <clipPath id="seedance-clip">
-              <rect width="16" height="14" fill="white" />
+              <rect width="16" height="14" fill="var(--app-v2-text-primary)" />
             </clipPath>
           </defs>
         </svg>
@@ -5640,41 +4907,6 @@ function ProviderIcon({ provider }: { provider: string }) {
     default:
       return null;
   }
-}
-
-function RatioTriggerPreview({ ratio }: { ratio: string }) {
-  const [ws, hs] = ratio.split(":");
-  const w = parseFloat(ws), h = parseFloat(hs);
-  if (!w || !h) return null;
-  const maxW = 16, maxH = 12;
-  let rw = maxW, rh = (h / w) * maxW;
-  if (rh > maxH) { rh = maxH; rw = (w / h) * maxH; }
-  return (
-    <span style={{
-      display: "inline-block",
-      width: `${Math.round(rw)}px`,
-      height: `${Math.round(rh)}px`,
-      border: "1.5px solid currentColor",
-      borderRadius: "2px",
-      flexShrink: 0,
-    }} />
-  );
-}
-
-function DiamondIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-      <path d="M9.7832 0.499878C10.3232 0.499878 10.6767 0.496482 11.0146 0.578979C11.1617 0.61491 11.3057 0.662985 11.4443 0.722534C11.7645 0.860077 12.0366 1.07387 12.4492 1.39148C13.1566 1.93605 13.7165 2.36662 14.127 2.75183C14.5421 3.14152 14.8482 3.52421 15.0088 3.99109C15.1407 4.37448 15.1904 4.77934 15.1543 5.18152C15.11 5.67308 14.9012 6.11252 14.5889 6.57898C14.2806 7.0392 13.8372 7.57315 13.2793 8.24695L10.6172 11.4628C10.115 12.0692 9.7038 12.5675 9.32715 12.9071C8.93826 13.2577 8.52095 13.4998 7.99902 13.4999C7.47706 13.4998 7.05981 13.2577 6.6709 12.9071C6.29425 12.5675 5.88301 12.0692 5.38086 11.4628L2.71875 8.24695C2.16068 7.573 1.71649 7.03928 1.4082 6.57898C1.09583 6.11253 0.88806 5.67308 0.84375 5.18152C0.807575 4.77927 0.857447 4.37442 0.989258 3.99109C1.14984 3.52425 1.45592 3.14152 1.87109 2.75183C2.28153 2.36662 2.84142 1.93606 3.54883 1.39148C3.96144 1.07384 4.23354 0.860066 4.55371 0.722534C4.69233 0.663015 4.83627 0.614905 4.9834 0.578979C5.32129 0.496532 5.67406 0.499877 6.21387 0.499878H9.7832ZM6.21387 1.49988C5.62618 1.49988 5.41459 1.50338 5.2207 1.55066C5.12692 1.57356 5.03539 1.60407 4.94824 1.64148C4.77007 1.71805 4.60994 1.83744 4.15918 2.18445C3.43571 2.74139 2.92207 3.13743 2.55566 3.48132C2.19409 3.82071 2.01931 4.06993 1.93457 4.31628C1.84817 4.56755 1.81638 4.83083 1.83984 5.09167C1.86269 5.34527 1.97017 5.62051 2.23926 6.02234C2.51258 6.43044 2.91688 6.91921 3.48828 7.60925L6.15039 10.8251C6.67274 11.4559 7.03123 11.8858 7.34082 12.1649C7.63783 12.4326 7.8253 12.4998 7.99902 12.4999C8.17274 12.4998 8.36021 12.4326 8.65723 12.1649C8.96678 11.8858 9.32443 11.4558 9.84668 10.8251L12.5098 7.60925C13.0811 6.91925 13.4855 6.43042 13.7588 6.02234C14.0278 5.62058 14.1353 5.34525 14.1582 5.09167C14.1816 4.83081 14.1498 4.56744 14.0635 4.31628C13.9788 4.06995 13.8039 3.82068 13.4424 3.48132C13.076 3.13744 12.5623 2.74138 11.8389 2.18445C11.3881 1.83744 11.228 1.71805 11.0498 1.64148C10.9627 1.60406 10.8712 1.57359 10.7773 1.55066C10.5834 1.50333 10.3713 1.49988 9.7832 1.49988H6.21387ZM9.33203 4.16687C9.6081 4.16695 9.83203 4.39078 9.83203 4.66687C9.83188 4.94283 9.60801 5.16679 9.33203 5.16687H6.66504C6.38915 5.16669 6.16519 4.94277 6.16504 4.66687C6.16504 4.39084 6.38905 4.16705 6.66504 4.16687H9.33203Z" />
-    </svg>
-  );
-}
-
-function AspectIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-    </svg>
-  );
 }
 
 // ── Gallery card ──────────────────────────────────────────────────────────────
@@ -6741,100 +5973,14 @@ function Lightbox({ item, thumbUrl, onClose, onCopyPrompt, onPrev, onNext }: { i
   );
 }
 
-// ── EmptyState ────────────────────────────────────────────────────────────────
-
-const EMPTY_VIDEOS = [
-  "https://pub-2aecfc42d3474240b32b9438bf2e3905.r2.dev/videos/1768127686656-deb8718b-abdc-4482-8439-a86e3dbb9d48.mp4",
-  "https://pub-2aecfc42d3474240b32b9438bf2e3905.r2.dev/videos/1768127930665-06888ffc-490f-4896-ba17-80e0de76c091.mp4",
-  "https://pub-2aecfc42d3474240b32b9438bf2e3905.r2.dev/videos/1765097494972-45b681a4-b32a-4c7d-ab7a-267f40d5ccb8.mp4",
-  "https://pub-2aecfc42d3474240b32b9438bf2e3905.r2.dev/videos/1768078715583-0108%20(1)(9).mp4",
-];
-
-const VIDEO_FAN_CONFIGS = [
-  { rot: "-10deg", rounded: false, mr: "clamp(-36px,-1.5vw,-16px)", z: 4 },
-  { rot: "4deg",   rounded: false, mr: "clamp(-36px,-1.5vw,-16px)", z: 3 },
-  { rot: "180deg", rounded: true,  mr: "clamp(-36px,-1.5vw,-16px)", z: 2 },
-  { rot: "-4deg",  rounded: false, mr: "0",                         z: 1 },
-];
-
-function LoopingVideo({ src }: { src: string }) {
-  const videoRef = React.useRef<HTMLVideoElement>(null);
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const [playing, setPlaying] = React.useState(false);
-
-  React.useEffect(() => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) return;
-
-    const captureFrame = () => {
-      const ctx = canvas.getContext("2d");
-      if (!ctx || !video.videoWidth) return;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    };
-
-    const onPlaying = () => setPlaying(true);
-
-    video.addEventListener("loadeddata", captureFrame);
-    video.addEventListener("playing", onPlaying);
-    return () => {
-      video.removeEventListener("loadeddata", captureFrame);
-      video.removeEventListener("playing", onPlaying);
-    };
-  }, []);
-
-  return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: playing ? 0 : 1, transition: "opacity 0.4s ease" }} />
-      <video ref={videoRef} src={src} autoPlay loop muted playsInline preload="auto" style={{ objectFit: "cover", width: "100%", height: "100%", display: "block", pointerEvents: "none" }} />
-    </div>
-  );
-}
-
-function VideoFan({ blur }: { blur?: boolean }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", position: blur ? "absolute" : undefined, left: blur ? "50%" : undefined, top: blur ? 0 : undefined, transform: blur ? "translateX(-50%)" : undefined, filter: blur ? "blur(32px)" : undefined, opacity: blur ? 0.4 : 1 }}>
-      {VIDEO_FAN_CONFIGS.map((c, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: c.mr, zIndex: c.z }}>
-          <div style={{ transform: `rotate(${c.rot})${c.rounded ? " scaleY(-1)" : ""}` }}>
-            <div style={{ position: "relative", overflow: "hidden", width: "clamp(64px,min(12vw,16vh),172px)", height: "clamp(64px,min(12vw,16vh),172px)", borderRadius: c.rounded ? "50%" : "12px", border: "3px solid rgba(134, 140, 255,0.75)", boxShadow: "0 0 14px rgba(134, 140, 255,0.35), 0 0 4px rgba(134, 140, 255,0.2)" }}>
-              <LoopingVideo src={EMPTY_VIDEOS[i]} />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function EmptyState({ tab }: { tab: Tab }) {
-  if (tab === "videos") {
-    return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "320px" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "clamp(12px,2.5vh,32px)", alignItems: "center", width: "100%", position: "relative" }}>
-          <VideoFan blur />
-          <VideoFan />
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "320px", gap: "10px" }}>
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#262640" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-        <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></>
-      </svg>
-      <p style={{ color: "#3A3A38", fontSize: "13px" }}>No images yet</p>
-      <p style={{ color: "#262640", fontSize: "11px" }}>Use the prompt below to generate your first image</p>
-    </div>
-  );
-}
 
 // ── CSS ───────────────────────────────────────────────────────────────────────
 
 const GALLERY_CSS = `
-  [data-prompt-input]::placeholder { color: rgba(255,255,255,0.3); }
+  /* O campo do composer agora carrega o atributo data-prompt-input (é por ele
+     que o menu de menções reconhece o campo). Com o branco a 30% que estava
+     aqui, o placeholder ficava branco sobre branco — invisível. */
+  [data-prompt-input]::placeholder { color: var(--ms-text-placeholder); }
   .picker-scroll { scrollbar-width: none; }
   .picker-scroll::-webkit-scrollbar { display: none; }
   .seed-input::-webkit-inner-spin-button, .seed-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -6864,11 +6010,11 @@ const GALLERY_CSS = `
     width: 100%;
     background: linear-gradient(
       90deg,
-      #262640 0px,
-      #262640 200px,
-      #3a3a40 350px,
-      #262640 500px,
-      #262640 700px
+      #EBEBEB 0px,
+      #EBEBEB 200px,
+      #F7F7F7 350px,
+      #EBEBEB 500px,
+      #EBEBEB 700px
     );
     background-size: 800px 100%;
     animation: shimmer 1.6s ease-in-out infinite;
@@ -6884,7 +6030,7 @@ const GALLERY_CSS = `
     width: 90px;
     height: 3px;
     border-radius: 2px;
-    background: rgba(255,255,255,0.14);
+    background: var(--ms-border-subtle);
     outline: none;
     cursor: pointer;
   }
@@ -6894,7 +6040,7 @@ const GALLERY_CSS = `
     width: 13px;
     height: 13px;
     border-radius: 50%;
-    background: #ffffff;
+    background: var(--brand-violet);
     cursor: pointer;
     transition: transform 120ms;
   }
@@ -6903,20 +6049,12 @@ const GALLERY_CSS = `
     width: 13px;
     height: 13px;
     border-radius: 50%;
-    background: #ffffff;
+    background: var(--brand-violet);
     cursor: pointer;
     border: none;
   }
-  @keyframes durPickerIn {
-    from { opacity: 0; transform: translateY(6px) scale(0.95); }
-    to   { opacity: 1; transform: translateY(0)   scale(1);    }
   }
-  @keyframes durPickerOut {
-    from { opacity: 1; transform: translateY(0)   scale(1);    }
-    to   { opacity: 0; transform: translateY(6px) scale(0.95); }
   }
-  .dur-picker-in  { animation: durPickerIn  170ms cubic-bezier(0.16,1,0.3,1) both; }
-  .dur-picker-out { animation: durPickerOut 160ms cubic-bezier(0.4,0,1,1)    both; }
   .dur-slider {
     -webkit-appearance: none;
     appearance: none;
@@ -6953,7 +6091,7 @@ const GALLERY_CSS = `
     position: relative;
     overflow: hidden;
     cursor: pointer;
-    background: #262640;
+    background: #EBEBEB;
     width: 100%;
     height: 100%;
     animation: galleryItemIn 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -7046,7 +6184,7 @@ const GALLERY_CSS = `
   }
   .gallery-shimmer {
     position: absolute; inset: 0;
-    background: linear-gradient(90deg, #262640 25%, #2a2a2e 50%, #262640 75%);
+    background: linear-gradient(90deg, #EBEBEB 25%, #F7F7F7 50%, #EBEBEB 75%);
     background-size: 800px 100%;
     animation: shimmer 1.6s infinite linear;
   }

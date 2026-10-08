@@ -2,7 +2,10 @@ import { NextRequest } from "next/server";
 import { jobStore, type JobResult } from "@/lib/jobStore";
 import { jobEvents } from "@/lib/jobEvents";
 import { resumeKieJob } from "@/lib/kieJobPoller";
+import { resumeHiggsfieldJob } from "@/lib/higgsfieldJobPoller";
+import { GUEST_USER_ID } from "@/lib/guestMode";
 import * as guestDb from "@/lib/guest/db";
+import { inferGenerationErrorCode } from "@/lib/generationError";
 
 const SSE_HEADERS = {
   "Content-Type": "text/event-stream",
@@ -10,7 +13,7 @@ const SSE_HEADERS = {
   "Connection": "keep-alive",
 };
 
-const TIMEOUT_MS = 12 * 60 * 1000; // 12 min hard cap
+const TIMEOUT_MS = 30 * 60 * 1000;
 
 function immediate(payload: JobResult): Response {
   return new Response(`data: ${JSON.stringify(payload)}\n\n`, { headers: SSE_HEADERS });
@@ -18,15 +21,33 @@ function immediate(payload: JobResult): Response {
 
 function recoverJob(taskId: string): JobResult | null {
   const gen = guestDb.recoverJob(taskId);
+  if (!gen || gen.user_id !== GUEST_USER_ID) return null;
   if (gen?.status === "done") {
     return gen.video_url
-      ? { status: "done", videoUrl: gen.video_url }
-      : { status: "done", imageUrl: gen.image_url ?? undefined, imageUrls: gen.image_urls ?? undefined };
+      ? { status: "done", videoUrl: gen.video_url, userId: GUEST_USER_ID }
+      : { status: "done", imageUrl: gen.image_url ?? undefined, imageUrls: gen.image_urls ?? undefined, userId: GUEST_USER_ID };
   }
   if (gen?.status === "error") {
-    return { status: "error", error: gen.error_msg ?? "Generation failed" };
+    const error = gen.error_msg ?? "Generation failed";
+    return { status: "error", error, errorCode: inferGenerationErrorCode(error), userId: GUEST_USER_ID };
+  }
+  if (gen.status === "pending") {
+    return {
+      status: "pending",
+      type: "video",
+      userId: GUEST_USER_ID,
+      provider: gen.model?.startsWith("higgsfield-") ? "higgsfield" : "kie",
+    };
   }
   return null;
+}
+
+function resumePending(taskId: string, result: Extract<JobResult, { status: "pending" }>): void {
+  if (result.provider === "higgsfield") {
+    resumeHiggsfieldJob(taskId, result.statusUrl, GUEST_USER_ID);
+  } else if (!taskId.startsWith("azure-")) {
+    resumeKieJob(taskId, result.type === "video" ? "video" : "image");
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -35,7 +56,15 @@ export async function GET(req: NextRequest) {
 
   // Already settled in jobStore — respond immediately, no stream needed
   const existing = jobStore.get(taskId);
+  if (existing?.userId && existing.userId !== GUEST_USER_ID) {
+    return immediate({ status: "error", error: "Job not found", userId: GUEST_USER_ID });
+  }
   if (existing && existing.status !== "pending") {
+    if (existing.status === "error" && !existing.errorCode) {
+      const enriched = { ...existing, errorCode: inferGenerationErrorCode(existing.error) };
+      jobStore.set(taskId, enriched);
+      return immediate(enriched);
+    }
     return immediate(existing);
   }
 
@@ -43,16 +72,15 @@ export async function GET(req: NextRequest) {
     const recovered = recoverJob(taskId);
     if (recovered) {
       jobStore.set(taskId, recovered);
-      return immediate(recovered);
+      if (recovered.status !== "pending") return immediate(recovered);
     }
     // No DB record either — truly not found
-    return immediate({ status: "error", error: "Job not found" });
+    if (!recovered) return immediate({ status: "error", error: "Job not found", userId: GUEST_USER_ID });
   }
 
-  // Restart the kie.ai poller if a server restart lost it.
-  if (!taskId.startsWith("azure-")) {
-    resumeKieJob(taskId, existing.type === "video" ? "video" : "image");
-  }
+  const pending = jobStore.get(taskId);
+  if (!pending || pending.status !== "pending") return immediate({ status: "error", error: "Job not found" });
+  resumePending(taskId, pending);
 
   // Job is pending — open an SSE stream and wait for the poller/callback to fire
   const stream = new ReadableStream({

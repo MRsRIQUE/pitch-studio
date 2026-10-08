@@ -1,0 +1,823 @@
+/* ============================================================
+   ESTRUTURAR A IDEIA
+
+   Duas colunas fixas: a conversa à esquerda, o artefato à direita. É a
+   repartição que separa esta tela do `/chat` — lá a resposta É o produto
+   e ocupa a largura toda; aqui a resposta é o caminho e o produto mora
+   ao lado, sempre visível, sempre o mais recente.
+
+   A coluna do artefato tem 460px. Medido a 1920×956: sobram 419px para o
+   cartão de cena e 389px para a caixa do prompt, onde um prompt de cena
+   típico (60 caracteres) fecha em 2 linhas de 19px — 39px de altura. É a
+   largura em que o prompt ainda se lê como frase; mais estreito, o cartão
+   vira um poço de texto.
+
+   Medidas e tokens são os da casa (`--ms-*`, `--app-v2-*`); o hover de
+   marca usa `--hover-brand*`, que já vira lilás sozinho no escuro.
+   ============================================================ */
+
+.est-tela {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  background: var(--app-v2-bg-page);
+  color: var(--app-v2-text-primary);
+}
+
+/* ── Coluna da conversa ─────────────────────────────────────── */
+
+.est-conversa {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.est-cabecalho {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 56px;
+  padding: 0 24px;
+}
+
+.est-cabecalho h1 {
+  margin: 0;
+  font-size: var(--ms-text-xl);
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--ms-text);
+}
+
+.est-cabecalho__dica {
+  margin: 0;
+  font-size: var(--ms-text-base);
+  line-height: 20px;
+  color: var(--app-v2-text-tertiary);
+}
+
+.est-mensagens {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 24px 16px;
+}
+
+.est-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.est-msg {
+  min-width: 0;
+  font-size: var(--ms-text-lg);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.est-msg--usuario {
+  align-self: flex-end;
+  max-width: 80%;
+  padding: 12px 16px;
+  border-radius: var(--ms-radius-xl);
+  background: var(--app-v2-bg-component);
+}
+
+.est-msg--assistente {
+  align-self: flex-start;
+  width: 100%;
+}
+
+.est-msg__erro {
+  margin-top: 6px;
+  font-size: var(--ms-text-base);
+  line-height: 20px;
+  color: var(--ms-text-danger);
+}
+
+/* Três pontos enquanto o modelo pensa. É o único movimento da tela. */
+.est-pensando {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  height: 20px;
+}
+
+.est-pensando span {
+  width: 4px;
+  height: 4px;
+  border-radius: var(--ms-radius-full);
+  background: var(--app-v2-text-tertiary);
+  animation: est-pulso 1.2s ease-in-out infinite;
+}
+
+.est-pensando span:nth-child(2) { animation-delay: .15s; }
+.est-pensando span:nth-child(3) { animation-delay: .3s; }
+
+@keyframes est-pulso {
+  0%, 100% { opacity: .25; }
+  50% { opacity: 1; }
+}
+
+/* Partidas sugeridas, na conversa vazia. */
+.est-partidas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding-top: 12px;
+}
+
+.est-partida {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--app-v2-border-subtle);
+  border-radius: var(--ms-radius-lg);
+  background: var(--app-v2-bg-surface);
+  font: inherit;
+  font-size: var(--ms-text-md);
+  line-height: 20px;
+  color: var(--ms-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+
+.est-partida:hover {
+  border-color: var(--hover-brand-soft);
+  color: var(--hover-brand);
+  background: var(--hover-brand-wash);
+}
+
+.est-composer {
+  flex-shrink: 0;
+  padding: 0 24px 20px;
+}
+
+.est-composer__caixa {
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+/* ── Coluna do artefato ─────────────────────────────────────── */
+
+.est-painel {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 460px;
+  min-height: 0;
+  border-left: 1px solid var(--app-v2-border-subtle);
+  background: var(--app-v2-bg-surface);
+}
+
+.est-painel__topo {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 56px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--app-v2-border-subtle);
+}
+
+.est-painel__topo h2 {
+  margin: 0;
+  font-size: var(--ms-text-md);
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--ms-text);
+}
+
+.est-painel__contagem {
+  font-size: var(--ms-text-base);
+  line-height: 20px;
+  color: var(--app-v2-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.est-painel__corpo {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.est-painel__vazio {
+  margin: 0;
+  font-size: var(--ms-text-md);
+  line-height: 20px;
+  color: var(--app-v2-text-tertiary);
+}
+
+.est-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.est-bloco__rotulo {
+  font-size: var(--ms-text-sm);
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--app-v2-text-tertiary);
+}
+
+.est-bloco__valor {
+  margin: 0;
+  font-size: var(--ms-text-md);
+  line-height: 21px;
+  color: var(--ms-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.est-campo {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-md);
+  background: var(--ms-bg);
+  font: inherit;
+  font-size: var(--ms-text-md);
+  line-height: 21px;
+  color: var(--ms-text);
+  resize: vertical;
+}
+
+.est-campo:focus-visible {
+  outline: 2px solid var(--ms-ring);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+/* ── Cartão de cena ─────────────────────────────────────────── */
+
+.est-cena {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--app-v2-border-subtle);
+  border-radius: var(--ms-radius-xl);
+  background: var(--ms-bg-component);
+  transition: border-color .15s ease;
+}
+
+.est-cena:hover,
+.est-cena:focus-within {
+  border-color: var(--hover-brand-soft);
+}
+
+.est-cena__topo {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.est-cena__n {
+  flex-shrink: 0;
+  font-size: var(--ms-text-base);
+  line-height: 20px;
+  color: var(--app-v2-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.est-cena__titulo {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: var(--ms-text-lg);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ms-text);
+}
+
+.est-cena:hover .est-cena__titulo {
+  color: var(--hover-brand);
+}
+
+.est-cena__descricao {
+  margin: 0;
+  font-size: var(--ms-text-base);
+  line-height: 20px;
+  color: var(--app-v2-text-secondary);
+}
+
+/* As pílulas de parâmetro. Cada uma mostra um valor REAL: id de modelo
+   de `lib/modelConfig.ts` e proporção que aquele modelo aceita. Não há
+   pílula de custo — não temos preço por modelo, e um número aqui seria
+   inventado. */
+.est-cena__params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.est-param {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--ms-radius-full);
+  background: var(--app-v2-bg-surface-active);
+  font-size: var(--ms-text-sm);
+  line-height: 16px;
+  color: var(--app-v2-text-secondary);
+}
+
+.est-param--video {
+  color: var(--ms-text);
+}
+
+.est-cena__prompt {
+  margin: 0;
+  padding: 10px;
+  border-radius: var(--ms-radius-md);
+  background: var(--app-v2-bg-surface);
+  font-size: var(--ms-text-base);
+  line-height: 19px;
+  color: var(--app-v2-text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.est-cena__acoes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Perguntas em aberto e consertos ────────────────────────── */
+
+.est-nota {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: var(--ms-radius-lg);
+  background: var(--app-v2-bg-component);
+}
+
+.est-nota ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.est-nota li {
+  font-size: var(--ms-text-base);
+  line-height: 19px;
+  color: var(--app-v2-text-secondary);
+}
+
+.est-nota--ajustes li {
+  /* O conserto é aviso, não erro: `--ms-text-danger` gritaria demais para
+     "troquei o modelo porque o id não existia". Fica no texto comum. */
+  color: var(--app-v2-text-secondary);
+}
+
+/* ── Botões ─────────────────────────────────────────────────── */
+
+.est-painel__rodape {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--app-v2-border-subtle);
+}
+
+.est-botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--app-v2-border-subtle);
+  border-radius: var(--ms-radius-lg);
+  background: var(--app-v2-bg-surface);
+  font: inherit;
+  font-size: var(--ms-text-base);
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--ms-text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.est-botao:hover:not(:disabled) {
+  border-color: var(--hover-brand-soft);
+  color: var(--hover-brand);
+  background: var(--hover-brand-wash);
+}
+
+.est-botao--principal {
+  flex: 1;
+  border-color: transparent;
+  background: var(--app-v2-button-bg);
+  color: var(--app-v2-button-fg);
+  box-shadow: var(--app-v2-button-shadow);
+}
+
+.est-botao--principal:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--app-v2-button-bg-hover);
+  color: var(--app-v2-button-fg);
+  box-shadow: var(--app-v2-button-shadow-hover);
+}
+
+.est-botao--miudo {
+  height: 24px;
+  padding: 0 8px;
+  font-size: var(--ms-text-sm);
+  line-height: 16px;
+}
+
+.est-botao:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.est-tela button:focus-visible,
+.est-tela [role="button"]:focus-visible {
+  outline: 2px solid var(--ms-ring);
+  outline-offset: 2px;
+}
+
+/* Abaixo de 1180px a coluna do artefato não cabe ao lado sem espremer o
+   prompt; ela vai para baixo da conversa, na mesma ordem de leitura. */
+@media (max-width: 1180px) {
+  .est-tela { flex-direction: column; }
+  .est-painel {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--app-v2-border-subtle);
+    max-height: 45%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .est-pensando span { animation: none; opacity: .6; }
+  .est-partida, .est-cena, .est-botao { transition: none; }
+}
+
+/* Lado direito do cabeçalho: dica, seletor de modelo e "Nova ideia". */
+.est-cabecalho__lado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* Com o seletor de modo, o lado direito não cabe inteiro numa tela de
+   1280 com a nav aberta: a dica é o que cede. O título nunca quebra. */
+.est-cabecalho h1 { white-space: nowrap; }
+.est-cabecalho__dica {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 1440px) {
+  .est-cabecalho__dica { display: none; }
+}
+
+.est-modelo {
+  height: 28px;
+  max-width: 160px;
+  padding: 0 8px;
+  border: 1px solid var(--app-v2-border-subtle);
+  border-radius: var(--ms-radius-lg);
+  background: var(--app-v2-bg-surface);
+  font: inherit;
+  font-size: var(--ms-text-base);
+  line-height: 20px;
+  color: var(--ms-text);
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease;
+}
+
+.est-modelo:hover:not(:disabled) {
+  border-color: var(--hover-brand-soft);
+  color: var(--hover-brand);
+}
+
+.est-modelo:disabled { opacity: .5; cursor: not-allowed; }
+
+@media (max-width: 1180px) {
+  .est-cabecalho__dica { display: none; }
+}
+
+/* ── O modo: ideia livre ou vídeo UGC ───────────────────────── */
+
+.est-modo {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--app-v2-border-subtle);
+  border-radius: var(--ms-radius-lg);
+  background: var(--app-v2-bg-component);
+}
+
+.est-modo__opcao {
+  height: 26px;
+  padding: 0 10px;
+  border: none;
+  border-radius: calc(var(--ms-radius-lg) - 3px);
+  background: transparent;
+  font: inherit;
+  font-size: var(--ms-text-sm);
+  font-weight: 500;
+  color: var(--app-v2-text-tertiary);
+  cursor: pointer;
+}
+
+.est-modo__opcao.is-active {
+  background: var(--app-v2-bg-surface);
+  color: var(--ms-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+}
+
+.est-modo__opcao:disabled { cursor: default; opacity: .7; }
+
+/* ── O briefing UGC ─────────────────────────────────────────── */
+
+.est-brief {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 12px 0 8px;
+}
+
+.est-brief__topo h2 {
+  margin: 0;
+  font-size: var(--ms-text-lg);
+  font-weight: 500;
+  color: var(--ms-text);
+}
+
+.est-brief__topo p {
+  margin: 4px 0 0;
+  font-size: var(--ms-text-base);
+  line-height: 20px;
+  color: var(--app-v2-text-tertiary);
+}
+
+.est-brief__grade {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+}
+
+.est-brief__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.est-brief__campo > span {
+  font-size: var(--ms-text-sm);
+  font-weight: 500;
+  color: var(--app-v2-text-secondary);
+}
+
+.est-brief__campo--largo { grid-column: 1 / -1; }
+
+.est-brief__fotos {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.est-brief__foto { width: 72px; }
+
+.est-brief__foto-prev {
+  position: relative;
+  width: 72px;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: var(--ms-radius-md);
+  border: 1px solid var(--ms-border-subtle);
+  background: var(--ms-bg-subtle);
+}
+
+.est-brief__foto-prev img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.est-brief__foto-prev button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .6);
+  color: #fff;
+  cursor: pointer;
+}
+
+.est-brief__foto-vazia {
+  width: 72px;
+  aspect-ratio: 3 / 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed var(--ms-border);
+  border-radius: var(--ms-radius-md);
+  background: var(--ms-bg-subtle);
+  font: inherit;
+  font-size: var(--ms-text-xs);
+  color: var(--app-v2-text-tertiary);
+  cursor: pointer;
+}
+
+.est-brief__foto-vazia:hover:not(:disabled) {
+  border-color: var(--hover-brand-soft);
+  color: var(--hover-brand);
+}
+
+.est-brief__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.est-chip {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--app-v2-border-subtle);
+  border-radius: 999px;
+  background: var(--app-v2-bg-surface);
+  font: inherit;
+  font-size: var(--ms-text-sm);
+  color: var(--ms-text);
+  cursor: pointer;
+}
+
+.est-chip.is-active {
+  border-color: transparent;
+  background: var(--app-v2-button-bg);
+  color: var(--app-v2-button-fg);
+}
+
+.est-brief__rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.est-brief__rodape .est-botao--principal { flex: 0 0 auto; }
+
+.est-brief__nota {
+  font-size: var(--ms-text-sm);
+  color: var(--app-v2-text-tertiary);
+}
+
+@keyframes est-girar { to { transform: rotate(360deg); } }
+.est-girando { animation: est-girar .8s linear infinite; }
+
+/* ── O esboço e as referências, no painel ───────────────────── */
+
+.est-esboco {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--ms-radius-lg);
+  border: 1px solid var(--app-v2-border-subtle);
+  background: var(--app-v2-bg-surface);
+}
+
+.est-esboco__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.est-esboco__estado {
+  font-size: var(--ms-text-xs);
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--app-v2-bg-component);
+  color: var(--app-v2-text-tertiary);
+}
+
+.est-esboco__estado.is-aprovado {
+  background: color-mix(in srgb, var(--app-v2-brand-solid) 14%, transparent);
+  color: var(--app-v2-brand-solid);
+}
+
+.est-esboco__linha {
+  margin: 0;
+  font-size: var(--ms-text-md);
+  line-height: 20px;
+  color: var(--ms-text);
+}
+
+.est-esboco__linha b {
+  display: block;
+  font-size: var(--ms-text-xs);
+  font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--app-v2-text-tertiary);
+  margin-bottom: 2px;
+}
+
+.est-esboco__linha--fala { white-space: pre-wrap; }
+
+.est-esboco__fluxo {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--ms-text-md);
+  line-height: 20px;
+  color: var(--ms-text);
+}
+
+.est-esboco__acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.est-esboco__dica {
+  font-size: var(--ms-text-sm);
+  line-height: 18px;
+  color: var(--app-v2-text-tertiary);
+}
+
+.est-refs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.est-ref {
+  margin: 0;
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.est-ref img {
+  width: 64px;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: var(--ms-radius-md);
+  border: 1px solid var(--ms-border-subtle);
+  display: block;
+}
+
+.est-ref figcaption {
+  font-size: var(--ms-text-xs);
+  color: var(--app-v2-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .est-brief__grade { grid-template-columns: 1fr; }
+}

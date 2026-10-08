@@ -154,17 +154,21 @@ async function settleSuccess(taskId: string, kind: Kind, kieUrls: string[]): Pro
 
 /** Write jobStore, emit the SSE event, and mirror into the guest DB. */
 function settle(taskId: string, kind: Kind, result: JobResult): void {
-  jobStore.set(taskId, result);
-  jobEvents.emit(`job:${taskId}`, result);
+  const previous = jobStore.get(taskId);
+  const ownedResult = previous?.userId && !result.userId
+    ? { ...result, userId: previous.userId, provider: previous.provider ?? "kie" } as JobResult
+    : result;
+  jobStore.set(taskId, ownedResult);
+  jobEvents.emit(`job:${taskId}`, ownedResult);
 
-  if (result.status === "done") {
+  if (ownedResult.status === "done") {
     guestDb.updateGeneration(
       taskId,
       kind === "video"
-        ? { status: "done", video_url: result.videoUrl }
-        : { status: "done", image_url: result.imageUrl, image_urls: result.imageUrls },
+        ? { status: "done", video_url: ownedResult.videoUrl }
+        : { status: "done", image_url: ownedResult.imageUrl, image_urls: ownedResult.imageUrls },
     );
-  } else if (result.status === "error") {
-    guestDb.updateGeneration(taskId, { status: "error", error_msg: result.error });
+  } else if (ownedResult.status === "error") {
+    guestDb.updateGeneration(taskId, { status: "error", error_msg: ownedResult.error });
   }
 }

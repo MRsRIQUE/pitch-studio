@@ -42,11 +42,12 @@ falhar sem credenciais reais.
 UI (GenerateNode / gallery)
   └─ POST /api/generate | /api/generate-video
        ├─ resolveUserId          lib/guestMode.ts
-       ├─ getKieTokenForUser     lib/getKieToken.ts
-       │
-       ├─ sem chave → startMockJob        lib/mockProvider.ts
-       └─ com chave → POST api.kie.ai/api/v1/jobs/createTask
-                       └─ pollKieJob      lib/kieJobPoller.ts
+       ├─ modelo Higgsfield → SDK oficial (@higgsfield/client)
+       │                       └─ pollHiggsfieldJob  lib/higgsfieldJobPoller.ts
+       └─ demais modelos → getKieTokenForUser       lib/getKieToken.ts
+                          ├─ sem chave → startMockJob  lib/mockProvider.ts
+                          └─ com chave → POST api.kie.ai/api/v1/jobs/createTask
+                                          └─ pollKieJob  lib/kieJobPoller.ts
   
   ambos terminam em "settle":
        jobStore.set()            data/.job-store.json
@@ -56,6 +57,19 @@ UI (GenerateNode / gallery)
 
 UI acompanha via GET /api/job-status (SSE) e lista em GET /api/gallery
 ```
+
+O Higgsfield usa `generation_submissions` no SQLite como trava de submissão. O
+cliente cria um `submissionId`; um ID aceito retorna o mesmo `request_id`, e um
+POST com timeout ambíguo fica `uncertain` para impedir reenvio automático. O
+`request_id`, usuário e provider ficam associados ao job e são validados nas
+rotas de status/stream. Em desktop local não há webhook público, então o app usa
+o `status_url` devolvido pelo provider com backoff e estados terminais.
+
+Os modelos Genjutsu usam o mesmo provider. O servidor envia mídias locais ao
+CDN da Higgsfield pelo ciclo REST de URL pré-assinada, respeitando todos os
+`upload_headers`, e usa o SDK oficial para submeter Motion Transfer ou Object
+Swap. O Workflow mapeia `videoRef` para o vídeo-fonte e `resource` para 1–8
+imagens; nenhum segredo ou header de autenticação passa pelo cliente.
 
 ### Convenção de task IDs
 

@@ -6,6 +6,7 @@ import { Handle, Position, NodeProps, Node, useUpdateNodeInternals } from "@xyfl
 import CornerResizer from "./CornerResizer";
 import { useWorkflowStore, NodeData } from "@/lib/store";
 import { sha256Hex } from "@/lib/assetHash";
+import MediaStudio from "./MediaStudio";
 
 
 type ImageInputNodeType = Node<NodeData, "imageInputNode">;
@@ -325,7 +326,7 @@ export default function ImageInputNode({ id, data, selected }: NodeProps<ImageIn
             <div
               aria-hidden
               className="absolute top-1.5 right-2 pointer-events-none select-none z-30 tabular-nums px-1.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 node-slide-reveal"
-              style={{ fontSize: 9, lineHeight: 1, color: "#fff", background: "#171728" }}
+              style={{ fontSize: 9, lineHeight: 1, color: "var(--ms-text)", background: "var(--ms-bg)" }}
             >
               {natW} × {natH}
             </div>
@@ -339,12 +340,19 @@ export default function ImageInputNode({ id, data, selected }: NodeProps<ImageIn
             <button
               onMouseDown={(e) => e.stopPropagation()}
               onClick={() => { fileRef.current?.click(); }}
-              className="h-6 px-3 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-[10px] text-[#C9D2EA] hover:text-white hover:bg-black/70 transition-colors relative z-10"
+              className="h-6 px-3 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 text-[10px] text-ms-text hover:text-white hover:bg-black/70 transition-colors relative z-10"
             >
               replace
             </button>
           </div>
         </div>
+
+        <details className="nodrag" style={{ position: "absolute", left: 8, bottom: 8, zIndex: 40, maxWidth: 420 }}>
+          <summary className="media-tools-trigger cursor-pointer rounded-full bg-black/75 px-3 py-1.5 text-[11px] font-semibold text-white">Studio Tools · abrir ferramentas</summary>
+          <div className="media-studio-panel mt-2 w-[390px] max-h-[580px] overflow-auto rounded-xl border border-[#ded9eb] bg-white p-3 shadow-2xl" onPointerDown={(e) => e.stopPropagation()}>
+            <MediaStudio id={id} data={data} kind="image" />
+          </div>
+        </details>
 
         {/* Handle rendered last so it sits above the image div in stacking order */}
               <Handle
@@ -401,7 +409,7 @@ export default function ImageInputNode({ id, data, selected }: NodeProps<ImageIn
               className="relative transition-all duration-200 ease-in-out rounded-2xl overflow-hidden"
               style={{
                 transform: lightboxVisible ? "scale(1)" : "scale(0.95)",
-                boxShadow: "0 0 0 8px #33334f",
+                boxShadow: "0 0 0 8px var(--ms-border)",
               }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -487,11 +495,11 @@ export default function ImageInputNode({ id, data, selected }: NodeProps<ImageIn
           onDrop={onDrop}
           onDragOver={(e) => e.preventDefault()}
           onClick={() => { fileRef.current?.click(); }}
-          className="border border-dashed border-[#262640] hover:border-[#262640] rounded-md cursor-pointer transition-colors py-8 text-center"
+          className="border border-dashed border-ms-border-subtle hover:border-ms-border-subtle rounded-md cursor-pointer transition-colors py-8 text-center"
         >
-          <p className="text-[11px] text-[#8B9CC7]">
+          <p className="text-[11px] text-ms-text-secondary">
             Drop image or{" "}
-            <span className="underline underline-offset-2 text-white">browse</span>
+            <span className="underline underline-offset-2 text-ms-text">browse</span>
           </p>
         </div>
         <input

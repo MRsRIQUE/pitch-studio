@@ -16,6 +16,10 @@ const eslintConfig = defineConfig([
     "src-tauri/**",
     // Protótipo anterior em Vite + Fastify, mantido apenas para consulta.
     "legacy/**",
+    // Captura de referência do miora.design: especificação para leitura,
+    // não código do app. O `component.tsx` de cada seção sequer compila
+    // (importa um `./icons` que não existe). Já está fora do tsconfig.
+    "miora/**",
   ]),
 ]);
 

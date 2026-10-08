@@ -1,0 +1,436 @@
+/* ============================================================
+   BLOCO 07 — ACERVO (`/assets` do miora.design)
+
+   Réplica do chrome da tela. Cada valor daqui saiu do `<style>` do
+   `miora/sections/07-assets/preview.html` ou da tabela de geometria
+   do `INFO.md` — nenhum foi lido de `className`, que erra ~18%.
+
+   As duas licenças que aparecem neste arquivo:
+   • cor de marca — onde a referência pinta de laranja, entra
+     `--ms-solid-brand`, que já é o violeta `#4318FF`;
+   • idioma — os rótulos ficam no TSX, não aqui.
+
+   Tudo o mais (cinza, alfa, raio, peso, tamanho, timing) é o valor
+   literal da referência.
+   ============================================================ */
+
+.acervo-cabecalho {
+  /* Os `20px 24px` são do `.app-v2-main-scroll`. Lá o cabeçalho é o
+     primeiro filho do scroller; aqui ele fica fora dele (a grade tem
+     rolagem própria por causa do composer flutuante), então o padding
+     de cima e das laterais vem para cá. */
+  padding: 20px var(--app-v2-spacing-page-x) 0;
+  flex-shrink: 0;
+
+  /* A referência escreve estes dois na unha (`rgba(0,0,0,.30)` na borda
+     e `rgba(0,0,0,.04)` no fundo do filtro sob o cursor). A escala
+     `--ms-grayA-*` não tem nenhum dos dois: pula de 26,7% (`-8`) para
+     44,7% (`-9`), e de 2,35% (`-2`) para 5,88% (`-3`). Ficam aqui, com
+     o valor literal, até o Maestro decidir se entram na escala. */
+  --acervo-filtro-borda-ativa: rgba(0, 0, 0, .30);
+  --acervo-filtro-fundo-ativo: rgba(0, 0, 0, .04);
+}
+
+/* `mx-auto w-full max-w-[1310px]` — a 1920 isso põe a borda esquerda
+   em x=430 e a direita em 1740. */
+.acervo-coluna {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1310px;
+}
+
+/* ── Título — `[430, 20] h 24` ───────────────────────────── */
+
+.acervo-titulo-linha {
+  display: flex;
+  height: 24px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.acervo-titulo {
+  margin: 0;
+  font-size: var(--ms-text-xl);
+  font-weight: 400;
+  line-height: 24px;
+  color: var(--ms-text);
+}
+
+/* ── Linha de controles — `[430, 72] 1310×32` ────────────── */
+
+.acervo-controles {
+  margin-top: 28px;
+  display: flex;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+/* A referência tem 7 chips fixos e sobra espaço. As nossas pastas são
+   dados do usuário e podem passar disso, então a fileira rola na
+   horizontal em vez de espremer o chip ou empurrar a busca para fora
+   da coluna. Sem barra visível: a rolagem aqui é gesto, não afordância. */
+.acervo-chips {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.acervo-chips::-webkit-scrollbar { display: none; }
+
+.acervo-chip {
+  display: flex;
+  height: 32px;
+  min-width: 48px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ms-radius-lg);
+  padding: 0 12px;
+  font-size: var(--ms-text-base);
+  line-height: 20px;
+  transition: color .15s, background-color .15s;
+  background: var(--ms-bg-component);
+  font-weight: 400;
+  color: var(--ms-text-secondary);
+}
+.acervo-chip:hover { background: var(--ms-bg-component-hover); }
+.acervo-chip[aria-pressed="true"] {
+  background: var(--ms-solid-brand);
+  font-weight: 600;
+  color: var(--ms-text-on-solid);
+}
+
+/* ── Gestão de pasta ─────────────────────────────────────────
+   Fora da referência, e de propósito: as sete categorias do Miora são
+   tipos do sistema, ninguém as cria; as nossas pastas são do usuário e
+   a árvore saiu da barra lateral. O peso visual é o menor possível —
+   mesma altura e mesmo raio dos outros chips, sem superfície própria
+   enquanto o cursor não chega. */
+
+.acervo-chip-novo {
+  min-width: 32px;
+  width: 32px;
+  padding: 0;
+  background: none;
+  color: var(--ms-icon-tertiary);
+}
+.acervo-chip-novo:hover {
+  background: var(--ms-bg-component);
+  color: var(--ms-text-secondary);
+}
+
+/* O chip vira campo no mesmo lugar, sem mudar a altura da fileira, para
+   a linha de controles não pular ao criar ou renomear. */
+.acervo-chip-campo {
+  width: 148px;
+  min-width: 148px;
+  justify-content: flex-start;
+  border: none;
+  outline: none;
+  color: var(--ms-text);
+  background: var(--ms-bg-component);
+}
+.acervo-chip-campo::placeholder { color: var(--ms-text-placeholder); }
+
+/* Ponto da cor da pasta. Fica no chip porque a cor era, na barra
+   antiga, o ícone de pasta pintado — aqui não há ícone. */
+.acervo-chip-marca {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  margin-right: 6px;
+  border-radius: var(--ms-radius-full);
+}
+
+/* Enquanto o menu do chip está aberto, ele continua parecendo "sob o
+   cursor" — a mesma regra que a referência usa nas pílulas de filtro. */
+.acervo-chip[data-popup-open]:not([aria-pressed="true"]),
+.acervo-chip[data-state="open"]:not([aria-pressed="true"]) {
+  background: var(--ms-bg-component-hover);
+}
+
+.acervo-filtros {
+  display: flex;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Gatilho do filtro. O hover e o menu aberto compartilham o mesmo par
+   de cores — é assim no site: o gatilho continua parecendo "sob o
+   cursor" enquanto o menu está aberto. */
+.acervo-filtro {
+  display: inline-flex;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  border-radius: var(--ms-radius-lg);
+  border: 1px solid var(--ms-border-subtle);
+  background: var(--ms-bg);
+  padding: 0 12px;
+  font-size: var(--ms-text-sm);
+  white-space: nowrap;
+  color: var(--ms-text);
+  min-width: 64px;
+  max-width: 220px;
+  transition: color .15s, background-color .15s, border-color .15s;
+}
+.acervo-filtro:hover,
+.acervo-filtro[data-popup-open],
+.acervo-filtro[data-state="open"] {
+  border-color: var(--acervo-filtro-borda-ativa);
+  background: var(--acervo-filtro-fundo-ativo);
+}
+.acervo-filtro > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.acervo-filtro svg {
+  flex-shrink: 0;
+  color: var(--ms-icon-secondary);
+  transition: transform .15s ease;
+}
+.acervo-filtro[data-popup-open] svg,
+.acervo-filtro[data-state="open"] svg { transform: rotate(180deg); }
+
+/* ── Busca — `[1450, 72] 290×32` ─────────────────────────── */
+
+.acervo-busca {
+  position: relative;
+  display: flex;
+  height: 32px;
+  width: 290px;
+  flex-shrink: 0;
+  align-items: center;
+  border-radius: var(--ms-radius-lg);
+  background: var(--ms-bg-component);
+}
+.acervo-busca-lupa {
+  pointer-events: none;
+  position: absolute;
+  left: 12px;
+  flex-shrink: 0;
+  color: var(--ms-icon-tertiary);
+}
+.acervo-busca input {
+  height: 100%;
+  min-width: 0;
+  flex: 1;
+  background: transparent;
+  /* Os 36px da esquerda são a lupa em `left-3`; os da direita reservam
+     o lugar do botão de limpar, que só aparece com texto. */
+  padding-left: 36px;
+  padding-right: 36px;
+  font-size: var(--ms-text-md);
+  color: var(--ms-text);
+  outline: none;
+  border: none;
+}
+.acervo-busca input::placeholder { color: var(--ms-text-placeholder); }
+.acervo-busca-limpar {
+  position: absolute;
+  right: 10px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ms-radius-full);
+  color: var(--ms-icon-tertiary);
+  transition: color .15s, background-color .15s;
+}
+.acervo-busca-limpar:hover {
+  color: var(--ms-text);
+  background: var(--ms-bg-hover);
+}
+
+/* ── Menu do filtro ──────────────────────────────────────────
+   Nenhum dos quatro menus foi capturado aberto; o INFO.md diz que a
+   superfície é a do popover de modelos do bloco 03 (raio 12, sombra
+   flutuante) e que a largura de 150 e a altura de item de 30 são
+   escolha do autor da referência. Estas regras não têm camada, então
+   ganham das utilitárias do `DropdownMenuContent` sem `!important`. */
+
+.acervo-menu {
+  width: max-content;
+  min-width: 150px;
+  padding: 6px;
+  border-radius: var(--ms-radius-lg);
+  background: var(--app-v2-bg-surface);
+  box-shadow: var(--app-v2-shadow-floating);
+}
+
+.acervo-menu [data-slot="dropdown-menu-radio-item"] {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 30px;
+  padding: 0 28px 0 10px;
+  border-radius: var(--ms-radius-md);
+  font-size: var(--ms-text-base);
+  color: var(--ms-text);
+  white-space: nowrap;
+  transition: background-color .12s ease;
+}
+.acervo-menu [data-slot="dropdown-menu-radio-item"]:hover,
+.acervo-menu [data-slot="dropdown-menu-radio-item"][data-highlighted] {
+  background: var(--ms-bg-hover);
+}
+/* Item marcado: texto na cor de link da marca com peso 600 e o check
+   no sólido da marca — os dois níveis que a referência usa. */
+.acervo-menu .acervo-menu-item--marcado {
+  color: var(--ms-text-brand);
+  font-weight: 600;
+}
+.acervo-menu [data-slot="dropdown-menu-radio-item-indicator"] {
+  right: 10px;
+  color: var(--ms-solid-brand);
+}
+.acervo-menu [data-slot="dropdown-menu-radio-item-indicator"] svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 3;
+}
+
+/* Ações do menu de pasta: mesma caixa dos itens de filtro. */
+.acervo-menu [data-slot="dropdown-menu-item"] {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--ms-radius-md);
+  font-size: var(--ms-text-base);
+  color: var(--ms-text);
+  white-space: nowrap;
+  transition: background-color .12s ease;
+}
+.acervo-menu [data-slot="dropdown-menu-item"]:hover,
+.acervo-menu [data-slot="dropdown-menu-item"][data-highlighted] {
+  background: var(--ms-bg-hover);
+}
+.acervo-menu .acervo-menu-acao--perigo { color: var(--ms-text-danger); }
+.acervo-menu .acervo-menu-acao--perigo:hover,
+.acervo-menu .acervo-menu-acao--perigo[data-highlighted] { background: var(--ms-bg-danger); }
+
+/* As sete cores da barra antiga, com a mesma medida: círculo de 14 e
+   gap de 5, no padding de 10 do item de menu. */
+.acervo-cores {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+}
+.acervo-cor {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--ms-radius-full);
+  cursor: pointer;
+}
+.acervo-cor[aria-pressed="true"] {
+  border-color: var(--ms-text);
+  outline: 1px solid var(--ms-border-strong);
+  outline-offset: -1px;
+}
+.acervo-cor svg {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  display: block;
+}
+
+.acervo-menu-risco {
+  height: 1px;
+  background: var(--ms-border-subtle);
+  margin: 2px 0 4px;
+}
+
+/* ── Estado vazio — `[430, 124] 1310×160` ────────────────────
+   `mt-5` (20px) e depois `flex h-40 … justify-center gap-2`. Entra sem
+   animação: nesta tela não há keyframe nenhum. */
+
+.acervo-lista { margin-top: 20px; padding-bottom: 16px; }
+
+.acervo-vazio {
+  display: flex;
+  height: 160px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+.acervo-vazio-titulo {
+  font-size: var(--ms-text-md);
+  color: var(--ms-text-secondary);
+}
+.acervo-vazio-desc {
+  font-size: var(--ms-text-sm);
+  color: var(--ms-text-placeholder);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acervo-chip,
+  .acervo-chip-novo,
+  .acervo-filtro,
+  .acervo-filtro svg,
+  .acervo-busca-limpar,
+  .acervo-menu [data-slot="dropdown-menu-radio-item"] { transition: none; }
+  .acervo-filtro[data-popup-open] svg,
+  .acervo-filtro[data-state="open"] svg { transform: none; }
+}
+
+
+/* ============================================================
+   HOVER DE MARCA — acréscimo da frente do Orvalho (leva 3)
+
+   Pedido do usuário: em quatro áreas do app o ponteiro acende a
+   marca. A regra do Maestro vale inteira: o FUNDO continua o
+   cinza da referência; o que acende é ícone, texto e borda.
+
+   Este bloco só ACRESCENTA regra de `:hover`. Nenhum valor que já
+   estava no arquivo foi alterado, e nenhuma regra de repouso foi
+   tocada — a geometria da tabela do INFO.md fica onde estava.
+
+   POR QUE AQUI e não no `components/gallery/cartao.css`, que é
+   onde o ladrilho está descrito: medido no navegador, em
+   `/gallery` o `cartao.css` NÃO é carregado. O `.gallery-item`
+   daquela grade é pintado por uma cópia mais antiga, embutida
+   como `GALLERY_CSS` dentro de `app/gallery/page.tsx` — e o
+   `components/gallery/GalleryCard.tsx` (o único que importa o
+   `cartao.css` e desenha o ladrilho) não é importado por
+   ninguém: o `page.tsx` define um `GalleryCard` local de mesmo
+   nome. Enquanto essa duplicata existir, regra posta no
+   `cartao.css` não pinta nada. Este arquivo é carregado na rota,
+   então é daqui que o anel alcança o ladrilho.
+
+   O anel vai em `outline` com `outline-offset: -1px`, e não em
+   `box-shadow: inset`: no ladrilho a mídia preenche a caixa, e
+   sombra interna é pintada ANTES dos filhos — o defeito que o
+   `cartao.css` já documenta no anel de "citado". `outline` é
+   pintado depois de todo o conteúdo, acompanha o `border-radius`
+   e não ocupa espaço, então a caixa não anda 1px.
+   ============================================================ */
+
+/* O ladrilho não tem título: é mídia inteira. Só o anel, então.
+
+   Ele fica NO BORDO, 1px, e o anel verde de "citado" mora numa
+   camada própria — os dois convivem, e o sinal de citado não some
+   quando o ponteiro passa. Conferido no navegador. */
+.gallery-item:hover:not(:focus-visible) {
+  outline: 1px solid var(--hover-brand-soft);
+  outline-offset: -1px;
+}

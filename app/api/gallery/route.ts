@@ -22,6 +22,10 @@ export async function GET(req: NextRequest) {
     azure_resolution?: string;
     source: "generation" | "upload";
     created_at: string;
+    /* Só a geração tem: a diferença para o `created_at` é a duração real dela.
+       É o que a tela de perfil usa em "Tarefa mais longa" — sem isto, a métrica
+       não existe, porque nenhuma outra fonte guarda quanto uma geração levou. */
+    updated_at?: string;
     referenceImageUrls?: string[];
   };
 
@@ -38,6 +42,7 @@ export async function GET(req: NextRequest) {
         azure_resolution:   g.azure_resolution ?? undefined,
         source:             "generation" as const,
         created_at:         g.created_at,
+        updated_at:         g.updated_at ?? undefined,
         referenceImageUrls: g.reference_image_urls?.length ? g.reference_image_urls : undefined,
       }))
     : [];

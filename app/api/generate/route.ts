@@ -278,6 +278,8 @@ export async function POST(req: NextRequest) {
     azureCustomWidth,
     azureCustomHeight,
     codexProvider,
+    segmentTaskId,
+    maskIndexes,
     debugOnly,
   } = (await req.json()) as {
     model?:              string;
@@ -292,11 +294,13 @@ export async function POST(req: NextRequest) {
     azureCustomWidth?:   number;     // manual size — used when aspectRatio === "custom"
     azureCustomHeight?:  number;
     codexProvider?:      boolean;    // route through the server's local codex-imagegen CLI
+    segmentTaskId?:      string;     // Grok 2.0 Segment Edit source task
+    maskIndexes?:        number[];   // Grok 2.0 Segment Edit selected regions
     debugOnly?:          boolean;
   };
 
   if (debugOnly) {
-    const body = { model, prompt, imageUrls, aspectRatio, quality, azureQuality, azureResolution, azureCustomWidth, azureCustomHeight };
+    const body = { model, prompt, imageUrls, aspectRatio, quality, azureQuality, azureResolution, azureCustomWidth, azureCustomHeight, segmentTaskId, maskIndexes };
     console.log("[DEBUG] generate payload:", JSON.stringify(body, null, 2));
     return NextResponse.json({ ok: true });
   }
@@ -305,6 +309,19 @@ export async function POST(req: NextRequest) {
 
   const cfg = IMAGE_MODELS.find((m) => m.id === model);
   if (!cfg) return NextResponse.json({ error: `Unknown model: ${model}` }, { status: 400 });
+
+  if (cfg.requiresSegmentTask) {
+    if (!segmentTaskId?.trim()) {
+      return NextResponse.json({ error: "Grok Segment Edit requires a source task ID from Grok Imagine 2.0 or Segment Map." }, { status: 400 });
+    }
+    if (!Array.isArray(maskIndexes) || maskIndexes.length === 0 || maskIndexes.some((n) => !Number.isInteger(n) || n < 0)) {
+      return NextResponse.json({ error: "Grok Segment Edit requires at least one valid mask index." }, { status: 400 });
+    }
+  }
+
+  if (cfg.oneKOnlyRatios?.includes(aspectRatio) && quality.toLowerCase() !== "1k") {
+    return NextResponse.json({ error: `${aspectRatio} is only available at 1K for ${cfg.name}.` }, { status: 400 });
+  }
 
   let r2ImageUrls: string[] = [];
   try {
@@ -525,19 +542,27 @@ export async function POST(req: NextRequest) {
       kieImageUrls = await ensureKieReachableImages(r2ImageUrls, kieToken);
     }
 
-    const input: Record<string, unknown> = {
-      prompt:                    prompt.slice(0, apiInput.promptMaxLength),
-      [apiInput.aspectRatioKey]: aspectRatio,
-    };
+    const input: Record<string, unknown> = cfg.requiresSegmentTask
+      ? {
+          prompt: prompt.slice(0, apiInput.promptMaxLength),
+          task_id: segmentTaskId!.trim(),
+          mask_indexs: [...new Set(maskIndexes!)],
+        }
+      : {
+          prompt: prompt.slice(0, apiInput.promptMaxLength),
+          [apiInput.aspectRatioKey]: aspectRatio,
+        };
 
-    if (apiInput.outputFormat)               input.output_format           = apiInput.outputFormat;
-    if (apiInput.imageInputKey && hasImages) input[apiInput.imageInputKey] = kieImageUrls.slice(0, cfg.maxImages);
-    if (apiInput.qualityKey) {
-      input[apiInput.qualityKey] = apiInput.qualityMap
-        ? (apiInput.qualityMap[quality] ?? quality)
-        : quality === "4k" ? "4K" : quality === "2k" ? "2K" : quality === "1k" ? "1K" : quality;
+    if (!cfg.requiresSegmentTask) {
+      if (apiInput.outputFormat)               input.output_format           = apiInput.outputFormat;
+      if (apiInput.imageInputKey && hasImages) input[apiInput.imageInputKey] = kieImageUrls.slice(0, cfg.maxImages);
+      if (apiInput.qualityKey) {
+        input[apiInput.qualityKey] = apiInput.qualityMap
+          ? (apiInput.qualityMap[quality] ?? quality)
+          : quality === "4k" ? "4K" : quality === "2k" ? "2K" : quality === "1k" ? "1K" : quality;
+      }
+      if (apiInput.extra) Object.assign(input, apiInput.extra);
     }
-    if (apiInput.extra) Object.assign(input, apiInput.extra);
 
     const requestBody = { model: resolvedApiId, callBackUrl, input };
 

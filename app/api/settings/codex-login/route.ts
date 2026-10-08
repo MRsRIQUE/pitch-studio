@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { codexBinary, codexChatStatus } from "@/lib/codexProcess";
 import { codexLoginStore } from "@/lib/codexLoginStore";
 
 // 15 minutes, matching the device code's own expiry (plus a little slack).
@@ -12,42 +10,22 @@ function stripAnsi(s: string): string {
   return s.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
-function checkLoginStatus(): Promise<boolean> {
-  return new Promise((resolve) => {
-    const proc = spawn("codex", ["login", "status"]);
-    let out = "";
-    proc.stdout.on("data", (d: Buffer) => out += d.toString());
-    // "Logged in using ChatGPT" vs "Not logged in" both contain "logged in" as a
-    // substring — anchor to the start of the (trimmed) line so "Not …" doesn't match.
-    proc.on("close", () => resolve(/^logged in/im.test(out.trim())));
-    proc.on("error", () => resolve(false));
-    // Don't let a wedged CLI hang the login verdict forever.
-    setTimeout(() => { proc.kill(); resolve(false); }, 10_000);
-  });
-}
-
-// The on-disk credential file, same source of truth /api/settings/codex-status
-// keys off. The CLI wipes it when a login *starts* and rewrites it only on
-// success, so at `codex login` exit its presence is a reliable success signal.
-function codexAuthExists(): boolean {
-  const authPath = join(process.env.CODEX_HOME ?? join(homedir(), ".codex"), "auth.json");
-  return existsSync(authPath);
-}
-
-// `codex login --device-auth` can exit a beat before auth.json is flushed, and a
-// lone `codex login status` fired immediately after sometimes reports stale
-// "not logged in" state. Retry briefly and accept the credential file as proof,
-// so a successful browser confirmation never surfaces as a red error.
 async function confirmLoggedIn(): Promise<boolean> {
-  for (let attempt = 0; attempt < 6; attempt++) {
-    if (codexAuthExists() || await checkLoginStatus()) return true;
-    await new Promise((r) => setTimeout(r, 1000));
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if ((await codexChatStatus()).ready) return true;
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
   return false;
 }
 
 export async function GET() {
-  return NextResponse.json(codexLoginStore.get());
+  const state = codexLoginStore.get();
+  if (state.status === "pending" && Date.now() - state.startedAt >= CODE_LIFETIME_MS) {
+    const expired = { status: "error" as const, error: "O código de login expirou. Conecte novamente para obter outro código." };
+    codexLoginStore.set(expired);
+    return NextResponse.json(expired);
+  }
+  return NextResponse.json(state);
 }
 
 export async function POST() {
@@ -65,7 +43,7 @@ export async function POST() {
     let buf = "";
     let settled = false;
 
-    const proc = spawn("codex", ["login", "--device-auth"]);
+    const proc = spawn(/* turbopackIgnore: true */ codexBinary(), ["login", "--device-auth"], { windowsHide: true });
 
     const trySettle = () => {
       if (settled) return;
@@ -97,7 +75,14 @@ export async function POST() {
     // run to completion asynchronously — the store gets the final verdict once
     // it exits, and the frontend polls GET for that.
     proc.on("close", async (exitCode) => {
-      const loggedIn = await confirmLoggedIn();
+      if (!settled) {
+        settled = true;
+        const failed = { status: "error" as const, error: "O Codex encerrou antes de fornecer o código de login." };
+        codexLoginStore.set(failed);
+        resolve(failed);
+        return;
+      }
+      const loggedIn = exitCode === 0 && await confirmLoggedIn();
       if (loggedIn) {
         codexLoginStore.set({ status: "success" });
       } else {
@@ -110,6 +95,8 @@ export async function POST() {
       if (!settled) {
         settled = true;
         const state = { status: "error" as const, error: "Timed out waiting for codex login to print a device code." };
+        codexLoginStore.set(state);
+        proc.kill();
         resolve(state);
       }
     }, 10_000);

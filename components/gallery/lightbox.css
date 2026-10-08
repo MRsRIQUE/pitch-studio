@@ -1,0 +1,481 @@
+/* ============================================================
+   LIGHTBOX DO ACERVO — a tela cheia da mídia
+
+   POR QUE ESTA TELA TEM VÉU ESCURO
+   O briefing lembra que, no Miora, a única tela escura é o grafo
+   de memória. O véu aqui não é herança do HeliosGen: são duas
+   evidências independentes dentro do bundle da referência.
+
+   1) `_fonte/css-node-BuH9kVuM.css` traz o scrim genérico do app,
+      literal:
+        .scrim{position:fixed;inset:0;background:var(--ms-bg-overlay);
+               backdrop-filter:blur(4px);z-index:100}
+      e `--ms-bg-overlay` é `var(--ms-blackA-9-hex)` = #000000b3
+      (preto a 70%) — o mesmo token que o nosso `app/tokens/ms.css`
+      já carrega na linha 41. O par HSL cru (`--ms-blackA-9`) é
+      `0 0% 0%`, sem alfa: usá-lo daria preto sólido e cobriria a
+      mídia. Daí a variante `-hex`.
+
+   2) O visualizador de imagem do próprio Miora é o `Image.Preview`
+      do Semi (`_fonte/css-semi-vendor-D21pAN7y.css`):
+        .semi-image-preview{position:fixed;inset:0;z-index:1070;
+          background-color:var(--semi-color-overlay-bg)}
+        --semi-color-overlay-bg: rgba(22,22,26,.6)
+      com o chrome flutuando por cima em pílulas pretas e ícones
+      brancos. Ou seja: a referência realmente escurece o fundo de
+      um visualizador de mídia.
+
+   O QUE VOLTA A SER CLARO
+   O painel de informação não é chrome sobre a mídia, é superfície
+   de leitura — e aí a referência manda o contrário. O modal do
+   mesmo arquivo casa o véu com um cartão claro:
+     .subscription-modal-overlay{background:var(--ms-bg-overlay)}
+     .subscription-modal-content{background:var(--app-v2-bg-surface);
+       border:.6px solid var(--app-v2-border-subtle);
+       border-radius:18px;box-shadow:var(--app-v2-shadow-floating)}
+   É esse o painel daqui. O raio 18 da referência não existe na
+   escala do kit (16 ou 20); ficou em `--ms-radius-2xl` (20), o
+   passo mais próximo por cima. Os blocos internos ficam em 12, que
+   é literal do mesmo modal
+   (`.subscription-modal-current-plan{border-radius:12px}`).
+
+   O HeliosGen usava véu a 55% com blur(16px) e painel #0F0F1A.
+   Trocados pelo par medido acima.
+   ============================================================ */
+
+/* ── Véu ─────────────────────────────────────────────────────
+   `.scrim` da referência, mais a transição de entrada que o
+   lightbox precisa (na referência o scrim não anima porque entra
+   junto com um modal que já tem animação própria). */
+.lb-veu {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  background-color: transparent;
+  transition: background-color 200ms ease;
+}
+
+/* Longhand, e não o atalho `background`: é a forma literal da
+   referência (`.semi-image-preview{background-color:...}`) e a que
+   não depende de o navegador resolver `var()` dentro de um atalho. */
+.lb-veu[data-visivel="true"] {
+  background-color: var(--ms-bg-overlay);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+/* Modo folheado: mídia e painel lado a lado, com respiro de 24. */
+.lb-veu[data-ampliado="false"] {
+  align-items: flex-start;
+  padding: 24px;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+/* Modo ampliado: a mídia toma a viewport inteira. */
+.lb-veu[data-ampliado="true"] {
+  align-items: center;
+  padding: 0;
+  gap: 0;
+  overflow-y: hidden;
+}
+
+/* ── Chrome flutuante sobre a mídia ──────────────────────────
+   Geometria literal do Semi: navegação 40×40 circular a 24px da
+   borda e centrada na vertical (`.semi-image-preview-icon`,
+   `-prev{left:24px}`, `-next{right:24px}`); fechar 30×30 circular
+   dentro de um cabeçalho de 60px com `padding:0 24px`, o que põe o
+   centro em y=30.
+
+   A tinta do Semi é `#000000bf` (preto a 75%), que cai no meio dos
+   nossos passos: blackA-9 é 70% e blackA-10 é 80%. Fica no 10 — o
+   9 é a tinta do próprio véu, e um botão da mesma cor do fundo
+   sumiria na faixa de padding, onde não há mídia por trás. */
+.lb-chrome {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  background: var(--ms-blackA-10-hex);
+  color: var(--ms-text-on-solid);
+  cursor: pointer;
+  transition: opacity 150ms ease, background 150ms ease;
+}
+
+.lb-chrome:hover:not(:disabled) {
+  background: var(--ms-blackA-11-hex);
+}
+
+.lb-chrome:disabled {
+  cursor: default;
+  opacity: .2;
+}
+
+.lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--ms-radius-full);
+  z-index: 10;
+}
+
+.lb-nav-anterior { left: 24px; }
+.lb-nav-proxima  { right: 24px; }
+
+/* No modo folheado o painel de 300px ocupa a direita, então a seta
+   de avanço encosta na borda da coluna de mídia em vez de na
+   viewport. Os 24px do Semi voltam quando a mídia é ampliada. */
+.lb-veu[data-ampliado="false"] .lb-nav-proxima { right: 0; }
+
+.lb-fechar {
+  position: fixed;
+  top: 15px;
+  right: 24px;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--ms-radius-full);
+  transition: opacity 200ms ease, background 150ms ease;
+}
+
+/* Pílula dos pontos de página. O Semi ancora o rodapé em
+   `left:50%; bottom:16px; transform:translate(-50%)`. */
+.lb-paginacao {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  border-radius: var(--ms-radius-full);
+  background: var(--ms-blackA-10-hex);
+  z-index: 5;
+}
+
+.lb-ponto {
+  height: 8px;
+  width: 8px;
+  padding: 0;
+  border: none;
+  border-radius: var(--ms-radius-sm);
+  background: var(--ms-whiteA-8-hex);
+  cursor: pointer;
+  transition: width 150ms ease, background 150ms ease;
+}
+
+.lb-ponto[data-ativo="true"] {
+  width: 16px;
+  background: var(--ms-text-on-solid);
+}
+
+/* ── Painel de informação ────────────────────────────────────
+   `.subscription-modal-content` da referência. */
+.lb-painel {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--ms-bg);
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-2xl);
+  box-shadow: var(--ms-shadow-md);
+  overflow: hidden;
+  transition: opacity 260ms ease, transform 280ms ease;
+}
+
+.lb-secao + .lb-secao {
+  border-top: 1px solid var(--ms-border-subtle);
+}
+
+/* Cabeçalho de seção: 10px/700 em versaletes na cor terciária — o
+   mesmo eyebrow que o Acervo usa nos rótulos. */
+.lb-secao-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px 12px;
+}
+
+.lb-secao-rotulo {
+  font-size: var(--ms-text-xs);
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ms-text-tertiary);
+}
+
+/* Linha de informação. O divisor é o mesmo
+   `.subscription-modal-current-plan-divider` da referência. */
+.lb-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  border-top: 1px solid var(--ms-border-subtle);
+  font-size: var(--ms-text-md);
+}
+
+.lb-linha-rotulo { color: var(--ms-text-tertiary); }
+.lb-linha-valor  { color: var(--ms-text); font-weight: 600; text-align: right; }
+
+/* ── Botões do painel ────────────────────────────────────────
+   Pílula secundária do kit: componente #F0F0F0 sobre a superfície
+   branca, sem borda — é como o chip inativo do bloco 07 se comporta
+   (`bg #F0F0F0 → #E8E8E8` no hover). */
+.lb-botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  background: var(--ms-bg-component);
+  color: var(--ms-text-secondary);
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.lb-botao:hover:not(:disabled) {
+  background: var(--ms-bg-component-hover);
+  color: var(--ms-text);
+}
+
+.lb-botao:disabled {
+  cursor: default;
+  color: var(--ms-text-disabled);
+}
+
+.lb-botao-copiar {
+  padding: 4px 12px;
+  border-radius: var(--ms-radius-md);
+  font-size: var(--ms-text-base);
+}
+
+/* Confirmação de cópia: verde legível do kit sobre a tinta verde
+   mais fraca, dentro da faixa de 14–18% que a regra do kit permite
+   para cor de sinal. */
+.lb-botao-copiar[data-copiado="true"],
+.lb-botao-copiar[data-copiado="true"]:hover {
+  background: var(--ms-bg-success-subtle);
+  color: var(--ms-text-success);
+}
+
+.lb-botao-baixar {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 0;
+  border-top: 1px solid var(--ms-border-subtle);
+  font-size: var(--ms-text-md);
+  background: var(--ms-bg);
+}
+
+.lb-botao-baixar:hover:not(:disabled) {
+  background: var(--ms-bg-hover);
+}
+
+/* ── Referências anexadas ao prompt ──────────────────────────*/
+.lb-referencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 16px 0;
+}
+
+.lb-referencia {
+  position: relative;
+  width: 76px;
+  height: 68px;
+  flex-shrink: 0;
+  border-radius: var(--ms-radius-md);
+  border: 1px solid var(--ms-border-subtle);
+  overflow: hidden;
+}
+
+.lb-referencia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* O número fica sobre a miniatura, não sobre a superfície do
+   painel — por isso aqui a tinta preta do chrome é a leitura
+   certa. */
+.lb-referencia-indice {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 2px 5px;
+  border-radius: var(--ms-radius-sm);
+  background: var(--ms-blackA-10-hex);
+  color: var(--ms-text-on-solid);
+  font-size: var(--ms-text-xs);
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ── Corpo do prompt ─────────────────────────────────────────*/
+.lb-prompt {
+  padding: 0 16px 16px;
+  font-size: var(--ms-text-md);
+  line-height: 1.65;
+  max-height: 40vh;
+  overflow-y: auto;
+  color: var(--ms-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Menção a uma imagem de referência dentro do prompt. */
+.lb-mencao-imagem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 1px;
+  padding: 1px 7px 1px 2px;
+  border-radius: var(--ms-radius);
+  background: var(--ms-bg-component);
+  color: var(--ms-text);
+  font-size: var(--ms-text-base);
+  font-weight: 600;
+  line-height: 20px;
+  vertical-align: middle;
+}
+
+.lb-mencao-imagem img {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--ms-radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* ── Realce de sintaxe (JSON/YAML) ───────────────────────────
+   A paleta antiga foi feita para fundo escuro e some em superfície
+   clara. Medido com WCAG sobre os dois fundos candidatos:
+
+     token                     hex       vs #F0F0F0   vs #FFFFFF
+     --signal-info    cru      #1B84FF      3.18         3.63
+     --signal-success cru      #01B574      2.34         2.67
+     --signal-warning cru      #FFB547      1.54         1.76
+     --ms-blue-11              #0070DF      4.20         4.79
+     --ms-green-11             #00844E      4.18         4.76
+     --ms-yellow-11            #9E6C00      4.01         4.57
+     --ms-brand-11             #2C04D7      8.75         9.97
+
+   Os hexes crus dos sinais não passam em nenhum dos dois fundos.
+   O passo 11 de cada escala é o degrau de "texto legível sobre
+   claro" do kit — é dele que saem `--ms-text-success` e
+   `--ms-text-danger`. Passa em 4,5 (AA para texto normal) só sobre
+   BRANCO, e é por isso que o corpo do prompt fica em `--ms-bg` e
+   não em `--ms-bg-component`.
+
+   Mapa: chave → info · texto → sucesso · número → aviso ·
+   booleano/nulo → marca · pontuação e comentário → terciário. */
+.lb-json-chave  { color: hsl(var(--ms-blue-11)); }
+.lb-json-texto  { color: var(--ms-text-success); }
+.lb-json-numero { color: hsl(var(--ms-yellow-11)); }
+.lb-json-bool   { color: var(--ms-text-brand); }
+.lb-json-pont   { color: var(--ms-text-tertiary); }
+.lb-json-plano  { color: var(--ms-text); }
+
+/* Chip de `@menção` no prompt cru: violeta legível da marca sobre
+   a tinta de marca mais fraca do kit. */
+.lb-mencao {
+  border-radius: var(--ms-radius-sm);
+  background: var(--ms-bg-brand-subtle);
+  box-shadow: 0 0 0 3px var(--ms-bg-brand-subtle);
+  color: var(--ms-text-brand);
+  font-weight: 500;
+  cursor: text;
+  pointer-events: auto;
+  user-select: none;
+}
+
+/* ── Mídia ───────────────────────────────────────────────────*/
+.lb-coluna-midia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lb-veu[data-ampliado="false"] .lb-coluna-midia {
+  position: relative;
+  flex: 1;
+  min-height: calc(100vh - 48px);
+}
+
+.lb-veu[data-ampliado="true"] .lb-coluna-midia {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.lb-midia {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 200ms ease, border-radius 280ms ease;
+}
+
+/* Sombra da mídia recortada sobre o véu. As três sombras do kit
+   (`--ms-shadow-*`) foram feitas para superfície clara e somem
+   aqui; então a projeção usa a própria tinta de overlay do kit,
+   espalhada — não um preto novo. */
+.lb-veu[data-ampliado="false"] .lb-midia {
+  border-radius: var(--ms-radius-lg);
+  overflow: hidden;
+  box-shadow: 0 32px 80px var(--ms-blackA-6-hex);
+}
+
+.lb-veu[data-ampliado="true"] .lb-midia {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Vídeo tem controles nativos e não amplia por clique, então não
+   recebe recorte nem sombra. */
+.lb-midia[data-video="true"] {
+  overflow: visible;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.lb-giro-baixar {
+  width: 13px;
+  height: 13px;
+  border-radius: var(--ms-radius-full);
+  border: 2px solid var(--ms-border-subtle);
+  border-top-color: var(--ms-text-tertiary);
+  display: inline-block;
+  animation: lb-giro .75s linear infinite;
+}
+
+@keyframes lb-giro {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lb-veu,
+  .lb-painel,
+  .lb-midia,
+  .lb-chrome,
+  .lb-botao,
+  .lb-ponto {
+    transition: none;
+  }
+
+  .lb-giro-baixar { animation: none; }
+}

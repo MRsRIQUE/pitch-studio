@@ -1,0 +1,882 @@
+/* ============================================================
+   BLOCO 09, PARTE 1 — o shell de /projeto/[id] e o painel de chat
+
+   Todos os números saíram do `<style>` do `preview.html` do bloco 09 e
+   da tabela de geometria do `INFO.md`, nunca do `className`.
+
+   A conta que governa o shell:
+
+     painel      inset 8px, largura 368  →  x 8…376, y 8…948
+     barra       left = 8 + 368 + 12 = 388px
+     colapsado   translate(calc(-100% - 24px)) + opacity 0, e a barra
+                 desliza de 388 para 12 em .2s
+
+   As três variáveis abaixo são o contrato com as outras duas frentes do
+   bloco: o canvas do Brasa e as barras dele leem `--design-app-v2-*`
+   daqui, e é este arquivo que as move quando o painel colapsa.
+   ============================================================ */
+
+.pj-raiz {
+  --design-app-v2-panel-inset: 8px;
+  --design-app-v2-panel-width: 368px;
+  --design-app-v2-toolbar-left: 388px;   /* inset + largura + 12 */
+
+  position: relative;
+  /* A rota vive dentro do `SidebarInset`, que é uma coluna flex: sem o
+     `flex: 1` o `height: 100%` não teria contra o que medir e o painel
+     colapsaria para a altura do conteúdo. */
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  /* O fundo do canvas é `#f5f5f5` na referência (96,1% de luz). A rampa
+     do kit não tem esse degrau: `--ms-gray-2` é 97,64% e `--ms-gray-3`
+     é 94,11%. Fico com o mais claro, que é o que o app já usa como
+     fundo de página — a diferença medida é de 1,5% de luz. */
+  background: var(--app-v2-bg-page);
+  color: var(--app-v2-text-primary);
+  font-family: var(--font-ui);
+}
+
+/* O canvas é do Brasa e vive por baixo de tudo, em `inset: 0`. */
+.pj-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+/* ── O painel ─────────────────────────────────────────────────
+   `.design-app-right-sidebar--v2`: o nome diz "right", mas o v2
+   posiciona à esquerda. Literal. */
+.pj-painel {
+  position: absolute;
+  z-index: 230;
+  left: var(--design-app-v2-panel-inset);
+  top: var(--design-app-v2-panel-inset);
+  width: var(--design-app-v2-panel-width);
+  height: calc(100% - var(--design-app-v2-panel-inset) * 2);
+  padding: 0;
+  transition:
+    transform .2s cubic-bezier(.4, 0, .2, 1),
+    opacity .2s ease;
+}
+.pj-painel[data-colapsado="true"] {
+  transform: translate(calc(-100% - 24px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* `.workflow-sidebar-v2-panel` — a caixa branca. */
+.pj-caixa {
+  display: flex;
+  width: var(--design-app-v2-panel-width);
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 12px;
+  border: .5px solid var(--app-v2-border-subtle);
+  border-radius: 18px;
+  background: var(--app-v2-bg-surface);
+  box-shadow: var(--app-v2-shadow-card);
+}
+
+/* ── Cabeçalho ────────────────────────────────────────────────
+   Duas linhas: a do projeto (32) e a da sessão (40, com a régua de
+   1px embaixo). `gap: 8px`, `margin-bottom: 12px`. */
+.pj-cabecalho {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.pj-linha-projeto,
+.pj-linha-sessao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.pj-linha-projeto { height: 32px; }
+.pj-linha-sessao {
+  height: 40px;
+  box-sizing: border-box;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--app-v2-border-hairline);
+}
+
+.pj-projeto-titulo {
+  display: flex;
+  min-width: 0;
+  max-width: 210px;
+  align-items: center;
+  gap: 12px;
+}
+.pj-projeto-titulo > span,
+.pj-projeto-titulo > input {
+  min-width: 0;
+  max-width: 160px;
+  overflow: hidden;
+  color: var(--app-v2-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* O título é editável no lugar (`workflow.clickToEdit`). */
+.pj-titulo-campo {
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  outline: none;
+}
+.pj-titulo-campo:focus {
+  outline: 1px solid var(--ms-text-link);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.pj-sessao-titulo {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-v2-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 32px;
+}
+
+.pj-sessao-acoes {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0;
+}
+
+/* `.workflow-sidebar-v2-header-btn` — 32×32, raio lg. */
+.pj-btn-cabecalho {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  color: var(--app-v2-text-primary);
+  border: none;
+  border-radius: var(--ms-radius-lg);
+  background: transparent;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+/* A licença de hover da leva 3: onde a referência só clareia o fundo,
+   o nosso também acende o ícone em violeta. O token vira lilás sozinho
+   sobre superfície escura. */
+.pj-btn-cabecalho:not(:disabled):hover {
+  background: var(--hover-brand-wash);
+  color: var(--hover-brand);
+}
+.pj-btn-cabecalho:disabled { color: var(--app-v2-icon-disabled); cursor: default; }
+
+/* ── O thread ─────────────────────────────────────────────────
+   O painel dá 344 de área útil (368 − 24) e a coluna reserva 12 de
+   calha para a barra de rolagem: 332. As margens negativas de 12 são
+   literais (`virtuoso-scroller { margin-inline:-12px; padding-inline:12px }`). */
+.pj-thread {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin-left: -12px;
+  margin-right: -12px;
+  padding-left: 12px;
+  padding-right: 12px;
+  scrollbar-color: hsl(var(--ms-gray-5)) transparent;
+  scrollbar-width: thin;
+}
+.pj-thread-inner { width: 332px; }
+
+/* A bolha do usuário: `padding: 1px 13px 4px`, raio 12, alinhada à
+   direita, `max-width: 303px`. O padding vertical apertado é medido —
+   a intuição pediria 8–12 e estaria errada. */
+.pj-usuario-linha {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 0;
+}
+.pj-usuario-bolha {
+  max-width: 303px;
+  padding: 1px 13px 4px;
+  border-radius: 12px;
+  background: var(--app-v2-bg-page);
+  color: var(--app-v2-text-primary);
+  font-size: 13px;
+  line-height: 21px;
+  overflow-x: hidden;
+  overflow-y: visible;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.pj-data {
+  margin-top: 25px;
+  color: var(--app-v2-text-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+/* `assistantMessage { margin-top: 25px }` é literal; os 8 aqui são o
+   espaço entre a data e o bloco do agente, medido no quadro. */
+.pj-agente { margin-top: 8px; padding: 0; }
+
+/* O bloco `Deep thinking 2.0s`. É dobrável no app; o transcript do
+   raciocínio nunca foi capturado, então só o rótulo e a duração. */
+.pj-pensamento {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  margin-top: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--app-v2-text-tertiary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: default;
+}
+
+/* As linhas cinza do rastro do agente. */
+.pj-rastro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 20px;
+  margin-top: 9px;
+  color: var(--app-v2-text-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+}
+.pj-rastro svg { flex-shrink: 0; color: var(--app-v2-icon-disabled); }
+
+/* `assistantMessageContent { font-size: 12px !important }` — literal. */
+.pj-resposta {
+  margin-top: 14px;
+  color: var(--app-v2-text-primary);
+  font-size: 12px;
+  line-height: 21px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+/* A régua: Copiar · Gostei · Não gostei · Mais. Botões de 24. */
+.pj-regua {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.pj-regua button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--ms-radius);
+  background: transparent;
+  color: var(--app-v2-text-primary);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.pj-regua button:hover {
+  background: var(--hover-brand-wash);
+  color: var(--hover-brand);
+}
+/* Marcado: onde a referência acende em laranja, o nosso é a marca. */
+.pj-regua button[aria-pressed="true"] { color: var(--app-v2-brand-solid); }
+
+/* As duas sugestões de continuação. A seta desliza 2px na diagonal. */
+.pj-sugestoes {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+}
+.pj-sugestao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--app-v2-text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  transition: color .15s ease;
+}
+.pj-sugestao svg {
+  flex-shrink: 0;
+  color: var(--app-v2-text-tertiary);
+  transition: transform .15s ease, color .15s ease;
+}
+.pj-sugestao:hover { color: var(--hover-brand); }
+.pj-sugestao:hover svg { transform: translate(2px, -2px); color: var(--hover-brand); }
+
+/* ── A miniatura do artefato, dentro do chat ──────────────────
+   332 de largura; a altura sai da proporção do artefato, e é por isso
+   que a caixa não muda quando a mídia chega. */
+.pj-midia {
+  position: relative;
+  margin-top: 9px;
+  width: 332px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.pj-midia img,
+.pj-midia video { display: block; width: 100%; height: auto; }
+
+.pj-midia-acoes {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  opacity: 0;
+  transition: opacity .15s ease;
+  background: linear-gradient(180deg, transparent, hsl(var(--ms-gray-12) / .28));
+}
+.pj-midia:hover .pj-midia-acoes,
+.pj-midia:focus-within .pj-midia-acoes { opacity: 1; }
+.pj-midia-acoes button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 999px;
+  background: hsl(var(--ms-gray-1) / .92);
+  color: var(--app-v2-text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.pj-midia-acoes button:hover {
+  background: hsl(var(--ms-gray-1));
+  color: var(--hover-brand);
+}
+
+/* ── O placeholder de geração ─────────────────────────────────
+   `css-common-fFd9Z1qJ.css`, verbatim: varredura de 1,5s sobre um
+   degradê de três paradas, `background-size: 200% 100%`.
+
+   Os hex literais são `#ededed` (237) e `#e4e4e4` (228): 9 níveis de
+   amplitude. A rampa do kit não tem esses dois degraus; o par mais
+   próximo em AMPLITUDE — que é o que faz a varredura ser vista — é
+   `--ms-gray-3` (240) com `--ms-gray-4` (232), que dá 8. Medido no
+   navegador: 240 → 224 com o gray-5 (16, o dobro do certo), 240 → 232
+   com o gray-4. Fica o gray-4. */
+/* O shimmer saiu por decisão do usuário: no lugar dele entra o loop da nota
+   portada (`components/notas/`), centrado dentro desta mesma caixa. A caixa
+   continua com a largura e a altura do artefato — é ela que segura o layout.
+   O `position: relative` existe só para o loop ter em que se ancorar. */
+.pj-placeholder {
+  position: relative;
+  overflow: hidden;
+  background-color: hsl(var(--ms-gray-3));
+}
+
+/* A pílula branca de 85×28, centrada nos dois eixos. */
+.pj-pilula-gerando {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 85px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--app-v2-bg-surface);
+  color: var(--app-v2-text-primary);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+/* ── A barra de status ────────────────────────────────────────
+   Altura 28, o mascote de 20 à esquerda e o texto com a onda de luz de
+   3s por `background-clip: text`.
+
+   As paradas da referência são `#000 → #999 → #000`. Uso `--ms-gray-12`
+   (12,55%) nas pontas e `--ms-gray-9` (55,29%) no meio: são os degraus
+   da rampa mais próximos de #000 e de #999 (60%). */
+.pj-status {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 28px;
+  align-items: center;
+  box-sizing: border-box;
+  padding-left: 28px;
+  transform: translateY(-5px);
+  flex-shrink: 0;
+}
+.pj-status-marca {
+  position: absolute;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pj-status-texto {
+  font-size: 13px;
+  line-height: 20px;
+  background: linear-gradient(
+    90deg,
+    hsl(var(--ms-gray-12)),
+    hsl(var(--ms-gray-9)),
+    hsl(var(--ms-gray-12))
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: pj-shimmer 3s ease-in-out infinite;
+}
+@keyframes pj-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: 0% 0; }
+}
+
+/* ── A área de entrada ────────────────────────────────────────
+   `isolation: isolate` é obrigatório: o contorno do composer é uma
+   camada em `z-index:-2`, e sem um contexto de empilhamento próprio ela
+   some atrás do branco do painel. */
+.pj-area-entrada {
+  flex-shrink: 0;
+  padding: 0 4px;
+  position: relative;
+  isolation: isolate;
+}
+
+/* ── O composer, reaproveitado ────────────────────────────────
+   O `ComposerShell` é o mesmo do bloco 03 e o contrato dele está
+   congelado — o que muda aqui é só a geometria, que no painel é a de
+   336 de largura e 160 de altura, e não a de 996/206 da Home.
+
+   A especificidade dupla é de propósito: `composer.css` tem
+   `.pc-shell:has(> .pc-band)` (0,2,0), e este arquivo pode ser injetado
+   antes dele. Com (0,3,0) a ordem de injeção deixa de importar. */
+/* A raiz entra no seletor de propósito. `composer.css` tem
+   `.pc-shell:has(> .pc-band:not(:empty))`, que também soma (0,3,0): com
+   o empate, quem vencia era a ordem de injeção. Com (0,4,0) a ordem
+   deixa de importar. */
+.pj-raiz .pc-shell.pj-composer {
+  max-width: none;
+  /* 1 de padding + 160 da superfície + 1 = 162. */
+  min-height: 162px;
+  border-radius: 19px;
+  padding: 1px;
+  /* A referência põe 2px entre o campo e a faixa (composer y 733…893,
+     faixa y 895…935), e não os 10 do bloco 03. */
+  gap: 2px;
+}
+.pj-raiz .pc-shell.pj-composer:has(> .pc-band) {
+  /* 1 + 160 + 2 + 40 + 1 = 204. */
+  min-height: 204px;
+  padding-bottom: 1px;
+}
+/* Na referência a barra de baixo é ABSOLUTA e ocupa a caixa inteira
+   menos 4 de cada lado (328), enquanto o campo tem 16 de recuo próprio
+   (304). Aqui os dois estão no fluxo, então o recuo horizontal sai da
+   superfície para o campo: superfície com 2, campo com 12. */
+.pj-raiz .pc-shell.pj-composer .pc-surface {
+  min-height: 160px;
+  padding: 12px 2px;
+  border-radius: 18px;
+}
+/* O campo do Miora mede 304×90. O recuo mora no invólucro, e não no
+   `textarea`: em `border-box` um `padding` no próprio campo deixaria a
+   CAIXA dele em 328 e só o texto em 304. */
+.pj-raiz .pc-shell.pj-composer .pc-field { padding: 0 12px; }
+.pj-raiz .pc-shell.pj-composer .pc-textarea {
+  min-height: 90px;
+  max-height: 90px;
+}
+
+/* A fila: 328 de largura para oito controles. Medida na tela, a soma
+   passava disso — a pílula do agente invadia o botão Melhorar em 7px e
+   os vãos saíam desiguais (8 / 8 / 4 / 4 / −7 / 4 / 4). Aqui o vão é UM
+   só, 6px em toda a fila, com 4 de respiro nas duas pontas para o
+   anexar e o enviar não encostarem na borda arredondada. As pílulas
+   perdem o `min-width` e passam a encolher (o texto trunca) em vez de
+   empurrar a fila da direita, que tem largura fixa (3 × 24 + 2 × 6). */
+.pj-raiz .pc-shell.pj-composer .pc-toolbar { gap: 6px; padding: 0 4px; }
+.pj-raiz .pc-shell.pj-composer .pc-toolbar-left { gap: 6px; flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.pj-raiz .pc-shell.pj-composer .pc-toolbar-right { gap: 6px; }
+.pj-raiz .pc-shell.pj-composer .pc-toolbar-right > .pc-send,
+.pj-raiz .pc-shell.pj-composer .pc-toolbar-right > .pc-send-metal { margin-left: 0; }
+/* A Auto não encolhe: o rótulo dela é curto e ficaria cortado; quem
+   cede é a pílula do agente, cujo nome já trunca com reticências. */
+.pj-raiz .pc-shell.pj-composer .pcx-exec-pill { min-width: 0; padding: 0 6px; gap: 3px; flex: 0 0 auto; }
+.pj-raiz .pc-shell.pj-composer .pc-pill { min-width: 0; max-width: 88px; padding: 0 8px; flex: 0 1 auto; }
+.pj-grupo-icones { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+/* A faixa Conectar não tem fundo próprio: o degradê que se vê nela é o
+   brilho do composer vazando por baixo. Pintar a faixa é o erro
+   clássico que o INFO.md anota. */
+.pj-raiz .pc-shell.pj-composer > .pc-band {
+  width: 100%;
+  height: 40px;
+  min-height: 40px;
+  padding: 8px 10px;
+  background: transparent;
+}
+
+/* A faixa Conectar é a mesma do bloco 03 (`FaixaConectores`), com o
+   estado real dos três provedores. Ela mede 24 de altura e cai exata
+   dentro dos 40 da faixa do painel, porque `padding: 8px 10px` deixa
+   justamente 24 de área útil. Por isso não há CSS próprio aqui. */
+
+/* ── O botão que traz o painel de volta ───────────────────────
+   Com o painel colapsado não sobra nada clicável no canto; a referência
+   deixa a barra de ferramentas deslizar para 12px e é de lá que se
+   reabre. Como a barra é do Brasa e ainda não aterrissou, este botão
+   ocupa o mesmo lugar e some quando o painel volta. */
+.pj-reabrir {
+  position: absolute;
+  z-index: 231;
+  left: 12px;
+  top: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: .5px solid var(--app-v2-border-subtle);
+  border-radius: var(--ms-radius-lg);
+  background: var(--app-v2-bg-surface);
+  box-shadow: var(--app-v2-shadow-card);
+  color: var(--app-v2-text-primary);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.pj-reabrir:hover { background: var(--hover-brand-wash); color: var(--hover-brand); }
+
+/* ── O vazio ──────────────────────────────────────────────────
+   Sem conversa ainda. A referência não tem captura deste estado; o que
+   entra é o mínimo que não mente: o nome do projeto e o convite. */
+.pj-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  padding: 24px 0;
+  text-align: center;
+}
+.pj-vazio strong {
+  color: var(--app-v2-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.pj-vazio span {
+  color: var(--app-v2-text-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pj-painel,
+  .pj-sugestao svg,
+  .pj-midia-acoes { transition: none; }
+  .pj-placeholder,
+  .pj-status-texto { animation: none; }
+}
+
+/* A marca do cabeçalho é botão porque esta tela não tem barra lateral: é o
+   caminho de volta. Sem aparência de botão — na referência ela é só o logo. */
+.pj-marca {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--ms-radius-md, 8px);
+  transition: opacity .15s ease;
+}
+
+.pj-marca:hover { opacity: .82; }
+
+/* ── A leva que o modo "Pedir" segurou ────────────────────────
+   A IA monta, mas quem manda aplicar é o usuário — e a decisão é a
+   mesma pílula que já governa a geração, não um interruptor novo. */
+.pj-leva {
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-lg);
+  background: var(--ms-bg);
+  box-shadow: var(--app-v2-shadow-card);
+  font-family: var(--font-ui);
+}
+.pj-leva-titulo {
+  margin-bottom: 6px;
+  color: var(--ms-text);
+  font-size: var(--ms-text-md);
+  font-weight: 600;
+}
+.pj-leva-lista {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--ms-text-secondary);
+  font-size: var(--ms-text-base);
+  line-height: 18px;
+}
+.pj-leva-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.pj-leva-acoes button {
+  height: 26px;
+  padding: 0 12px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-md);
+  background: var(--ms-bg);
+  color: var(--ms-text);
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-base);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.pj-leva-acoes button:hover { background: var(--hover-brand-wash); color: var(--hover-brand); }
+/* A dupla `.pj-leva-acoes` evita `!important` contra o hover acima. */
+.pj-leva-acoes button.pj-leva-btn--marca,
+.pj-leva-acoes button.pj-leva-btn--marca:hover {
+  border-color: transparent;
+  background: var(--app-v2-brand-solid);
+  color: var(--app-v2-text-on-brand);
+}
+
+/* ── A bandeja de anexos do composer ─────────────────────────
+   Os arquivos que o usuário pôs no chat e ainda não enviou. Cada chip
+   é a miniatura com o rótulo (`@foto 1`) pelo qual o texto e o agente
+   se referem a ele. Fica no slot `above` do `ComposerShell`, dentro da
+   superfície branca, acima do campo. */
+.pj-bandeja {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px 8px;
+}
+.pj-chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 2px 6px 2px 2px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: 10px;
+  background: var(--ms-bg);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--ms-text);
+}
+.pj-chip[data-subindo="true"] { opacity: .6; }
+.pj-chip-mini {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  object-fit: cover;
+  background: var(--app-v2-bg-page);
+  flex-shrink: 0;
+}
+.pj-chip-rotulo { font-weight: 600; white-space: nowrap; }
+.pj-chip-rotulo::before { content: "@"; opacity: .55; }
+.pj-chip-acao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ms-text-tertiary);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.pj-chip-acao:hover { background: var(--hover-brand-wash); color: var(--hover-brand); }
+.pj-chip-acao[data-feito="true"] { color: var(--app-v2-brand-solid); cursor: default; }
+.pj-chip-acao[data-feito="true"]:hover { background: transparent; }
+
+/* O composer inteiro aceita soltar um arquivo. */
+.pj-composer-caixa { position: relative; }
+.pj-composer-caixa[data-arrastando="true"] .pc-surface {
+  outline: 2px dashed var(--app-v2-brand-solid);
+  outline-offset: -6px;
+}
+
+/* ── O menu do `@` ───────────────────────────────────────────
+   Abre acima do composer, ancorado à esquerda, quando o usuário digita
+   `@`. Lista as referências da sessão (bandeja e já enviadas) e os
+   estilos ligados. Setas e Enter escolhem; Esc fecha. */
+.pj-mencoes {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(100% + 6px);
+  z-index: 40;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-lg);
+  background: var(--ms-bg);
+  box-shadow: var(--app-v2-shadow-card);
+  font-family: var(--font-ui);
+}
+.pj-mencoes-titulo {
+  padding: 4px 8px 6px;
+  color: var(--ms-text-tertiary);
+  font-size: var(--ms-text-sm);
+}
+.pj-mencao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--ms-radius-md);
+  background: transparent;
+  color: var(--ms-text);
+  font-family: inherit;
+  font-size: var(--ms-text-base);
+  text-align: left;
+  cursor: pointer;
+}
+.pj-mencao[data-ativa="true"], .pj-mencao:hover { background: var(--hover-brand-wash); color: var(--hover-brand); }
+.pj-mencao-mini {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--app-v2-bg-page);
+  flex-shrink: 0;
+}
+.pj-mencao-rotulo { font-weight: 600; }
+.pj-mencao-detalhe { margin-left: auto; color: var(--ms-text-tertiary); font-size: var(--ms-text-sm); }
+
+/* ── Os anexos na bolha do usuário ──────────────────────────── */
+.pj-usuario-anexos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 303px;
+  margin-bottom: 4px;
+}
+.pj-usuario-anexo {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--app-v2-bg-page);
+}
+.pj-usuario-anexo img, .pj-usuario-anexo video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pj-usuario-anexo span {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, .55);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+}
+/* A menção no texto, destacada como o chip. */
+.pj-mencao-inline {
+  padding: 0 4px;
+  border-radius: 5px;
+  background: var(--hover-brand-wash);
+  color: var(--hover-brand);
+  font-weight: 600;
+}
+
+/* ── As menções dentro do campo ──────────────────────────────
+   O `textarea` fica transparente (o caret continua) e a camada por
+   cima redesenha o texto com `@foto 1` virado chip. As duas TÊM a
+   mesma métrica — fonte 13/20 de `composer.css` e os 12 de recuo do
+   campo — senão o cursor descola do glifo. A camada só existe quando há
+   texto, então o placeholder nativo segue aparecendo. */
+.pj-raiz .pc-shell.pj-composer .pc-textarea:not(:placeholder-shown) { color: transparent; }
+.pj-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  padding: 0 12px;
+}
+.pj-overlay-inner {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: var(--ms-text-md);
+  line-height: 20px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--ms-text);
+  will-change: transform;
+}
+/* O chip tem de medir EXATAMENTE o que o texto mede no `textarea`, senão
+   o cursor descola de tudo o que vem depois dele. Por isso: sem padding,
+   sem miniatura e com o mesmo peso de fonte. A "caixa" é o `box-shadow`,
+   que pinta para fora sem ocupar layout. */
+.pj-overlay-chip {
+  display: inline;
+  padding: 0;
+  border-radius: 4px;
+  background: var(--hover-brand-wash);
+  box-shadow: 0 0 0 3px var(--hover-brand-wash);
+  color: var(--hover-brand);
+  font-weight: inherit;
+}
+.pj-overlay-chip[data-tipo="estilo"] {
+  background: color-mix(in srgb, var(--ms-text) 8%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ms-text) 8%, transparent);
+  color: var(--ms-text);
+}

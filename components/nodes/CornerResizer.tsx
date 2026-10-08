@@ -12,7 +12,7 @@ const S = 8;     // handle bounding box (px)
 const T = 1.5;   // border thickness (px)
 const R = 4;     // corner radius
 const O = -6;    // offset: push handle outside the card border
-const C = "#5A6795"; // muted gray
+const C = "var(--ms-text-tertiary)"; // muted gray
 
 type CornerDef = {
   position: ControlPosition;

@@ -5,26 +5,20 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PitchLogo, PitchMark } from "@/components/PitchLogo";
 import { useWorkflowStore } from "@/lib/store";
-import { useChatSessionStore } from "@/lib/chatSessionStore";
-import { useFolderStore } from "@/lib/folderStore";
 import {
-  Workflow,
-  Image as ImageIcon,
-  Video as VideoIcon,
+  ImageIcon,
   Package,
-  MessageSquare,
-  Settings,
   MoreHorizontal,
-  Bot,
-  Pencil,
-  Trash2,
-  Folder,
-  FolderOpen,
-  FolderPlus,
-  LayoutGrid,
-  ChevronRight,
-  ChevronDown,
-} from "lucide-react";
+  Plus,
+  ArrowRight,
+  Flame,
+  Sparkles,
+  Lightbulb,
+  Palette,
+  Network,
+  Clapperboard,
+} from "@/components/icones";
+import { User } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -33,6 +27,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -104,500 +99,6 @@ function PixelAvatar({ seed, size = 36 }: { seed: string; size?: number }) {
   );
 }
 
-// ── Module-level drag tracker (avoids stale closures across re-renders) ──────
-let _dragFolderId: string | null = null;
-
-const FOLDER_COLORS: { color: string | null; label: string }[] = [
-  { color: null, label: "Default" },
-  { color: "#1B84FF", label: "Blue" },
-  { color: "#868CFF", label: "Cyan" },
-  { color: "#A855F7", label: "Purple" },
-  { color: "#01B574", label: "Pink" },
-  { color: "#E31A1A", label: "Red" },
-  { color: "#FFB547", label: "Orange" },
-  { color: "#FFB547", label: "Yellow" },
-  { color: "#01B574", label: "Green" },
-];
-
-// ── Clean failed pending generations from localStorage + notify gallery page ──
-function cleanFailedJobs(folderId: string | null) {
-  try {
-    const stored = localStorage.getItem("aiui-pending-gens");
-    if (stored) {
-      const parsed = JSON.parse(stored) as Array<{ error?: string; folderId?: string | null }>;
-      const cleaned = parsed.filter(pg => {
-        if (!pg.error) return true;
-        if (folderId === null) return false;
-        return pg.folderId !== folderId;
-      });
-      localStorage.setItem("aiui-pending-gens", JSON.stringify(cleaned));
-    }
-  } catch {}
-  window.dispatchEvent(new CustomEvent("clean-failed-jobs", { detail: { folderId } }));
-}
-
-// ── FolderRow — defined at module level so React never remounts it on parent re-renders ──
-interface FolderRowProps {
-  folder: import("@/lib/folderStore").Folder;
-  allFolders: import("@/lib/folderStore").Folder[];
-  depth: number;
-  expandedIds: Set<string>;
-  selectedFolderId: string | null;
-  onToggleExpand: (id: string) => void;
-  onSelect: (id: string) => void;
-  onDelete: (id: string) => void;
-  onRename: (id: string, name: string) => void;
-  onColorChange: (id: string, color: string | null) => void;
-  onMove: (id: string, newParentId: string | null, newOrderIndex: number) => void;
-  creatingInFolderId: string | null;
-  newFolderName: string;
-  onNameChange: (v: string) => void;
-  onNameKeyDown: (e: React.KeyboardEvent) => void;
-  onNameBlur: () => void;
-  inputRef: React.RefObject<HTMLInputElement | null>;
-  getCount: (id: string) => number;
-  generatingFolderIds: string[];
-  unseenFolderIds: string[];
-}
-
-const FolderRow = React.memo(function FolderRow({
-  folder, allFolders, depth, expandedIds, selectedFolderId,
-  onToggleExpand, onSelect, onDelete, onRename, onColorChange, onMove,
-  creatingInFolderId, newFolderName, onNameChange, onNameKeyDown, onNameBlur, inputRef,
-  getCount, generatingFolderIds, unseenFolderIds,
-}: FolderRowProps) {
-  const [drop, setDrop] = React.useState<"before" | "after" | "inside" | null>(null);
-  const [menuOpen, setMenuOpen] = React.useState(false);
-  const [menuPos, setMenuPos] = React.useState<{ x: number; y: number } | null>(null);
-  const [isRenaming, setIsRenaming] = React.useState(false);
-  const [renameValue, setRenameValue] = React.useState("");
-  const menuRef = React.useRef<HTMLDivElement>(null);
-  const btnRef = React.useRef<HTMLButtonElement>(null);
-  const renameInputRef = React.useRef<HTMLInputElement>(null);
-
-  // Focus rename input once it mounts
-  React.useEffect(() => {
-    if (isRenaming) renameInputRef.current?.focus();
-  }, [isRenaming]);
-
-  // Close menu on click outside
-  React.useEffect(() => {
-    if (!menuOpen) return;
-    function handle(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, [menuOpen]);
-
-  function openMenu(e: React.MouseEvent) {
-    e.stopPropagation();
-    const rect = btnRef.current!.getBoundingClientRect();
-    setMenuPos({ x: rect.right, y: rect.bottom + 4 });
-    setMenuOpen(true);
-  }
-
-  function startRename() {
-    setMenuOpen(false);
-    setRenameValue(folder.name);
-    setIsRenaming(true);
-  }
-
-  function confirmRename() {
-    const name = renameValue.trim();
-    if (name && name !== folder.name) onRename(folder.id, name);
-    setIsRenaming(false);
-  }
-
-  const children = allFolders
-    .filter(f => f.parentId === folder.id)
-    .sort((a, b) => a.orderIndex - b.orderIndex);
-  const hasChildren = children.length > 0;
-  const isCreatingHere = creatingInFolderId === folder.id;
-  const isExpanded = expandedIds.has(folder.id);
-  const isActive = selectedFolderId === folder.id;
-
-  function getPos(e: React.DragEvent<HTMLDivElement>): "before" | "after" | "inside" {
-    const { top, height } = e.currentTarget.getBoundingClientRect();
-    const pct = (e.clientY - top) / height;
-    return pct < 0.3 ? "before" : pct > 0.7 ? "after" : "inside";
-  }
-
-  const isGenerating = generatingFolderIds.includes(folder.id);
-  const hasUnseen = unseenFolderIds.includes(folder.id);
-
-  const sharedChildProps = {
-    allFolders, expandedIds, selectedFolderId,
-    onToggleExpand, onSelect, onDelete, onRename, onColorChange, onMove,
-    creatingInFolderId, newFolderName, onNameChange, onNameKeyDown, onNameBlur, inputRef,
-    getCount, generatingFolderIds, unseenFolderIds,
-  };
-
-  return (
-    <React.Fragment>
-      {drop === "before" && (
-        <div style={{ height: 1, background: "#868CFF", margin: "1px 8px", borderRadius: 1, pointerEvents: "none" }} />
-      )}
-      <div
-        draggable
-        onDragStart={e => {
-          _dragFolderId = folder.id;
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData("text/plain", folder.id);
-        }}
-        onDragOver={e => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (_dragFolderId === folder.id) return;
-          setDrop(getPos(e));
-        }}
-        onDragLeave={e => {
-          if (!e.currentTarget.contains(e.relatedTarget as Node)) setDrop(null);
-        }}
-        onDrop={e => {
-          e.preventDefault();
-          e.stopPropagation();
-          const dragged = _dragFolderId;
-          setDrop(null);
-          _dragFolderId = null;
-          if (!dragged || dragged === folder.id) return;
-          const pos = getPos(e);
-          if (pos === "inside") {
-            const sibs = allFolders.filter(f => f.parentId === folder.id).sort((a, b) => a.orderIndex - b.orderIndex);
-            onMove(dragged, folder.id, sibs.length > 0 ? Math.max(...sibs.map(f => f.orderIndex)) + 1 : 0);
-          } else {
-            const sibs = allFolders.filter(f => f.parentId === folder.parentId && f.id !== dragged).sort((a, b) => a.orderIndex - b.orderIndex);
-            const idx = sibs.findIndex(f => f.id === folder.id);
-            onMove(dragged, folder.parentId, pos === "before" ? idx : idx + 1);
-          }
-        }}
-        onDragEnd={() => { _dragFolderId = null; setDrop(null); }}
-        onClick={() => !isRenaming && onSelect(folder.id)}
-        className={cn(
-          "group flex items-center gap-2 py-2 rounded-lg cursor-pointer transition-colors select-none",
-          isActive ? "bg-white/[0.07]" : "hover:bg-white/[0.04]",
-        )}
-        style={{
-          paddingLeft: `${8 + depth * 14}px`,
-          paddingRight: "8px",
-          outline: drop === "inside" ? "1px solid rgba(134, 140, 255,0.7)" : "none",
-          outlineOffset: -1,
-        }}
-      >
-        {/* Expand toggle */}
-        <button
-          onClick={e => { e.stopPropagation(); onToggleExpand(folder.id); }}
-          style={{
-            width: 10, height: 10, display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0, opacity: (hasChildren || isCreatingHere) ? 0.45 : 0,
-            pointerEvents: (hasChildren || isCreatingHere) ? "auto" : "none",
-            background: "none", border: "none", padding: 0, cursor: "pointer",
-          }}
-        >
-          {isExpanded ? <ChevronDown size={10} color="white" /> : <ChevronRight size={10} color="white" />}
-        </button>
-
-        {isActive
-          ? <FolderOpen size={13} className="shrink-0" style={{ color: folder.color ?? "rgba(255,255,255,0.70)" }} />
-          : <Folder size={13} className="shrink-0" style={{ color: folder.color ?? "rgba(255,255,255,0.35)" }} />}
-
-        {isRenaming ? (
-          <input
-            ref={renameInputRef}
-            value={renameValue}
-            onChange={e => setRenameValue(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === "Enter") { e.preventDefault(); confirmRename(); }
-              if (e.key === "Escape") { e.stopPropagation(); setIsRenaming(false); }
-            }}
-            onBlur={confirmRename}
-            onClick={e => e.stopPropagation()}
-            className="flex-1 bg-transparent text-[12px] text-white/90 outline-none border-b border-white/30 pb-0.5 min-w-0"
-          />
-        ) : (
-          <span className={cn(
-            "flex-1 text-[12px] truncate leading-tight",
-            isActive ? "text-white/90" : "text-white/55",
-          )}>
-            {folder.name}
-          </span>
-        )}
-
-        {!isRenaming && (() => { const c = getCount(folder.id); return c > 0 ? (
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
-            {c}
-          </span>
-        ) : null; })()}
-        {!isRenaming && isGenerating && (
-          <svg width="10" height="10" viewBox="0 0 10 10" style={{ flexShrink: 0, animation: "spin 0.9s linear infinite" }}>
-            <circle cx="5" cy="5" r="3.5" fill="none" stroke="rgba(134, 140, 255,0.2)" strokeWidth="1.5" />
-            <path d="M5 1.5A3.5 3.5 0 0 1 8.5 5" fill="none" stroke="url(#fg-spin)" strokeWidth="1.5" strokeLinecap="round" />
-            <defs>
-              <linearGradient id="fg-spin" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#1B84FF" />
-                <stop offset="100%" stopColor="#868CFF" />
-              </linearGradient>
-            </defs>
-          </svg>
-        )}
-        {!isRenaming && !isGenerating && hasUnseen && (
-          <span style={{
-            width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-            background: "linear-gradient(135deg, #1B84FF 0%, #868CFF 100%)",
-            boxShadow: "0 0 5px rgba(134, 140, 255,0.6)",
-          }} />
-        )}
-
-        {/* ⋯ context menu button */}
-        <button
-          ref={btnRef}
-          onClick={openMenu}
-          className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 text-white/35 hover:text-white/70 hover:bg-white/[0.08] transition-all shrink-0"
-        >
-          <MoreHorizontal size={12} />
-        </button>
-      </div>
-
-      {/* Context menu — fixed-position to escape overflow:auto clipping */}
-      {menuOpen && menuPos && (
-        <div
-          ref={menuRef}
-          onMouseDown={e => e.preventDefault()}
-          style={{
-            position: "fixed",
-            left: menuPos.x,
-            top: menuPos.y,
-            transform: "translateX(-100%)",
-            zIndex: 9999,
-            background: "#171728",
-            border: "1px solid rgba(255,255,255,0.09)",
-            borderRadius: 8,
-            padding: 4,
-            minWidth: 130,
-            boxShadow: "0 6px 24px rgba(0,0,0,0.6)",
-          }}
-        >
-          {/* Color swatches */}
-          <div style={{ padding: "6px 10px 6px", display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
-            {FOLDER_COLORS.map(({ color, label }) => {
-              const isSelected = color === null ? !folder.color : folder.color === color;
-              return (
-                <button
-                  key={label}
-                  title={label}
-                  onClick={e => { e.stopPropagation(); setMenuOpen(false); onColorChange(folder.id, color); }}
-                  style={{
-                    width: 14, height: 14, borderRadius: "50%",
-                    background: color ?? "rgba(255,255,255,0.18)",
-                    border: isSelected ? "2px solid rgba(255,255,255,0.85)" : "2px solid transparent",
-                    outline: isSelected ? "1px solid rgba(0,0,0,0.4)" : "none",
-                    outlineOffset: -1,
-                    cursor: "pointer",
-                    padding: 0,
-                    flexShrink: 0,
-                    position: "relative",
-                  }}
-                >
-                  {color === null && (
-                    <svg width="10" height="10" viewBox="0 0 10 10" style={{ position: "absolute", inset: 0, margin: "auto", display: "block" }}>
-                      <line x1="2" y1="8" x2="8" y2="2" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "2px 0 4px" }} />
-          <button
-            onClick={e => { e.stopPropagation(); startRename(); }}
-            style={{
-              display: "block", width: "100%", textAlign: "left",
-              padding: "6px 10px", borderRadius: 5, fontSize: 12,
-              color: "rgba(255,255,255,0.72)", background: "none", border: "none", cursor: "pointer",
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "none")}
-          >
-            Rename
-          </button>
-          <button
-            onClick={e => { e.stopPropagation(); setMenuOpen(false); cleanFailedJobs(folder.id); }}
-            style={{
-              display: "block", width: "100%", textAlign: "left",
-              padding: "6px 10px", borderRadius: 5, fontSize: 12,
-              color: "rgba(255,255,255,0.72)", background: "none", border: "none", cursor: "pointer",
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "none")}
-          >
-            Clean failed jobs
-          </button>
-          <button
-            onClick={e => { e.stopPropagation(); setMenuOpen(false); onDelete(folder.id); }}
-            style={{
-              display: "block", width: "100%", textAlign: "left",
-              padding: "6px 10px", borderRadius: 5, fontSize: 12,
-              color: "rgba(255, 138, 138,0.85)", background: "none", border: "none", cursor: "pointer",
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255, 138, 138,0.08)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "none")}
-          >
-            Delete
-          </button>
-        </div>
-      )}
-
-      {drop === "after" && (
-        <div style={{ height: 1, background: "#868CFF", margin: "1px 8px", borderRadius: 1, pointerEvents: "none" }} />
-      )}
-      {isExpanded && (hasChildren || isCreatingHere) && (
-        <>
-          {children.map(child => (
-            <FolderRow key={child.id} folder={child} depth={depth + 1} {...sharedChildProps} />
-          ))}
-          {isCreatingHere && (
-            <div
-              className="flex items-center gap-2 py-1"
-              style={{ paddingLeft: `${8 + (depth + 1) * 14}px`, paddingRight: "8px" }}
-            >
-              <Folder size={13} className="shrink-0 text-white/40" />
-              <input
-                ref={inputRef}
-                value={newFolderName}
-                onChange={e => onNameChange(e.target.value)}
-                onKeyDown={onNameKeyDown}
-                onBlur={onNameBlur}
-                placeholder="Folder name…"
-                className="flex-1 bg-transparent text-[12px] text-white/80 placeholder:text-white/25 outline-none border-b border-white/20 pb-0.5 min-w-0"
-              />
-            </div>
-          )}
-        </>
-      )}
-    </React.Fragment>
-  );
-});
-
-// ── AllAssetsRow — "All assets" item with its own "..." menu ─────────────────
-interface AllAssetsRowProps {
-  isActive: boolean;
-  count: number;
-  onSelect: () => void;
-  isGenerating?: boolean;
-  hasUnseen?: boolean;
-}
-
-const AllAssetsRow = React.memo(function AllAssetsRow({ isActive, count, onSelect, isGenerating, hasUnseen }: AllAssetsRowProps) {
-  const [menuOpen, setMenuOpen] = React.useState(false);
-  const [menuPos, setMenuPos] = React.useState<{ x: number; y: number } | null>(null);
-  const menuRef = React.useRef<HTMLDivElement>(null);
-  const btnRef = React.useRef<HTMLButtonElement>(null);
-
-  React.useEffect(() => {
-    if (!menuOpen) return;
-    function handle(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, [menuOpen]);
-
-  function openMenu(e: React.MouseEvent) {
-    e.stopPropagation();
-    const rect = btnRef.current!.getBoundingClientRect();
-    setMenuPos({ x: rect.right, y: rect.bottom + 4 });
-    setMenuOpen(true);
-  }
-
-  return (
-    <React.Fragment>
-      <div
-        onClick={onSelect}
-        className={cn(
-          "group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors",
-          isActive ? "bg-white/[0.07]" : "hover:bg-white/[0.04]"
-        )}
-      >
-        <LayoutGrid size={13} className={cn("shrink-0", isActive ? "text-white/70" : "text-white/35")} />
-        <span className={cn(
-          "flex-1 text-[12px] truncate leading-tight",
-          isActive ? "text-white/90" : "text-white/55"
-        )}>
-          Todo o acervo
-        </span>
-        {count > 0 && (
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
-            {count}
-          </span>
-        )}
-        {isGenerating && (
-          <svg width="10" height="10" viewBox="0 0 10 10" style={{ flexShrink: 0, animation: "spin 0.9s linear infinite" }}>
-            <circle cx="5" cy="5" r="3.5" fill="none" stroke="rgba(134, 140, 255,0.2)" strokeWidth="1.5" />
-            <path d="M5 1.5A3.5 3.5 0 0 1 8.5 5" fill="none" stroke="url(#fg-spin-all)" strokeWidth="1.5" strokeLinecap="round" />
-            <defs>
-              <linearGradient id="fg-spin-all" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#1B84FF" />
-                <stop offset="100%" stopColor="#868CFF" />
-              </linearGradient>
-            </defs>
-          </svg>
-        )}
-        {!isGenerating && hasUnseen && (
-          <span style={{
-            width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-            background: "linear-gradient(135deg, #1B84FF 0%, #868CFF 100%)",
-            boxShadow: "0 0 5px rgba(134, 140, 255,0.6)",
-          }} />
-        )}
-        <button
-          ref={btnRef}
-          onClick={openMenu}
-          className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 text-white/35 hover:text-white/70 hover:bg-white/[0.08] transition-all shrink-0"
-        >
-          <MoreHorizontal size={12} />
-        </button>
-      </div>
-
-      {menuOpen && menuPos && (
-        <div
-          ref={menuRef}
-          onMouseDown={e => e.preventDefault()}
-          style={{
-            position: "fixed",
-            left: menuPos.x,
-            top: menuPos.y,
-            transform: "translateX(-100%)",
-            zIndex: 9999,
-            background: "#171728",
-            border: "1px solid rgba(255,255,255,0.09)",
-            borderRadius: 8,
-            padding: 4,
-            minWidth: 130,
-            boxShadow: "0 6px 24px rgba(0,0,0,0.6)",
-          }}
-        >
-          <button
-            onClick={e => { e.stopPropagation(); setMenuOpen(false); cleanFailedJobs(null); }}
-            style={{
-              display: "block", width: "100%", textAlign: "left",
-              padding: "6px 10px", borderRadius: 5, fontSize: 12,
-              color: "rgba(255,255,255,0.72)", background: "none", border: "none", cursor: "pointer",
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "none")}
-          >
-            Clean failed jobs
-          </button>
-        </div>
-      )}
-    </React.Fragment>
-  );
-});
-
 // ── Static icons ──────────────────────────────────────────────────────────────
 function LogoIcon() {
   return <PitchMark size={26} />;
@@ -615,11 +116,11 @@ function CreditIcon({ size = 12 }: { size?: number }) {
 
 // ── Sidebar component ─────────────────────────────────────────────────────────
 export function AppSidebar() {
+  const { setOpenMobile } = useSidebar();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab") ?? "images";
-  const activeChatId = searchParams.get("id");
 
   const [balance, setBalance] = React.useState<number | null>(null);
 
@@ -656,106 +157,103 @@ export function AppSidebar() {
     return () => { clearInterval(id); window.removeEventListener("credits-refresh", fetchBalance); };
   }, []);
 
-  const { sessions, deleteSession } = useChatSessionStore();
+  /* No Miora, a seção `Projects` lista os projetos salvos. O nosso projeto é o
+     espaço de workflow: mesma coisa — um canvas com nome, criado pelo `+` e
+     aberto no clique. */
+  const spaces        = useWorkflowStore((s) => s.spaces);
+  const activeSpaceId = useWorkflowStore((s) => s.activeSpaceId);
+  const createSpace   = useWorkflowStore((s) => s.createSpace);
+  const switchSpace   = useWorkflowStore((s) => s.switchSpace);
 
-  const {
-    folders, selectedFolderId, itemFolderMap,
-    createFolder, deleteFolder, selectFolder,
-    updateFolder, moveFolder, folderItemCount,
-    galleryImageCount, galleryVideoCount,
-    loadFromServer, generatingFolderIds, unseenFolderIds,
-    generatingAllAssets, unseenAllAssets,
-  } = useFolderStore();
-  const [creatingFolder, setCreatingFolder] = React.useState(false);
-  const [newFolderName, setNewFolderName] = React.useState("");
-  const newFolderInputRef = React.useRef<HTMLInputElement>(null);
-  const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
+  /* A referência mostra no máximo 4 projetos antes do `View more`; o resto vive
+     na página. A escada de entrada (40ms por linha) é do próprio bloco 01. */
+  const projetos = React.useMemo(
+    () => [...spaces].sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt)).slice(0, 4),
+    [spaces],
+  );
 
-  React.useEffect(() => {
-    loadFromServer();
-  }, [loadFromServer]);
-
-  function startNewChat() {
-    router.push("/chat");
+  function novoProjeto() {
+    createSpace("Novo projeto");
+    setOpenMobile(false);
+    router.push("/workflow");
   }
 
-  function handleDeleteChat(id: string, isActive: boolean) {
-    deleteSession(id);
-    if (isActive) {
-      const next = sessions.find(s => s.id !== id);
-      router.push(next ? `/chat?id=${next.id}` : "/chat");
-    }
+  function abrirProjeto(id: string) {
+    switchSpace(id);
+    setOpenMobile(false);
+    router.push("/workflow");
   }
 
-  function handleCreateFolder() {
-    setCreatingFolder(true);
-    setNewFolderName("");
-    // Auto-expand parent folder so the inline input is visible
-    if (selectedFolderId) {
-      setExpandedIds(prev => new Set([...prev, selectedFolderId]));
-    }
-    setTimeout(() => newFolderInputRef.current?.focus(), 50);
-  }
-
-  function confirmCreateFolder() {
-    const name = newFolderName.trim();
-    if (name) {
-      // If a folder is currently selected, create subfolder under it
-      const parentId = selectedFolderId ?? null;
-      createFolder(name, parentId);
-    }
-    setCreatingFolder(false);
-    setNewFolderName("");
-  }
-
-  function handleFolderKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") confirmCreateFolder();
-    if (e.key === "Escape") { setCreatingFolder(false); setNewFolderName(""); }
-  }
-
-  // ── Folder tree helpers ──────────────────────────────────────────────────────
-  function buildTree(parentId: string | null): typeof folders {
-    return folders
-      .filter((f) => f.parentId === parentId)
-      .sort((a, b) => a.orderIndex - b.orderIndex);
-  }
-
-  function handleToggleExpand(id: string) {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  const displayName = "";
+  const displayName = "Workspace pessoal";
   const avatarSeed = "guest";
 
-  const folderParam = selectedFolderId ? `&folder=${selectedFolderId}` : "";
-  const navItems = [
-    { label: "Imagem", href: `/gallery?tab=images${folderParam}`, icon: ImageIcon, active: pathname === "/gallery" && tab === "images" },
-    { label: "Vídeo", href: `/gallery?tab=videos${folderParam}`, icon: VideoIcon, active: pathname === "/gallery" && tab === "videos" },
-    { label: "Workflow", href: "/workflow", icon: Workflow, active: pathname === "/workflow" || (pathname.startsWith("/workflow/") && pathname !== "/workflow") },
-    { label: "Acervo", href: "#", icon: Package, active: false, disabled: true },
-    { label: "Chat", href: "/chat", icon: MessageSquare, active: pathname === "/chat" },
-    { label: "Configurações", href: "#", icon: Settings, active: false, onClick: (e: React.MouseEvent) => { e.preventDefault(); setSettingsOpen(true); } },
+  const isCreationView = searchParams.get("view") === "create";
+
+  /* A barra do Miora tem sete itens em dois grupos, e um único rótulo de grupo
+     (`Customize`) entre eles. A ordem, os nomes e o que cada um abre estão em
+     `.migracao/MAPA-AFORDANCIAS.md`, bloco 01.
+
+     Nós temos SETE, e é aqui que a barra deixa de ser 3 + 3: os Produtos
+     Quentes entram como quarto item do grupo de cima. Eles são fonte de
+     MATERIAL, irmãos de Inspiração — não uma preferência da conta, que é o
+     que o grupo "Personalizar" guarda. O rótulo de grupo e o segundo grupo
+     descem 40px, um passo, e o resto da métrica não muda. */
+  const navTopo = [
+    { label: "Criar",      href: `/gallery?tab=${tab}&view=create`, icon: ImageIcon, active: pathname === "/gallery" && isCreationView },
+    { label: "Inspiração", href: "/inspiracao",                     icon: Sparkles,  active: pathname.startsWith("/inspiracao") },
+    /* A aba de estruturar a ideia (leva 8). Ela ocupa o terceiro lugar do grupo
+       de cima — o mesmo que a Arena tinha antes de sair —, então a barra volta à
+       contagem da referência: 3 itens, rótulo de grupo, 3 itens. */
+    { label: "Estruturar", href: "/estruturar",                     icon: Lightbulb, active: pathname.startsWith("/estruturar") },
+    /* Os produtos que vêm do banco do PitchAI. A mesma grade também vive
+       no painel da direita da tela de projeto — lá para arrastar direto
+       para o grafo, aqui para procurar com espaço. */
+    { label: "Quentes",    href: "/quentes",                        icon: Flame,     active: pathname.startsWith("/quentes") },
+    /* O kit turbo 1.000 seguidores: um formato travado, um episódio por
+       dia. É fluxo de criação, irmão do Estruturar — por isso fica no
+       grupo de cima e não em "Personalizar". */
+    { label: "Séries",     href: "/series",                         icon: Clapperboard, active: pathname.startsWith("/series") },
+  ];
+  const navPersonalizar = [
+    { label: "Personagens", href: "/personagens", icon: User, active: pathname.startsWith("/personagens") },
+    { label: "Estilos", href: "/estilos",         icon: Palette, active: pathname.startsWith("/estilos") },
+    /* `is-assets-brand`: no Miora, Assets é o único item cujo estado ativo usa a
+       cor da marca em vez do cinza. Lá é laranja; aqui, violeta. */
+    { label: "Acervo",  href: `/gallery?tab=${tab}`, icon: Package, active: pathname === "/gallery" && !isCreationView, marca: true },
+    { label: "Memória", href: "/memoria",         icon: Network, active: pathname.startsWith("/memoria") },
   ];
 
-  const itemCls = (active: boolean, disabled?: boolean) => cn(
-    "flex items-center gap-3.5 px-3 h-11 w-full rounded-xl transition-colors duration-150 text-left",
-    "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:mx-auto",
-    active ? "bg-white/[0.08] text-white" : "text-white/50 hover:text-white/80 hover:bg-white/[0.05]",
-    disabled && "opacity-35 cursor-not-allowed pointer-events-none",
+  const renderNav = (items: typeof navTopo | typeof navPersonalizar) => items.map((item) => (
+    <Link
+      key={item.label}
+      aria-current={item.active ? "page" : undefined}
+      href={item.href}
+      onClick={() => setOpenMobile(false)}
+      className={itemCls(item.active, "marca" in item && item.marca)}
+      title={item.label}
+    >
+      {React.createElement(item.icon, { size: 16, strokeWidth: 1.5, className: "shrink-0" })}
+      <span className="text-ms-md font-medium group-data-[collapsible=icon]:hidden leading-none">
+        {item.label}
+      </span>
+    </Link>
+  ));
+
+  const itemCls = (active: boolean, marca?: boolean) => cn(
+    "miora-nav-item flex items-center gap-3 px-3 h-9 w-full rounded-xl transition-colors duration-150 text-left",
+    "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-9 group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:rounded-full",
+    marca && "is-marca",
+    active ? "is-active" : "",
   );
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0 bg-[#0F0F1A]" style={{ borderRight: "none" }}>
+    <Sidebar collapsible="icon" className="border-r-0">
 
       {/* ── Header ── */}
-      <SidebarHeader className="flex-row items-center justify-between px-4 pt-5 pb-2 gap-0">
-        <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:hidden">
-          <PitchLogo size={26} />
+      <SidebarHeader className="flex-row items-center justify-between h-[84px] pl-5 pr-2 py-[22px] gap-0">
+        {/* `logo-btn` de 40px de altura em x 20: mascote 32 + gap 8 + lockup 63. */}
+        <div className="flex h-10 items-center group-data-[collapsible=icon]:hidden">
+          <PitchLogo size={32} />
         </div>
         {/* Collapsed: logo fades to trigger on hover */}
         <div className="hidden group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-1">
@@ -763,165 +261,104 @@ export function AppSidebar() {
             <div className="pointer-events-none transition-opacity duration-200 group-hover/logo-area:opacity-0">
               <LogoIcon />
             </div>
-            <SidebarTrigger className="absolute inset-0 opacity-0 group-hover/logo-area:opacity-100 transition-opacity duration-200 text-white/50 hover:text-white hover:bg-white/[0.05] w-full h-full rounded-xl p-0 [&_svg]:size-4" />
+            <SidebarTrigger className="absolute inset-0 opacity-0 group-hover/logo-area:opacity-100 transition-opacity duration-200 w-full h-full rounded-xl p-0 [&_svg]:size-4" />
           </div>
         </div>
-        <SidebarTrigger className="group-data-[collapsible=icon]:hidden text-white/30 hover:text-white/70 hover:bg-white/[0.05] transition-colors p-1.5 rounded-lg -mr-1 [&_svg]:size-4" />
+        {/* `40×40`, `border-radius:12px`, encostado em x 202–242 pelo `pr-2` do
+            cabeçalho. Estava em 28×28, o que o descolava 16px da borda. */}
+        <SidebarTrigger className="group-data-[collapsible=icon]:hidden transition-colors size-10 p-0 rounded-xl [&_svg]:size-4" />
       </SidebarHeader>
 
-      {/* ── Nav + Chat history ── */}
-      <SidebarContent className="overflow-y-auto flex flex-col">
-        {/* Nav items */}
-        <div className="px-2 py-3 flex flex-col gap-0.5 shrink-0">
-          {navItems.map((item) => {
-            const content = (
-              <>
-                {React.createElement(item.icon, { size: 20, strokeWidth: 1.5, className: "shrink-0" })}
-                <span className="text-[14px] font-medium group-data-[collapsible=icon]:hidden leading-none">
-                  {item.label}
-                </span>
-              </>
-            );
-            if (item.disabled) return (
-              <div key={item.label} className={itemCls(item.active, true)} title={item.label}>{content}</div>
-            );
-            if (!item.href || item.href === "#") return (
-              <button key={item.label} className={itemCls(item.active)} onClick={item.onClick} title={item.label}>{content}</button>
-            );
-            return (
-              <Link key={item.label} href={item.href} onClick={item.onClick} className={itemCls(item.active)} title={item.label}>{content}</Link>
-            );
-          })}
+      {/* ── Menu ──
+          `.app-v2-navi-menu`: padding 0 12px, gap 12 entre grupos e 4 entre itens
+          (item de 36 → passo de 40). Colapsada, o padding vai a 14px e o rótulo
+          de grupo some, o que sobe o segundo grupo de 246 para 212. */}
+      <SidebarContent className="overflow-y-auto flex flex-col gap-3 px-3 group-data-[collapsible=icon]:px-[14px]">
+
+        <div className="flex flex-col gap-1 shrink-0">
+          {renderNav(navTopo)}
         </div>
 
-        {/* Folders section — hidden in icon mode */}
-        <div className="group-data-[collapsible=icon]:hidden flex flex-col shrink-0 px-2">
-          <div className="border-t border-white/[0.06] mb-1" />
+        <div className="flex flex-col gap-1 shrink-0">
+          <span className="miora-group-title flex items-center group-data-[collapsible=icon]:hidden">Personalizar</span>
+          {renderNav(navPersonalizar)}
+        </div>
 
-          {/* Section header */}
-          <div className="flex items-center justify-between px-1 py-2 shrink-0">
-            <span className="text-[10px] font-bold tracking-[0.08em] uppercase text-white/25">Pastas</span>
-            <button
-              onClick={handleCreateFolder}
-              title="New folder"
-              className="w-6 h-6 rounded-lg flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/[0.06] transition-colors"
-            >
-              <FolderPlus size={12} />
-            </button>
+        {/* ── Projetos ──
+            No rail, a seção inteira vira uma entrada só, com o traço de 24×1px
+            que o `::before` do `.app-v2-navi-rail-entry` desenha 5px acima. */}
+        <div className="flex flex-col gap-1 shrink-0 group-data-[collapsible=icon]:mt-1">
+          <div className="miora-group-title is-projetos flex items-center justify-between gap-0.5 group-data-[collapsible=icon]:hidden">
+            <span>Projetos</span>
+            <span className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={novoProjeto}
+                aria-label="Novo projeto"
+                title="Novo projeto"
+                className="size-6 rounded-lg flex items-center justify-center text-ms-icon-tertiary hover:text-ms-text-secondary hover:bg-ms-bg-hover transition-colors"
+              >
+                <Plus size={14} strokeWidth={1.8} />
+              </button>
+              <Link
+                href="/workflow"
+                aria-label="Ver mais"
+                title="Ver mais"
+                className="size-6 rounded-lg flex items-center justify-center text-ms-icon-tertiary hover:text-ms-text-secondary hover:bg-ms-bg-hover transition-colors"
+              >
+                <ArrowRight size={14} strokeWidth={1.8} />
+              </Link>
+            </span>
           </div>
 
-          {/* Folder list — max 7 rows, scrollable */}
-          <div className="flex flex-col gap-0.5" style={{ maxHeight: "calc(7 * 36px)", overflowY: "auto" }}>
-            {/* All assets row */}
-            <AllAssetsRow
-              isActive={selectedFolderId === null}
-              count={pathname === "/gallery" ? (tab === "videos" ? galleryVideoCount : galleryImageCount) : 0}
-              onSelect={() => selectFolder(null)}
-              isGenerating={generatingAllAssets}
-              hasUnseen={unseenAllAssets}
-            />
-
-            {/* Recursive folder tree — root folders only, children rendered inside FolderRow */}
-            {buildTree(null).map((folder) => (
-              <FolderRow
-                key={folder.id}
-                folder={folder}
-                allFolders={folders}
-                depth={0}
-                expandedIds={expandedIds}
-                selectedFolderId={selectedFolderId}
-                onToggleExpand={handleToggleExpand}
-                onSelect={selectFolder}
-                onDelete={deleteFolder}
-                onRename={(id, name) => updateFolder(id, { name })}
-                onColorChange={(id, color) => updateFolder(id, { color })}
-                onMove={moveFolder}
-                creatingInFolderId={creatingFolder ? selectedFolderId : null}
-                newFolderName={newFolderName}
-                onNameChange={setNewFolderName}
-                onNameKeyDown={handleFolderKeyDown}
-                onNameBlur={confirmCreateFolder}
-                inputRef={newFolderInputRef}
-                getCount={folderItemCount}
-                generatingFolderIds={generatingFolderIds}
-                unseenFolderIds={unseenFolderIds}
-              />
-            ))}
-
-            {/* Root-level new folder input — shown at bottom when no folder is selected */}
-            {creatingFolder && selectedFolderId === null && (
-              <div className="flex items-center gap-2 px-2 py-1">
-                <Folder size={13} className="shrink-0 text-white/40" />
-                <input
-                  ref={newFolderInputRef}
-                  value={newFolderName}
-                  onChange={e => setNewFolderName(e.target.value)}
-                  onKeyDown={handleFolderKeyDown}
-                  onBlur={confirmCreateFolder}
-                  placeholder="Folder name…"
-                  className="flex-1 bg-transparent text-[12px] text-white/80 placeholder:text-white/25 outline-none border-b border-white/20 pb-0.5 min-w-0"
-                />
-              </div>
+          <Link
+            href="/workflow"
+            title="Projetos"
+            className={cn(
+              "miora-rail-entry hidden group-data-[collapsible=icon]:flex items-center justify-center size-9 mx-auto rounded-full",
+              "miora-nav-item transition-colors duration-150",
+              pathname.startsWith("/workflow") && "is-active",
             )}
+          >
+            <Package size={16} strokeWidth={1.5} />
+          </Link>
+
+          <div className="group-data-[collapsible=icon]:hidden flex flex-col gap-1">
+            {projetos.length === 0 ? (
+              <p className="px-3 py-2 text-ms-sm text-ms-text-placeholder leading-none">Nenhum projeto ainda</p>
+            ) : projetos.map((sp, i) => (
+              <button
+                key={sp.id}
+                type="button"
+                onClick={() => abrirProjeto(sp.id)}
+                title={sp.name}
+                style={{ animationDelay: `${i * 40}ms` }}
+                className={cn(
+                  "miora-nav-item miora-projeto flex items-center gap-3 px-3 h-9 w-full rounded-xl transition-colors duration-150 text-left",
+                  pathname.startsWith("/workflow") && sp.id === activeSpaceId && "is-active",
+                )}
+              >
+                <span className="truncate text-ms-md font-medium leading-none">{sp.name}</span>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Chat history — hidden in icon mode */}
-        <div className="group-data-[collapsible=icon]:hidden flex flex-col flex-1 min-h-0 px-2 pb-2">
-          <div className="border-t border-white/[0.06] mb-1" />
-
-          {/* Section header */}
-          <div className="flex items-center justify-between px-1 py-2 shrink-0">
-            <span className="text-[10px] font-bold tracking-[0.08em] uppercase text-white/25">Conversas</span>
-            <button
-              onClick={startNewChat}
-              title="New chat"
-              className="w-6 h-6 rounded-lg flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/[0.06] transition-colors"
-            >
-              <Pencil size={12} />
-            </button>
-          </div>
-
-          {/* Session list */}
-          <div className="flex-1 overflow-y-auto flex flex-col gap-0.5 min-h-0">
-            {sessions.length === 0 ? (
-              <p className="text-center text-[11px] text-white/20 px-2 py-4">Nenhuma conversa ainda</p>
-            ) : sessions.map(sess => {
-              const isActive = pathname === "/chat" && sess.id === activeChatId;
-              return (
-                <div
-                  key={sess.id}
-                  onClick={() => router.push(`/chat?id=${sess.id}`)}
-                  className={cn(
-                    "group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors",
-                    isActive ? "bg-white/[0.07]" : "hover:bg-white/[0.04]"
-                  )}
-                >
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(134, 140, 255,0.08)", border: "1px solid rgba(134, 140, 255,0.12)" }}>
-                    <Bot size={11} style={{ color: "rgba(134, 140, 255,0.7)" }} />
-                  </div>
-                  <span className={cn(
-                    "flex-1 text-[12px] truncate leading-tight",
-                    isActive ? "text-white/90" : "text-white/55"
-                  )}>
-                    {sess.title}
-                  </span>
-                  <button
-                    onClick={e => { e.stopPropagation(); handleDeleteChat(sess.id, isActive); }}
-                    className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400/70 hover:bg-red-400/10 transition-all shrink-0"
-                  >
-                    <Trash2 size={10} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </SidebarContent>
 
       {/* ── Footer ── */}
-      <SidebarFooter className="px-2 pb-4">
+      <SidebarFooter className="px-3 pb-3 gap-3">
+        <div className="miora-credit-card group-data-[collapsible=icon]:m-0">
+          <div className="miora-credit-copy group-data-[collapsible=icon]:hidden">
+            <span>Créditos</span>
+            <strong className="metric">{balance !== null ? balance.toLocaleString() : "0"}</strong>
+          </div>
+          <button type="button" className="miora-upgrade group-data-[collapsible=icon]:hidden" onClick={() => window.open("https://kie.ai?ref=25abb3f2236cbff9780ab9c2f84479ec", "_blank")}>Adicionar créditos</button>
+          <div className="miora-credit-rail hidden group-data-[collapsible=icon]:flex">
+            <CreditIcon size={13} />
+            <strong className="metric">{balance !== null ? balance.toLocaleString() : "0"}</strong>
+          </div>
+        </div>
         <DropdownMenu>
 
           {/* Trigger: pixel avatar + name + credits */}
@@ -930,23 +367,23 @@ export function AppSidebar() {
               <button
                 title={displayName}
                 className={cn(
-                  "flex items-center gap-3 w-full px-2.5 py-2 rounded-xl hover:bg-white/[0.05] transition-colors cursor-pointer",
+                  /* `min-height:56px; gap:11px; padding:7px` com o avatar de 42.
+                     Com `p-2`/`gap-3` a conta media 58 e empurrava o card de
+                     crédito 3px para cima do 780 da referência. */
+                  "miora-account flex items-center gap-[11px] w-full p-[7px] min-h-14 rounded-xl transition-colors cursor-pointer",
                   "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:mx-auto",
                 )}
               >
-                <Avatar className="size-9 rounded-xl shrink-0 after:rounded-xl after:border-white/15">
+                <Avatar className="size-[42px] rounded-xl shrink-0 after:rounded-xl after:border-ms-border-subtle">
                   <AvatarFallback className="rounded-xl bg-transparent p-0 overflow-hidden">
-                    <PixelAvatar seed={avatarSeed} size={36} />
+                    <PixelAvatar seed={avatarSeed} size={42} />
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left group-data-[collapsible=icon]:hidden min-w-0">
-                  {displayName && <div className="text-[13px] font-semibold text-white/90 truncate leading-tight">{displayName}</div>}
-                  <div className="flex items-center gap-1 mt-0.5 text-[11px] text-white/40">
-                    <CreditIcon />
-                    <span>{balance !== null ? `${balance.toLocaleString()} Credits` : "0 Credits"}</span>
-                  </div>
+                  {displayName && <div className="text-[13px] font-semibold text-ms-text truncate leading-tight">{displayName}</div>}
+                  <div className="mt-0.5 text-[11px] opacity-55">Configurações da conta</div>
                 </div>
-                <MoreHorizontal size={15} className="text-white/30 shrink-0 group-data-[collapsible=icon]:hidden" />
+                <MoreHorizontal size={15} className="text-ms-icon-tertiary shrink-0 group-data-[collapsible=icon]:hidden" />
               </button>
             }
           />
@@ -956,43 +393,55 @@ export function AppSidebar() {
             side="top"
             align="start"
             sideOffset={8}
-            className="!p-0 !rounded-2xl !bg-[#0f0f0f] !border-white/[0.12] !ring-0 !shadow-[0_8px_48px_rgba(0,0,0,0.85)] overflow-hidden !w-auto !min-w-[280px]"
+            className="miora-account-menu !p-0 !rounded-2xl bg-popover text-popover-foreground border-border !ring-0 !shadow-xl overflow-hidden !w-auto !min-w-[280px]"
           >
             {/* User header — non-interactive */}
             <div className="flex items-center gap-3.5 px-4 pt-4 pb-3.5">
-              <Avatar className="size-14 rounded-xl shrink-0 after:rounded-xl after:border-white/15">
+              <Avatar className="size-14 rounded-xl shrink-0 after:rounded-xl after:border-ms-border-subtle">
                 <AvatarFallback className="rounded-xl bg-transparent p-0 overflow-hidden">
                   <PixelAvatar seed={avatarSeed} size={56} />
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                {displayName && <div className="text-[15px] font-semibold text-white truncate">{displayName}</div>}
-                <div className="flex items-center gap-1.5 mt-0.5 text-[12px] text-white/40">
+                {displayName && <div className="text-[15px] font-semibold text-ms-text truncate">{displayName}</div>}
+                <div className="flex items-center gap-1.5 mt-0.5 text-[12px] text-ms-icon-tertiary">
                   <CreditIcon size={13} />
-                  <span>{balance !== null ? `${balance.toLocaleString()} Credits` : "0 Credits"}</span>
+                  <span>{balance !== null ? `${balance.toLocaleString()} créditos` : "0 créditos"}</span>
                 </div>
               </div>
             </div>
 
-            <DropdownMenuSeparator className="!bg-white/[0.07] !my-0 !mx-0" />
+            <DropdownMenuSeparator className="bg-popover/[0.07] !my-0 !mx-0" />
 
-            {/* Purchase Kie Credits */}
+            {/* Perfil — a tela do bloco de perfil (leva 8). Ela entra no menu da
+                conta, e não como sétimo item da navegação: no Miora a conta é o
+                rodapé da barra, e perfil é assunto de conta. */}
             <DropdownMenuItem
-              className="flex items-center justify-between rounded-none px-4 py-3 text-[14px] text-white/60 hover:text-white focus:text-white focus:bg-white/[0.06] cursor-pointer"
+              className="rounded-none px-4 py-3 text-[14px] text-ms-text-secondary hover:text-ms-text focus:text-ms-text focus:bg-ms-bg-hover cursor-pointer"
+              onClick={() => { setOpenMobile(false); router.push("/perfil"); }}
+            >
+              Perfil
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator className="bg-popover/[0.07] !my-0 !mx-0" />
+
+            {/* Comprar créditos */}
+            <DropdownMenuItem
+              className="flex items-center justify-between rounded-none px-4 py-3 text-[14px] text-ms-text-secondary hover:text-ms-text focus:text-ms-text focus:bg-ms-bg-hover cursor-pointer"
               onClick={() => window.open("https://kie.ai?ref=25abb3f2236cbff9780ab9c2f84479ec", "_blank")}
             >
-              <span>Purchase Kie Credits</span>
+              <span>Comprar créditos na Kie</span>
               <CreditIcon size={15} />
             </DropdownMenuItem>
 
-            <DropdownMenuSeparator className="!bg-white/[0.07] !my-0 !mx-0" />
+            <DropdownMenuSeparator className="bg-popover/[0.07] !my-0 !mx-0" />
 
             {/* Settings */}
             <DropdownMenuItem
-              className="rounded-none px-4 pb-4 pt-3 text-[14px] text-white/60 hover:text-white focus:text-white focus:bg-white/[0.06] cursor-pointer"
+              className="rounded-none px-4 pb-4 pt-3 text-[14px] text-ms-text-secondary hover:text-ms-text focus:text-ms-text focus:bg-ms-bg-hover cursor-pointer"
               onClick={() => setSettingsOpen(true)}
             >
-              Settings
+              Configurações
             </DropdownMenuItem>
           </DropdownMenuContent>
 
