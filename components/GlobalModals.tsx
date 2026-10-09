@@ -1,7 +1,6 @@
 "use client";
 import SettingsModal from "@/components/SettingsModal";
 import Toaster from "@/components/Toaster";
-import DesktopLinkHandler from "@/components/DesktopLinkHandler";
 import { useWorkflowStore } from "@/lib/store";
 
 export default function GlobalModals() {
@@ -10,7 +9,6 @@ export default function GlobalModals() {
 
   return (
     <>
-      <DesktopLinkHandler />
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       <Toaster />
     </>

@@ -1,25 +1,17 @@
+import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { jobStore } from "@/lib/jobStore";
-import { pollKieJob } from "@/lib/kieJobPoller";
+import { getSessionUser, unauthorized } from "@/lib/auth/currentUser";
+import { data } from "@/lib/data";
+import { chargeGeneration, creditsFor, refundCharge } from "@/lib/jobs/charge";
+import { startJob } from "@/lib/jobs/lifecycle";
 import { rewriteLocalMediaForKie } from "@/lib/kieUpload";
 import { ensureR2 } from "@/lib/storage";
 import { VIDEO_MODELS } from "@/lib/modelConfig";
 import { getKieTokenForUser } from "@/lib/getKieToken";
-import { GUEST_USER_ID } from "@/lib/guestMode";
-import { shouldMock, startMockJob } from "@/lib/mockProvider";
-import {
-  HIGGSFIELD_GENJUTSU_MOTION_ENDPOINT,
-  HIGGSFIELD_GENJUTSU_OBJECT_ENDPOINT,
-  HIGGSFIELD_SEEDANCE_2_ENDPOINT,
-  ensureHiggsfieldReachableMedia,
-  normalizeHiggsfieldSubmissionError,
-  submitHiggsfieldGeneration,
-  type HiggsfieldEndpoint,
-  type HiggsfieldGenjutsuInput,
-  type HiggsfieldTextToVideoInput,
-} from "@/lib/higgsfieldProvider";
-import { pollHiggsfieldJob } from "@/lib/higgsfieldJobPoller";
-import * as guestDb from "@/lib/guest/db";
+import { MOCK_TASK_PREFIX, shouldMock } from "@/lib/mockProvider";
+
+export const runtime = "nodejs";
+export const maxDuration = 120;
 
 const KIE_BASE = "https://api.kie.ai";
 
@@ -36,6 +28,8 @@ interface KlingElementInput {
 
 
 export async function POST(req: NextRequest) {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
   try {
   const body = await req.json();
   const {
@@ -57,12 +51,11 @@ export async function POST(req: NextRequest) {
     seed,
     veoMode,
     generationType: rawGenerationType,
-    callBackUrl:    rawCallBackUrl,
     debugOnly       = false,
-    submissionId,
   } = body;
 
-  const userId = GUEST_USER_ID;
+  const userId = user.uid;
+  const store = await data();
 
   const cfg = VIDEO_MODELS.find((m) => m.id === videoModel);
   if (!cfg) return NextResponse.json({ error: `Unknown video model: ${videoModel}` }, { status: 400 });
@@ -79,185 +72,35 @@ export async function POST(req: NextRequest) {
     ? Math.max(apiInput.durationMin, Math.min(apiInput.durationMax, Number(duration)))
     : 0;
 
+  // Higgsfield (Seedance 2.0 e Genjutsu) não tem preço fixo publicado: fica
+  // fora do Studio até medirmos o custo — a política de planos do saysell-web
+  // também o recusa.
   if (apiInput.useHiggsfield) {
-    const cleanPrompt = typeof prompt === "string" ? prompt.trim() : "";
-    if (cleanPrompt.length > (apiInput.promptMaxLength ?? 10_000)) {
-      return NextResponse.json({ error: "The prompt is too long." }, { status: 400 });
-    }
-
-    const isGenjutsu = Boolean(apiInput.useHiggsfieldGenjutsu);
-    const rawGenjutsuImages = Array.isArray(rawRefImages)
-      ? rawRefImages.filter((value): value is string => typeof value === "string" && value.length > 0).slice(0, 9)
-      : [];
-    let endpointId: HiggsfieldEndpoint = HIGGSFIELD_SEEDANCE_2_ENDPOINT;
-    let debugInput: HiggsfieldTextToVideoInput | HiggsfieldGenjutsuInput;
-    let numericDuration = Number(duration);
-
-    if (isGenjutsu) {
-      if (typeof rawVideoRef !== "string" || rawVideoRef.length === 0) {
-        return NextResponse.json({ error: "Genjutsu requires a source video." }, { status: 400 });
-      }
-      if (rawGenjutsuImages.length < 1 || rawGenjutsuImages.length > 8) {
-        return NextResponse.json({ error: "Genjutsu requires from 1 to 8 reference images." }, { status: 400 });
-      }
-      if (resolution !== "480p" && resolution !== "720p") {
-        return NextResponse.json({ error: "Genjutsu resolution must be 480p or 720p." }, { status: 400 });
-      }
-      endpointId = cfg.id === "higgsfield-genjutsu-object-swap"
-        ? HIGGSFIELD_GENJUTSU_OBJECT_ENDPOINT
-        : HIGGSFIELD_GENJUTSU_MOTION_ENDPOINT;
-      debugInput = {
-        prompt: cleanPrompt,
-        video_url: rawVideoRef,
-        image_urls: rawGenjutsuImages,
-        resolution,
-      };
-      numericDuration = 0;
-    } else {
-      const allowedResolutions = new Set(["480p", "720p", "1080p", "4k"]);
-      const allowedRatios = new Set(["16:9", "4:3", "1:1", "3:4", "9:16", "21:9"]);
-      if (!cleanPrompt) {
-        return NextResponse.json({ error: "A prompt is required for Higgsfield Seedance 2.0." }, { status: 400 });
-      }
-      if (!Number.isInteger(numericDuration) || numericDuration < 4 || numericDuration > 15) {
-        return NextResponse.json({ error: "Higgsfield duration must be an integer from 4 to 15 seconds." }, { status: 400 });
-      }
-      if (!allowedResolutions.has(resolution)) {
-        return NextResponse.json({ error: "Unsupported Higgsfield resolution." }, { status: 400 });
-      }
-      if (!allowedRatios.has(aspectRatio)) {
-        return NextResponse.json({ error: "Unsupported Higgsfield aspect ratio." }, { status: 400 });
-      }
-      debugInput = {
-        prompt: cleanPrompt,
-        resolution: resolution as HiggsfieldTextToVideoInput["resolution"],
-        generate_audio: Boolean(sound),
-        duration: numericDuration,
-        aspect_ratio: aspectRatio as HiggsfieldTextToVideoInput["aspect_ratio"],
-      };
-    }
-
-    const endpoint = `https://api.higgsfield.ai/${endpointId}`;
-
-    if (debugOnly) {
-      return NextResponse.json({
-        debugPayload: debugInput,
-        debugEndpoint: endpoint,
-        transport: "@higgsfield/client (polling disabled for initial submission)",
-      });
-    }
-
-    if (typeof submissionId !== "string" || !/^[a-zA-Z0-9_-]{8,100}$/.test(submissionId)) {
-      return NextResponse.json({ error: "A valid submissionId is required." }, { status: 400 });
-    }
-
-    const credentials = guestDb.getHiggsfieldCredentials();
-    if (!credentials) {
-      return NextResponse.json(
-        { error: "No Higgsfield credentials configured. Add them in Settings." },
-        { status: 401 },
-      );
-    }
-
-    const claim = guestDb.claimGenerationSubmission(submissionId, userId, "higgsfield");
-    if (!claim.claimed) {
-      if (claim.existing.user_id !== userId || claim.existing.provider !== "higgsfield") {
-        return NextResponse.json({ error: "Submission not found." }, { status: 404 });
-      }
-      if (claim.existing.state === "accepted" && claim.existing.task_id) {
-        return NextResponse.json({ taskId: claim.existing.task_id, deduplicated: true });
-      }
-      const message = claim.existing.state === "uncertain"
-        ? "The prior submission outcome is unknown. Check the Higgsfield console before submitting again."
-        : "This generation is already being submitted.";
-      return NextResponse.json({ error: message }, { status: 409 });
-    }
-
-    let input = debugInput;
-    if (isGenjutsu) {
-      try {
-        const [videoUrl, imageUrls] = await Promise.all([
-          ensureHiggsfieldReachableMedia(rawVideoRef as string, credentials),
-          Promise.all(rawGenjutsuImages.map((url) => ensureHiggsfieldReachableMedia(url, credentials))),
-        ]);
-        if (videoUrl.length > 2083 || imageUrls.some((url) => url.length > 2083)) {
-          guestDb.releaseGenerationSubmission(submissionId);
-          return NextResponse.json({ error: "A Higgsfield media URL is too long." }, { status: 400 });
-        }
-        input = { ...debugInput, video_url: videoUrl, image_urls: imageUrls } as HiggsfieldGenjutsuInput;
-      } catch (error) {
-        guestDb.releaseGenerationSubmission(submissionId);
-        const normalized = normalizeHiggsfieldSubmissionError(error);
-        console.error("[generate-video] Higgsfield media upload failed:", normalized.message);
-        return NextResponse.json(
-          { error: `Higgsfield media upload failed: ${normalized.message}` },
-          { status: normalized.httpStatus },
-        );
-      }
-    }
-
-    try {
-      const created = await submitHiggsfieldGeneration(credentials, endpointId, input);
-      const taskId = created.request_id;
-      if (!taskId) {
-        guestDb.markGenerationSubmissionUncertain(submissionId);
-        return NextResponse.json(
-          { error: "Higgsfield accepted the request but did not return a request ID. Check the console before trying again." },
-          { status: 502 },
-        );
-      }
-
-      guestDb.acceptGenerationSubmission(submissionId, taskId);
-      jobStore.set(taskId, {
-        status: "pending",
-        type: "video",
-        userId,
-        provider: "higgsfield",
-        statusUrl: created.status_url,
-      });
-      guestDb.insertGeneration({
-        task_id: taskId,
-        user_id: userId,
-        generation_type: "video",
-        status: "pending",
-        model: videoModel,
-        prompt: cleanPrompt,
-        aspect_ratio: isGenjutsu ? undefined : aspectRatio,
-        duration: isGenjutsu ? undefined : numericDuration,
-        sound: Boolean(sound),
-        reference_image_urls: isGenjutsu ? rawGenjutsuImages : [],
-      });
-      pollHiggsfieldJob(taskId, credentials, created.status_url, userId, created);
-      return NextResponse.json({ taskId });
-    } catch (error) {
-      const normalized = normalizeHiggsfieldSubmissionError(error);
-      if (normalized.ambiguous) guestDb.markGenerationSubmissionUncertain(submissionId);
-      else guestDb.releaseGenerationSubmission(submissionId);
-      console.error("[generate-video] Higgsfield submission failed:", normalized.message);
-      return NextResponse.json({ error: normalized.message }, { status: normalized.httpStatus });
-    }
+    return NextResponse.json({ error: "Este modelo ainda não está disponível no Studio." }, { status: 403 });
   }
 
-  const apiKey = (await getKieTokenForUser()) ?? process.env.KIE_API_TOKEN ?? null;
+  const apiKey = await getKieTokenForUser();
 
-  // Sem chave kie.ai: cai no provider simulado (lib/mockProvider.ts) para o app
-  // continuar navegável de ponta a ponta. MOCK_GENERATION=false desliga isso.
+  // Sem chave kie.ai: provider simulado (lib/mockProvider.ts), sem cobrança.
   if (shouldMock(apiKey)) {
-    const taskId = startMockJob({
-      kind:        "video",
-      prompt:      typeof prompt === "string" ? prompt : "",
-      model:       videoModel,
-      aspectRatio,
-      duration:    Number(duration) || undefined,
-      userId,
+    const taskId = `${MOCK_TASK_PREFIX}${randomUUID()}`;
+    const mockPrompt = typeof prompt === "string" ? prompt : "";
+    await store.insertGeneration(userId, {
+      task_id: taskId, generation_type: "video", status: "pending",
+      prompt: mockPrompt, model: videoModel, aspect_ratio: aspectRatio, duration: Number(duration) || undefined,
+      reference_image_urls: [],
+    });
+    await startJob({
+      uid: userId, taskId, kind: "video", provider: "mock", model: videoModel, creditJobId: null,
+      mockInput: { prompt: mockPrompt, aspectRatio },
     });
     return NextResponse.json({ taskId });
   }
 
-  if (!apiKey) return NextResponse.json({ error: "No Kie.ai API key configured. Add one in Settings." }, { status: 401 });
+  if (!apiKey) return NextResponse.json({ error: "Geração indisponível no momento." }, { status: 503 });
 
-  // The app polls kie.ai directly (lib/kieJobPoller) — no callback URL needed.
-  const callBackUrl = rawCallBackUrl || undefined;
+  // O job é acompanhado por leitura do status e pelo Cron — sem callback.
+  const callBackUrl = undefined;
 
   let input: Record<string, unknown>;
   let effectiveApiId = cfg.apiId;
@@ -598,40 +441,64 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ debugPayload: kieBody, debugEndpoint: endpoint });
   }
 
-  console.log(`[generate-video] sending to ${endpoint}:`, JSON.stringify(kieBody));
-  const createRes = await fetch(endpoint, {
-    method:  "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body:    JSON.stringify(kieBody),
+  // Cobra antes de criar o job; qualquer falha daqui em diante estorna.
+  const referenceCount = [rawStartFrame, rawEndFrame, rawVideoRef].filter(Boolean).length
+    + (Array.isArray(rawRefImages) ? rawRefImages.length : 0)
+    + (Array.isArray(rawRefVideoUrls) ? rawRefVideoUrls.length : 0);
+  const billedDuration = clampedDuration > 0
+    ? clampedDuration
+    : apiInput.durationMax > 0 ? apiInput.durationMax : 15;
+  const charge = await chargeGeneration(userId, {
+    kind: "video",
+    model: videoModel,
+    // O Veo entrega 720p; os demais seguem a resolução escolhida.
+    resolution: apiInput.useGoogleVeo ? "720p" : String(resolution),
+    credits: creditsFor({
+      model: videoModel,
+      kind: "video",
+      resolution: String(resolution),
+      duration: billedDuration,
+      sound: cfg.sound ? Boolean(sound) : undefined,
+      references: referenceCount,
+    }),
   });
+  if (!charge.ok) return charge.response;
+  const fail = async (error: string, status: number) => {
+    await refundCharge(userId, charge.creditJobId);
+    return NextResponse.json({ error }, { status });
+  };
+
+  let createRes: Response;
+  try {
+    createRes = await fetch(endpoint, {
+      method:  "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body:    JSON.stringify(kieBody),
+    });
+  } catch (e) {
+    return fail(`Não foi possível falar com o provedor: ${(e as Error).message}`, 502);
+  }
 
   if (!createRes.ok) {
-    if (createRes.status === 401) {
-      return NextResponse.json({ error: "Invalid Kie.ai API key — please update it in Settings." }, { status: 401 });
-    }
     const errText = await createRes.text();
     console.error("[generate-video] kie.ai HTTP error:", createRes.status, errText);
-    return NextResponse.json({ error: errText }, { status: 500 });
+    return fail(createRes.status === 401 ? "Geração indisponível no momento." : errText, 500);
   }
 
   const createdText = await createRes.text();
-  console.log("[generate-video] kie.ai response:", createdText);
   let created: { code?: number; msg?: string; data?: { taskId?: string; id?: string } };
   try {
     created = JSON.parse(createdText);
   } catch {
-    return NextResponse.json({ error: `Upstream returned non-JSON: ${createdText.slice(0, 200)}` }, { status: 500 });
+    return fail(`Upstream returned non-JSON: ${createdText.slice(0, 200)}`, 500);
   }
   if (created.code !== 200) {
-    console.error("[generate-video] kie.ai API error:", created.code, created.msg, "input:", JSON.stringify(input));
-    return NextResponse.json({ error: created.msg ?? "Task creation failed" }, { status: 500 });
+    console.error("[generate-video] kie.ai API error:", created.code, created.msg);
+    return fail(created.msg ?? "Task creation failed", 500);
   }
 
   const taskId = created.data?.taskId || created.data?.id;
-  if (!taskId) return NextResponse.json({ error: "No taskId returned" }, { status: 500 });
-
-  // Register as pending so the frontend can poll job-status
-  jobStore.set(taskId, { status: "pending", type: "video", userId: userId ?? undefined });
+  if (!taskId) return fail("No taskId returned", 500);
 
   const referenceUrls: string[] = apiInput.useMotionControl
     ? [
@@ -659,18 +526,18 @@ export async function POST(req: NextRequest) {
           ?.map((el) => el.element_input_urls[0]) ?? []),
       ];
 
-  guestDb.insertGeneration({
-    task_id: taskId, user_id: userId, generation_type: "video",
+  await store.insertGeneration(userId, {
+    task_id: taskId, generation_type: "video",
     status: "pending", model: videoModel, prompt, aspect_ratio: effectiveAspectRatio,
     duration: clampedDuration, kling_mode: mode,
     sound: cfg.sound ? Boolean(sound) : false,
     reference_image_urls: referenceUrls,
   });
-  if (apiInput.useGoogleVeo) {
-    console.warn("[generate-video] Veo has no jobs-API polling yet — result needs a callback URL");
-  } else {
-    pollKieJob(taskId, apiKey, "video");
-  }
+  await startJob({
+    uid: userId, taskId, kind: "video", provider: "kie",
+    kieApi: apiInput.useGoogleVeo ? "veo" : "jobs",
+    model: videoModel, creditJobId: charge.creditJobId,
+  });
 
   return NextResponse.json({ taskId });
   } catch (e: unknown) {

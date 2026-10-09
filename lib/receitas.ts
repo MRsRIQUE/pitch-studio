@@ -73,22 +73,6 @@ export const RECEITAS: Receita[] = [
     ],
     acoes: [{ rotulo: "Abrir o template", tipo: "template", template: "troca-pessoa" }],
   },
-  {
-    id: "cena-de-produto",
-    titulo: "Cena de produto com o seu personagem",
-    resumo:
-      "Um produto quente, um personagem do seu elenco, e a cena montada no grafo em um clique: a foto parada primeiro, para você ver se a mão pegou o produto certo antes de gastar o vídeo.",
-    modelos: ["nano-banana-pro", "seedance-2-5"],
-    passos: [
-      "Em Quentes, limpe a foto do produto (recorte) e clique em Usar.",
-      "Escolha o personagem. A cena nasce com o prompt de produção já com timeline e fala de exemplo.",
-      "Gere a imagem, confira, e só então gere o vídeo.",
-    ],
-    acoes: [
-      { rotulo: "Ir para Quentes", tipo: "rota", href: "/quentes" },
-      { rotulo: "Meus personagens", tipo: "rota", href: "/personagens" },
-    ],
-  },
 ];
 
 /* ── Executar uma ação ─────────────────────────────────────────

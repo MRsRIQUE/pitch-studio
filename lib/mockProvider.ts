@@ -1,31 +1,24 @@
 /**
- * Provider simulado do Pitch Studio.
+ * Provider simulado do SaySell Studio.
  *
  * Existe para o app ser navegável de ponta a ponta sem uma chave da kie.ai:
- * o ciclo real de um job (jobStore → evento SSE em `/api/job-status` → guest DB
- * → galeria) roda inteiro; só a chamada externa é falsa.
+ * o ciclo real de um job (reserva → job pendente → leitura do status → galeria)
+ * roda inteiro; só a chamada externa é falsa.
  *
- * Ativo quando `MOCK_GENERATION !== "false"` E não há chave kie.ai configurada.
- * Assim que a chave é preenchida (env `KIE_API_KEY` ou Settings → API Keys), o
- * caminho real assume sozinho e este módulo deixa de ser consultado.
+ * Fora da Vercel, ativo quando não há `KIE_API_KEY` e `MOCK_GENERATION` não é
+ * "false". Na Vercel só com `MOCK_GENERATION=true` explícito.
  *
- * Os task IDs recebem o prefixo `mock-`, seguindo a convenção que
- * `lib/kieJobPoller.ts` já usa para providers locais (`azure-`, `codex-`), de
- * modo que nenhum poller tente buscar esses jobs na kie.ai.
+ * Os task IDs recebem o prefixo `mock-`, de modo que ninguém tente buscar
+ * esses jobs na kie.ai.
  */
-import { randomUUID } from "crypto";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import sharp from "sharp";
-import { jobStore, type JobResult } from "./jobStore";
-import { jobEvents } from "./jobEvents";
-import * as guestDb from "./guest/db";
-import { uploadBuffer } from "./guest/localStorage";
 
 export const MOCK_TASK_PREFIX = "mock-";
 
 /** Quanto tempo o job simulado leva para "gerar", em ms. */
-const MOCK_LATENCY_MS = 2_500;
+export const MOCK_LATENCY_MS = 2_500;
 
 /** Vídeo simulado: asset estático em `public/mock/`, sem ffmpeg em runtime. */
 const PLACEHOLDER_VIDEO = join(process.cwd(), "public", "mock", "placeholder-video.mp4");
@@ -42,6 +35,8 @@ export function isMockTaskId(taskId: string): boolean {
  */
 export function shouldMock(kieToken: string | null | undefined): boolean {
   if (kieToken) return false;
+  // Na Vercel, sem chave é erro de configuração — simular só se pedido.
+  if (process.env.VERCEL) return process.env.MOCK_GENERATION === "true";
   return process.env.MOCK_GENERATION !== "false";
 }
 
@@ -117,85 +112,30 @@ ${lines
   )
   .join("\n")}
   <text x="${w / 2}" y="${h * 0.88}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" letter-spacing="2" fill="#5a6795">${escapeXml(model)} · ${escapeXml(aspectRatio)}</text>
-  <text x="${w / 2}" y="${h * 0.94}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" fill="#5a6795">configure sua chave kie.ai em Settings para gerar de verdade</text>
+  <text x="${w / 2}" y="${h * 0.94}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" fill="#5a6795">defina KIE_API_KEY no servidor para gerar de verdade</text>
 </svg>`;
 
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
-// ── Ciclo de vida do job simulado ────────────────────────────────────────────
-
-export interface MockJobParams {
-  kind: MockKind;
-  prompt: string;
-  model: string;
-  aspectRatio?: string;
-  userId?: string | null;
-  referenceImageUrls?: string[];
-  duration?: number;
-}
+// ── Resultado do job simulado ────────────────────────────────────────────────
 
 /**
- * Cria um job simulado e devolve o taskId imediatamente, como fazem os
- * handlers reais. A resolução acontece em background depois de MOCK_LATENCY_MS.
+ * O job simulado não roda em background (na Vercel não há processo vivo):
+ * `lib/jobs/lifecycle.ts` cria o job com `mockReadyAt` e, na primeira leitura
+ * depois desse instante, pede aqui o arquivo e encerra o job como qualquer
+ * outro.
  */
-export function startMockJob(params: MockJobParams): string {
-  const taskId = `${MOCK_TASK_PREFIX}${randomUUID()}`;
-  const { kind, prompt, model, aspectRatio = "1:1", userId = null } = params;
-
-  jobStore.set(taskId, { status: "pending", userId: userId ?? undefined });
-
-  guestDb.insertGeneration({
-    task_id:              taskId,
-    user_id:              userId,
-    generation_type:      kind,
-    status:               "pending",
-    prompt,
-    model,
-    aspect_ratio:         aspectRatio,
-    duration:             params.duration,
-    reference_image_urls: params.referenceImageUrls ?? [],
-  });
-
-  void resolveLater(taskId, params);
-  return taskId;
-}
-
-async function resolveLater(taskId: string, params: MockJobParams): Promise<void> {
-  await new Promise((r) => setTimeout(r, MOCK_LATENCY_MS));
-  try {
-    if (params.kind === "video") {
-      const buf = await readFile(PLACEHOLDER_VIDEO);
-      const url = await uploadBuffer(buf, "video/mp4", "videos");
-      settle(taskId, "video", { status: "done", videoUrl: url });
-    } else {
-      const buf = await renderImage(params.prompt, params.aspectRatio ?? "1:1", params.model);
-      const url = await uploadBuffer(buf, "image/png", "images");
-      settle(taskId, "image", { status: "done", imageUrl: url, imageUrls: [url] });
-    }
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error(`[mock] ${taskId} falhou:`, msg);
-    settle(taskId, params.kind, { status: "error", error: `Geração simulada falhou: ${msg}` });
+export async function renderMockResult(
+  kind: MockKind,
+  input: { prompt: string; aspectRatio: string; model: string },
+): Promise<{ buffer: Buffer; contentType: string; folder: string }> {
+  if (kind === "video") {
+    return { buffer: await readFile(PLACEHOLDER_VIDEO), contentType: "video/mp4", folder: "videos" };
   }
-}
-
-/**
- * Mesma sequência de `settle` em lib/kieJobPoller.ts: grava o jobStore, emite o
- * evento que o SSE de `/api/job-status` aguarda, e espelha no guest DB.
- */
-function settle(taskId: string, kind: MockKind, result: JobResult): void {
-  jobStore.set(taskId, result);
-  jobEvents.emit(`job:${taskId}`, result);
-
-  if (result.status === "done") {
-    guestDb.updateGeneration(
-      taskId,
-      kind === "video"
-        ? { status: "done", video_url: result.videoUrl }
-        : { status: "done", image_url: result.imageUrl, image_urls: result.imageUrls },
-    );
-  } else if (result.status === "error") {
-    guestDb.updateGeneration(taskId, { status: "error", error_msg: result.error });
-  }
+  return {
+    buffer: await renderImage(input.prompt, input.aspectRatio || "1:1", input.model),
+    contentType: "image/png",
+    folder: "images",
+  };
 }

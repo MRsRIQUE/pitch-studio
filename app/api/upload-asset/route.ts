@@ -14,14 +14,16 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { uploadBuffer } from "@/lib/storage";
-import { GUEST_USER_ID } from "@/lib/guestMode";
-import * as guestDb from "@/lib/guest/db";
+import { getSessionUser, unauthorized } from "@/lib/auth/currentUser";
+import { data } from "@/lib/data";
 
 export const maxDuration = 60;
 
 const MAX_BYTES = 100 * 1024 * 1024; // 100 MB
 
 export async function POST(req: NextRequest) {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
   try {
     const mimeType = req.headers.get("content-type") ?? "application/octet-stream";
 
@@ -37,11 +39,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "File exceeds 100 MB limit" }, { status: 413 });
     }
 
-    // ── Store on local disk (dedupe happens inside uploadBuffer) ─────────────
+    // ── Guarda (Blob em produção; o dedupe acontece dentro de uploadBuffer) ──
     const folder  = mimeType.startsWith("video/") ? "references" : "uploads";
     const cdnUrl  = await uploadBuffer(buffer, mimeType, folder);
 
-    guestDb.insertUpload({ user_id: GUEST_USER_ID, r2_url: cdnUrl, mime_type: mimeType, source: "user_upload" });
+    await (await data()).insertUpload(user.uid, { r2_url: cdnUrl, mime_type: mimeType, source: "user_upload" });
 
     return NextResponse.json({ cdnUrl });
   } catch (e: unknown) {

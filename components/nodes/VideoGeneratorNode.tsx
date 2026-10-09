@@ -521,7 +521,9 @@ export default function VideoGeneratorNode({ id, data, selected }: NodeProps<Vid
       }
     };
 
-    es.onerror = () => es.close();
+    // O servidor fecha o stream perto do limite da função e o navegador
+    // reconecta sozinho (CONNECTING). Só desiste quando ele mesmo desistiu.
+    es.onerror = () => { if (es.readyState === EventSource.CLOSED) es.close(); };
 
     return () => es.close();
   }, [data.taskId, status, id, updateNodeData]);

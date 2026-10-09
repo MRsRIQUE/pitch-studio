@@ -1,25 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GUEST_USER_ID } from "@/lib/guestMode";
-import * as guestDb from "@/lib/guest/db";
+import { getSessionUser, unauthorized } from "@/lib/auth/currentUser";
+import { data } from "@/lib/data";
 
-export async function POST(req: NextRequest) {
+async function readBody(req: NextRequest) {
   const body = await req.json() as { folderId: string; itemIds: string[] };
   const { folderId, itemIds } = body;
-  if (!folderId || !Array.isArray(itemIds)) {
-    return NextResponse.json({ error: "Missing folderId or itemIds" }, { status: 400 });
-  }
+  return folderId && Array.isArray(itemIds) ? { folderId, itemIds } : null;
+}
 
-  guestDb.insertFolderItems(folderId, itemIds, GUEST_USER_ID);
+export async function POST(req: NextRequest) {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
+  const body = await readBody(req);
+  if (!body) return NextResponse.json({ error: "Missing folderId or itemIds" }, { status: 400 });
+  await (await data()).insertFolderItems(user.uid, body.folderId, body.itemIds);
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: NextRequest) {
-  const body = await req.json() as { folderId: string; itemIds: string[] };
-  const { folderId, itemIds } = body;
-  if (!folderId || !Array.isArray(itemIds)) {
-    return NextResponse.json({ error: "Missing folderId or itemIds" }, { status: 400 });
-  }
-
-  guestDb.deleteFolderItems(folderId, itemIds, GUEST_USER_ID);
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
+  const body = await readBody(req);
+  if (!body) return NextResponse.json({ error: "Missing folderId or itemIds" }, { status: 400 });
+  await (await data()).deleteFolderItems(user.uid, body.folderId, body.itemIds);
   return NextResponse.json({ ok: true });
 }

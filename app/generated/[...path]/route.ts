@@ -37,6 +37,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
+  // Só existe em desenvolvimento: na Vercel a mídia mora no Blob.
+  if (process.env.VERCEL) return new NextResponse("Not found", { status: 404 });
+
   const { path: segments } = await params;
 
   // Reject traversal — the joined path must stay inside MEDIA_DIR.

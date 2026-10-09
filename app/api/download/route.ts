@@ -27,13 +27,15 @@ function isAllowed(url: string): boolean {
     return false;
   }
   if (ALLOWED_HOSTS.has(hostname)) return true;
+  // A mídia do Studio hospedado (Vercel Blob, ver lib/media).
+  if (hostname.endsWith(".public.blob.vercel-storage.com")) return true;
   // Cloudflare R2 public buckets — workflow templates and character avatars
   // are hosted here (see `lib/templates.ts`), same allowlist `next.config.ts`
   // already trusts for <Image>.
   if (hostname.endsWith(".r2.dev")) return true;
   // kie.ai's temporary result CDN (e.g. tempfile.aiquickdraw.com) — the normal
   // path mirrors these to local disk right after generation (see
-  // `settleSuccess` in lib/kieJobPoller.ts), but a transient network error
+  // `advanceJob` in lib/jobs/lifecycle.ts), but a transient network error
   // during that mirror falls back to the source URL, which then needs to
   // stay downloadable until a later retry succeeds.
   return hostname.endsWith(".aiquickdraw.com");

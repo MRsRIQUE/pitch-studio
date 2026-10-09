@@ -1,29 +1,34 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import sharp from "sharp";
-import { MEDIA_DIR } from "./guest/paths";
+import { data } from "./data";
+import { FFMPEG, FFPROBE } from "./ffmpegBin";
+import { isStoredUrl, readStoredBytes } from "./media";
 import { uploadBuffer } from "./storage";
-import { insertUpload } from "./guest/db";
-import { GUEST_USER_ID } from "./guestMode";
 import { clipFades, clipFit, type Timeline } from "./timelineEditor";
 
 const exec = promisify(execFile);
+
+/** Dono do processamento em curso — quem recebe os arquivos em `saveMedia`. */
+const owner = new AsyncLocalStorage<string>();
+
+/** Fonte do texto desenhado pelo ffmpeg (ver assets/fonts/LEIA-ME.txt). */
+const FONT_FILE = join(process.cwd(), "assets", "fonts", "Geist-Regular.ttf");
+
 export async function mediaBytes(url: string): Promise<Buffer> {
   if (typeof url !== "string") throw new Error("Selecione uma mídia.");
-  if (url.startsWith("/generated/")) {
-    const path = resolve(MEDIA_DIR, decodeURIComponent(url.slice(11)));
-    if (!path.startsWith(resolve(MEDIA_DIR) + sep)) throw new Error("Caminho de mídia inválido.");
-    return readFile(path);
-  }
+  if (isStoredUrl(url)) return readStoredBytes(url);
   if (/^data:(image|audio|video)\/[\w.+-]+;base64,/.test(url)) return Buffer.from(url.split(",")[1], "base64");
-  throw new Error("Importe a mídia para o acervo antes de processá-la localmente.");
+  throw new Error("Importe a mídia para o acervo antes de processá-la.");
 }
 export async function saveMedia(bytes: Buffer, mime: string) {
   const url = await uploadBuffer(bytes, mime, "production");
-  insertUpload({ user_id: GUEST_USER_ID, r2_url: url, mime_type: mime, source: "production" });
+  const uid = owner.getStore();
+  if (uid) await (await data()).insertUpload(uid, { r2_url: url, mime_type: mime, source: "production" });
   return url;
 }
 const number = (value: unknown, fallback: number, min: number, max: number) => {
@@ -34,8 +39,8 @@ const number = (value: unknown, fallback: number, min: number, max: number) => {
 export interface Clip { url: string; start: number; end: number; muted?: boolean; volume?: number }
 export interface CaptionWord { text: string; start: number; end: number }
 export interface MediaRequest { operation: string; url?: string; start?: number; end?: number; speed?: number; volume?: number; pitch?: number; effect?: string; scale?: number; fps?: number; width?: number; height?: number; left?: number; top?: number; rows?: number; columns?: number; threshold?: number; clips?: Clip[]; audioUrl?: string; narrationUrl?: string; audioVolume?: number; narrationVolume?: number; brightness?: number; saturation?: number; rotation?: number; replacementUrl?: string; maskUrl?: string; words?: CaptionWord[]; timeline?: Timeline }
-async function ffmpeg(args: string[], cwd?: string) { return exec("ffmpeg", ["-hide_banner", "-nostdin", "-y", ...args], { timeout: 1_200_000, maxBuffer: 24 * 1024 * 1024, windowsHide: true, cwd }); }
-async function probe(path: string) { const { stdout } = await exec("ffprobe", ["-v", "error", "-show_format", "-show_streams", "-of", "json", path], { windowsHide: true, timeout: 30000 }); return JSON.parse(stdout) as { format: { duration: string }; streams: { codec_type: string; width?: number; height?: number }[] }; }
+async function ffmpeg(args: string[], cwd?: string) { return exec(FFMPEG, ["-hide_banner", "-nostdin", "-y", ...args], { timeout: 1_200_000, maxBuffer: 24 * 1024 * 1024, windowsHide: true, cwd }); }
+async function probe(path: string) { const { stdout } = await exec(FFPROBE, ["-v", "error", "-show_format", "-show_streams", "-of", "json", path], { windowsHide: true, timeout: 30000 }); return JSON.parse(stdout) as { format: { duration: string }; streams: { codec_type: string; width?: number; height?: number }[] }; }
 
 /** Legenda estilo TikTok: uma linha (~4 palavras ou corte por pausa >0.6s) por "chunk",
  * com um evento ASS por palavra reescrevendo a linha inteira só para trocar a palavra em
@@ -88,7 +93,11 @@ const fadeFilters = (entrada: number, saida: number, start: number, duracao: num
   return partes.length && !audio ? ["format=yuva420p", ...partes] : partes;
 };
 
-export async function processMedia(body: MediaRequest) {
+export async function processMedia(body: MediaRequest, uid: string) {
+  return owner.run(uid, () => processMediaFor(body));
+}
+
+async function processMediaFor(body: MediaRequest) {
   const temp = await mkdtemp(join(tmpdir(), "pitch-production-"));
   try {
     const input = join(temp, "input");
@@ -209,7 +218,7 @@ export async function processMedia(body: MediaRequest) {
       let current = "";
       let labelSeq = 0;
       for (const o of overlays) { const next = `ov${labelSeq++}_${o.videoLabel}`; filters.push(`[${current || "0:v"}][${o.videoLabel}]overlay=${o.x}:${o.y}:enable='between(t,${o.start},${o.end})'[${next}]`); current = next; }
-      if (texts.length) await writeFile(join(temp, "font.ttf"), await readFile("C:\\Windows\\Fonts\\arialbd.ttf"));
+      if (texts.length) await writeFile(join(temp, "font.ttf"), await readFile(FONT_FILE));
       for (const [i, t] of texts.entries()) {
         const start = number(t.start, 0, 0, total), textDuration = number(t.duration, 1, 0.1, total - start + 0.1);
         const fontSize = Math.max(8, Math.round(number(t.fontSize, 64, 8, 400) * (height / 1920)));

@@ -1,0 +1,4 @@
+Geist-Regular.ttf — fonte Geist, da Vercel, sob a SIL Open Font License 1.1
+(https://github.com/vercel/geist-font). Copiada do pacote next
+(next/dist/compiled/@vercel/og) para o ffmpeg desenhar texto no editor
+multi-trilha: na Vercel não há fontes do sistema.

@@ -36,16 +36,9 @@ const MOTIVO: Record<ProviderId, string> = {
 export function useProvedores(): EstadoProvedor[] {
   const kieKeySet = useWorkflowStore((s) => s.kieKeySet);
   const azureKeySet = useWorkflowStore((s) => s.azureKeySet);
-  const [codexPronto, setCodexPronto] = React.useState<boolean | null>(null);
-
-  React.useEffect(() => {
-    let vivo = true;
-    fetch("/api/settings/codex-status")
-      .then((r) => r.json())
-      .then((d: { ready?: boolean }) => { if (vivo) setCodexPronto(!!d.ready); })
-      .catch(() => { if (vivo) setCodexPronto(false); });
-    return () => { vivo = false; };
-  }, []);
+  // O Codex era do app desktop (`codex login` na máquina); no Studio
+  // hospedado ele não existe e a lista de provedores só tem a kie.ai.
+  const codexPronto = false;
 
   return React.useMemo(() => {
     const estado: Record<ProviderId, boolean | null> = {

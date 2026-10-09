@@ -1,10 +1,9 @@
 /**
- * SHA-256 → stored-URL index for uploaded/generated media, so re-uploading the
- * same bytes reuses the existing file. Backed by the local SQLite DB
- * (`lib/guest/db.ts`).
+ * Índice SHA-256 → URL guardada, para o mesmo arquivo reaproveitar a mesma
+ * URL. Vive na camada de dados (`lib/data`).
  */
 import { createHash } from "crypto";
-import * as guestDb from "./guest/db";
+import { data } from "./data";
 
 /** Compute SHA-256 hex from a Node.js Buffer (server-side). */
 export function hashBuffer(buf: Buffer): string {
@@ -13,7 +12,7 @@ export function hashBuffer(buf: Buffer): string {
 
 /** Look up a previously-stored asset by its SHA-256 hash. */
 export async function lookupAssetHash(hash: string): Promise<string | null> {
-  return guestDb.lookupAssetHash(hash);
+  return (await data()).lookupAssetHash(hash);
 }
 
 /** Store a hash → URL mapping (idempotent). */
@@ -23,5 +22,5 @@ export async function storeAssetHash(
   mimeType: string,
   byteSize: number,
 ): Promise<void> {
-  guestDb.storeAssetHash(hash, cdnUrl, mimeType, byteSize);
+  await (await data()).storeAssetHash(hash, cdnUrl, mimeType, byteSize);
 }

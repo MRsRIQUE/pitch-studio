@@ -12,7 +12,6 @@ import {
   MoreHorizontal,
   Plus,
   ArrowRight,
-  Flame,
   Sparkles,
   Lightbulb,
   Palette,
@@ -191,11 +190,8 @@ export function AppSidebar() {
      (`Customize`) entre eles. A ordem, os nomes e o que cada um abre estão em
      `.migracao/MAPA-AFORDANCIAS.md`, bloco 01.
 
-     Nós temos SETE, e é aqui que a barra deixa de ser 3 + 3: os Produtos
-     Quentes entram como quarto item do grupo de cima. Eles são fonte de
-     MATERIAL, irmãos de Inspiração — não uma preferência da conta, que é o
-     que o grupo "Personalizar" guarda. O rótulo de grupo e o segundo grupo
-     descem 40px, um passo, e o resto da métrica não muda. */
+     Os Produtos Quentes (Firestore do PitchAI) saíram do Studio hospedado;
+     voltam quando houver a versão com os quentes do próprio SaySell. */
   const navTopo = [
     { label: "Criar",      href: `/gallery?tab=${tab}&view=create`, icon: ImageIcon, active: pathname === "/gallery" && isCreationView },
     { label: "Inspiração", href: "/inspiracao",                     icon: Sparkles,  active: pathname.startsWith("/inspiracao") },
@@ -203,10 +199,6 @@ export function AppSidebar() {
        de cima — o mesmo que a Arena tinha antes de sair —, então a barra volta à
        contagem da referência: 3 itens, rótulo de grupo, 3 itens. */
     { label: "Estruturar", href: "/estruturar",                     icon: Lightbulb, active: pathname.startsWith("/estruturar") },
-    /* Os produtos que vêm do banco do PitchAI. A mesma grade também vive
-       no painel da direita da tela de projeto — lá para arrastar direto
-       para o grafo, aqui para procurar com espaço. */
-    { label: "Quentes",    href: "/quentes",                        icon: Flame,     active: pathname.startsWith("/quentes") },
     /* O kit turbo 1.000 seguidores: um formato travado, um episódio por
        dia. É fluxo de criação, irmão do Estruturar — por isso fica no
        grupo de cima e não em "Personalizar". */

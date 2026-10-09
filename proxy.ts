@@ -15,6 +15,8 @@ function isPublic(pathname: string): boolean {
   if (pathname.startsWith("/api/cron/")) return true;
   // Link público de workflow compartilhado (somente leitura).
   if (pathname.startsWith("/share/")) return true;
+  // A rota do link público: GET é aberto, POST/DELETE conferem a sessão.
+  if (pathname === "/api/production/share") return true;
   return false;
 }
 

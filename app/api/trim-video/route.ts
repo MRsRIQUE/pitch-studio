@@ -1,10 +1,13 @@
 /**
  * POST /api/trim-video
  * Body: { videoUrl: string, startTime: number, endTime: number }
- * Downloads the video, trims it with ffmpeg, uploads result to R2.
+ * Baixa o vídeo, corta com ffmpeg e guarda o resultado na mídia do Studio.
  * Returns: { cdnUrl: string }
  */
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionUser, unauthorized } from "@/lib/auth/currentUser";
+import { FFMPEG } from "@/lib/ffmpegBin";
+import { readStoredBytes } from "@/lib/media";
 import { uploadBuffer } from "@/lib/storage";
 import { writeFile, readFile, unlink, mkdtemp } from "fs/promises";
 import { join } from "path";
@@ -16,7 +19,11 @@ const execFileAsync = promisify(execFile);
 
 export const maxDuration = 120;
 
+export const runtime = "nodejs";
+
 export async function POST(req: NextRequest) {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
   let inputPath: string | null  = null;
   let outputPath: string | null = null;
 
@@ -31,12 +38,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Download the video
-    const res = await fetch(videoUrl);
-    if (!res.ok) {
-      return NextResponse.json({ error: `Failed to fetch video: ${res.status}` }, { status: 400 });
+    let videoBuffer: Buffer;
+    try {
+      videoBuffer = await readStoredBytes(String(videoUrl));
+    } catch (e) {
+      return NextResponse.json({ error: `Failed to fetch video: ${(e as Error).message}` }, { status: 400 });
     }
-    const videoBuffer = Buffer.from(await res.arrayBuffer());
-    const contentType = res.headers.get("content-type") ?? "video/mp4";
+    const contentType = "video/mp4";
 
     // Write to temp files
     const tmpDir  = await mkdtemp(join(tmpdir(), "trim-"));
@@ -45,7 +53,7 @@ export async function POST(req: NextRequest) {
     await writeFile(inputPath, videoBuffer);
 
     // Trim with ffmpeg: -ss before -i = fast seek; -t = duration; -c copy = no re-encode
-    await execFileAsync("ffmpeg", [
+    await execFileAsync(FFMPEG, [
       "-ss", String(startTime),
       "-i",  inputPath,
       "-t",  String(endTime - startTime),

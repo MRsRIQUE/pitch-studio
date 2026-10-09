@@ -1,20 +1,24 @@
 /**
  * POST /api/fetch-url
  *
- * Fetches a remote image/video URL server-side and stores it locally.
+ * Busca uma imagem/vídeo de uma URL pública e guarda na mídia do Studio.
  * Body: { url: string }
  * Returns: { cdnUrl: string; mediaType: "image" | "video" }
  */
 import { NextRequest, NextResponse } from "next/server";
 import { uploadBuffer } from "@/lib/storage";
-import { GUEST_USER_ID } from "@/lib/guestMode";
-import * as guestDb from "@/lib/guest/db";
+import { getSessionUser, unauthorized } from "@/lib/auth/currentUser";
+import { data } from "@/lib/data";
+import { isPrivateHost } from "@/lib/media";
 
+export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_BYTES = 50 * 1024 * 1024; // 50 MB
 
 export async function POST(req: NextRequest) {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
   try {
     const { url } = await req.json() as { url?: string };
     if (!url || typeof url !== "string") {
@@ -30,9 +34,12 @@ export async function POST(req: NextRequest) {
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
       return NextResponse.json({ error: "Only http/https URLs are supported" }, { status: 400 });
     }
+    if (isPrivateHost(parsed.hostname)) {
+      return NextResponse.json({ error: "Endereço não permitido." }, { status: 400 });
+    }
 
     const upstream = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; PitchStudio/1.0)" },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; SaySellStudio/1.0)" },
       redirect: "follow",
     });
 
@@ -59,7 +66,7 @@ export async function POST(req: NextRequest) {
     const mediaType: "image" | "video" = isImage ? "image" : "video";
 
     // Record in uploads so it appears in the gallery "uploaded" section
-    guestDb.insertUpload({ user_id: GUEST_USER_ID, r2_url: cdnUrl, mime_type: mimeType, source: "user_upload" });
+    await (await data()).insertUpload(user.uid, { r2_url: cdnUrl, mime_type: mimeType, source: "user_upload" });
 
     return NextResponse.json({ cdnUrl, mediaType });
   } catch (e: unknown) {
