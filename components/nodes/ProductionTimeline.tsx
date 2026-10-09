@@ -1,0 +1,86 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { useWorkflowStore, type NodeData } from "@/lib/store";
+import { productionRequest, productionAI, parseProductionJSON, outputToCanvas } from "@/lib/productionClient";
+import type { Clip } from "@/lib/productionMedia";
+import { newShot, type Shot } from "@/lib/production";
+import { newTimelineClip, type Timeline } from "@/lib/timelineEditor";
+import TimelineEditor from "./TimelineEditor";
+
+export default function ProductionTimeline({ id, data, videoUrl, mode }: { id: string; data: NodeData; videoUrl: string; mode: "edit" | "breakdown" }) {
+  const nodes = useWorkflowStore(s => s.nodes), edges = useWorkflowStore(s => s.edges), update = useWorkflowStore(s => s.updateNodeData);
+  const [busy, setBusy] = useState(false), [error, setError] = useState(""), [previewIndex, setPreviewIndex] = useState(0), [previewTime, setPreviewTime] = useState(0);
+  const [editorTimeline, setEditorTimeline] = useState<Timeline | null>(null);
+  const player = useRef<HTMLVideoElement>(null), abort = useRef<AbortController | null>(null);
+  const clips = (data.clips as Clip[] | undefined) ?? [];
+  const patch = (values: Partial<NodeData>) => update(id, values);
+  const connectedVideos = edges.filter(e => e.target === id && e.targetHandle === "videoRef").map(e => nodes.find(n => n.id === e.source)?.data.videoUrl).filter(Boolean) as string[];
+  const audioNodes = nodes.filter(n => n.data.audioUrl);
+  async function act(fn: (signal: AbortSignal) => Promise<void>) { if (busy) return; const controller = new AbortController(); abort.current = controller; setBusy(true); setError(""); patch({ status: "running", errorMsg: undefined }); try { await fn(controller.signal); patch({ status: "done" }); } catch (e) { const message = e instanceof Error ? e.message : "Falha na edição"; setError(message); patch({ status: controller.signal.aborted ? "idle" : "error", errorMsg: message }); } finally { setBusy(false); } }
+  useEffect(() => () => abort.current?.abort(), []);
+  async function addClips(signal: AbortSignal) { const urls = [...new Set([videoUrl, ...connectedVideos].filter(Boolean))]; if (!urls.length) throw new Error("Conecte ou envie um vídeo primeiro."); const next: Clip[] = []; for (const url of urls) { if (clips.some(c => c.url === url)) continue; const result = await productionRequest<{ duration: number }>("/api/production/media", { operation: "probe", url }, signal); next.push({ url, start: 0, end: result.duration, volume: 1 }); } patch({ clips: [...clips, ...next] }); }
+  async function render(signal: AbortSignal) { const result = await productionRequest<{ url: string }>("/api/production/media", { operation: "compose", clips, width: Number(data.outputWidth ?? 1280), height: Number(data.outputHeight ?? 720), audioUrl: data.bgmUrl, narrationUrl: data.narrationUrl, audioVolume: data.bgmVolume ?? 0.3, narrationVolume: 1 }, signal); patch({ videoUrl: result.url }); outputToCanvas(id, result.url, "video", "Montagem final"); }
+  async function openTimelineEditor(signal: AbortSignal) {
+    const width = Number(data.outputWidth ?? 1080), height = Number(data.outputHeight ?? 1920);
+    let cursor = 0;
+    const timelineClips = [];
+    for (const clip of clips) {
+      const probed = await productionRequest<{ duration: number }>("/api/production/media", { operation: "probe", url: clip.url }, signal);
+      timelineClips.push(newTimelineClip({ url: clip.url, kind: "video", sourceDuration: probed.duration, track: 0, start: cursor, duration: clip.end - clip.start, sourceIn: clip.start, muted: clip.muted, volume: clip.volume }));
+      cursor += clip.end - clip.start;
+    }
+    setEditorTimeline({ width, height, clips: timelineClips, texts: [], bgmUrl: data.bgmUrl as string | undefined, bgmVolume: Number(data.bgmVolume ?? 0.3), narrationUrl: data.narrationUrl as string | undefined, narrationVolume: 1 });
+  }
+  async function caption(signal: AbortSignal) {
+    if (!data.videoUrl) throw new Error("Renderize a montagem antes de gerar legendas.");
+    const transcript = await productionRequest<{ words: { text: string; start: number; end: number }[] }>("/api/production/audio", { operation: "transcribe", url: String(data.videoUrl) }, signal);
+    if (!transcript.words?.length) throw new Error("Nenhuma fala detectada no vídeo renderizado para legendar.");
+    const result = await productionRequest<{ url: string }>("/api/production/media", { operation: "caption", url: String(data.videoUrl), words: transcript.words }, signal);
+    patch({ videoUrl: result.url });
+    outputToCanvas(id, result.url, "video", "Vídeo legendado");
+  }
+  async function analyze(signal: AbortSignal) {
+    if (!videoUrl) throw new Error("Envie um vídeo para analisar.");
+    const result = await productionRequest<{ shots: { start: number; duration: number; imageUrl: string }[]; audioStats: string }>("/api/production/media", { operation: "analyze", url: videoUrl, threshold: data.sceneThreshold ?? 0.3 }, signal);
+    const baseShots = result.shots.map((s, i) => ({ ...newShot(), duration: Math.round(s.duration * 100) / 100, scene: `Plano ${i + 1}`, start: s.start, imageUrl: s.imageUrl }));
+    let transcriptWords: { text: string; start: number; end: number }[] = [];
+    let transcriptText = "";
+    if (data.transcribeSpeech !== false && !result.audioStats.startsWith("Sem faixa de áudio")) {
+      try {
+        const transcript = await productionRequest<{ text: string; words: { text: string; start: number; end: number }[] }>("/api/production/audio", { operation: "transcribe", url: videoUrl }, signal);
+        transcriptWords = transcript.words ?? [];
+        transcriptText = transcript.text ?? "";
+      } catch (e) { setError(e instanceof Error ? `Transcrição indisponível: ${e.message}` : "Transcrição indisponível."); }
+    }
+    const shots = transcriptWords.length ? baseShots.map(shot => ({ ...shot, dialogue: transcriptWords.filter(w => w.start >= shot.start && w.start < shot.start + shot.duration).map(w => w.text).join(" ").replace(/\s+([,.;:!?])/g, "$1").trim() })) : baseShots;
+    patch({ shots, audioAnalysis: result.audioStats, transcriptWords, transcriptText });
+    if (data.visualAnalysis !== false) {
+      const keys = (transcriptWords.length ? ["scene", "size", "lighting", "movement", "sfx", "finalPrompt"] : ["scene", "size", "lighting", "movement", "dialogue", "sfx", "finalPrompt"]) as (keyof Shot)[];
+      const enriched: Shot[] = [];
+      for (let i = 0; i < shots.length; i += 6) {
+        const batch = shots.slice(i, i + 6);
+        const reply = await productionAI(`Analise estes frames consecutivos. Retorne apenas JSON array com exatamente ${batch.length} itens: {scene,size,lighting,movement,dialogue,sfx,finalPrompt}. Descreva conteúdo e enquadramento observáveis; não invente falas ou sons não fornecidos. Movimento é uma inferência visual, sinalize isso. Cada item corresponde a um frame na ordem enviada.`, String(data.model ?? "gemini-3.1-pro"), signal, batch.map(s => s.imageUrl));
+        const values = parseProductionJSON<Partial<Shot>[]>(reply); if (!Array.isArray(values) || values.length !== batch.length) throw new Error("Análise visual incompleta. Os planos detectados foram preservados.");
+        enriched.push(...batch.map((s, j) => ({ ...s, ...Object.fromEntries(keys.filter(k => typeof values[j][k] === "string").map(k => [k, values[j][k]])) })));
+      }
+      patch({ shots: enriched });
+    }
+  }
+  const execute = useRef(mode === "edit" ? render : analyze);
+  useEffect(() => { execute.current = mode === "edit" ? render : analyze; });
+  useEffect(() => { if (data.pendingGenerate && !busy) { patch({ pendingGenerate: false }); void act(signal => execute.current(signal)); } }, [data.pendingGenerate]); // eslint-disable-line react-hooks/exhaustive-deps
+  const editClip = (i: number, values: Partial<Clip>) => patch({ clips: clips.map((c, j) => j === i ? { ...c, ...values } : c) });
+  return <>
+    {mode === "breakdown" ? <><div className="pn-grid"><label>Sensibilidade de corte<input type="number" min="0.01" max="1" step="0.05" value={Number(data.sceneThreshold ?? 0.3)} onChange={e => patch({ sceneThreshold: Number(e.target.value) })} /></label><label><input type="checkbox" checked={data.transcribeSpeech !== false} onChange={e => patch({ transcribeSpeech: e.target.checked })} /> Transcrever fala (ElevenLabs)</label><label><input type="checkbox" checked={data.visualAnalysis !== false} onChange={e => patch({ visualAnalysis: e.target.checked })} /> Analisar conteúdo com IA</label></div><button disabled={busy || !videoUrl} onClick={() => void act(analyze)}>Detectar e analisar planos</button><p className="pn-note">Detecta cortes e mede silêncio/volume localmente. Quando há fala, a transcrição real vem da ElevenLabs; a análise visual descreve cena e enquadramento sem inventar falas ou sons não fornecidos.</p>{typeof data.audioAnalysis === "string" && <details><summary>Análise de áudio · silêncio e volume</summary><pre style={{ whiteSpace: "pre-wrap" }}>{data.audioAnalysis}</pre></details>}{typeof data.transcriptText === "string" && data.transcriptText && <details><summary>Transcrição da fala</summary><pre style={{ whiteSpace: "pre-wrap" }}>{data.transcriptText}</pre></details>}<button disabled={!Array.isArray(data.shots) || !data.shots.length} onClick={() => { const source = nodes.find(n => n.id === id); useWorkflowStore.getState().insertProductionBatch([{ id: crypto.randomUUID(), type: "scriptNode", position: { x: (source?.position.x ?? 0) + 850, y: source?.position.y ?? 0 }, data: { label: "Roteiro da análise", shots: structuredClone(data.shots) }, style: { width: 760, height: 650 } }], []); }}>Enviar análise para Roteiro</button></> : <>
+    <button disabled={busy} onClick={() => void act(addClips)}>Adicionar vídeos conectados à timeline</button>
+    {clips.length > 0 && <><video ref={player} controls src={clips[previewIndex]?.url} onLoadedMetadata={() => { if (player.current) player.current.currentTime = clips[previewIndex]?.start ?? 0; }} onTimeUpdate={() => { const v = player.current; if (!v) return; setPreviewTime(v.currentTime); const c = clips[previewIndex]; if (c && v.currentTime >= c.end) { if (previewIndex + 1 < clips.length) { setPreviewIndex(previewIndex + 1); } else v.pause(); } }} onCanPlay={() => { if (previewIndex > 0) void player.current?.play().catch(() => {}); }} /><div className="pn-actions"><button onClick={() => { setPreviewIndex(0); if (player.current) { player.current.currentTime = clips[0].start; void player.current.play(); } }}>Prévia da sequência</button><button onClick={() => { if (player.current) player.current.currentTime = Math.max(0, player.current.currentTime - 1 / 30); }}>−1 frame</button><button onClick={() => { if (player.current) player.current.currentTime += 1 / 30; }}>+1 frame</button><button onClick={() => void player.current?.requestFullscreen()}>Tela cheia</button><span>{previewTime.toFixed(2)}s</span></div></>}
+    <div className="pn-clips">{clips.map((clip, i) => <div key={`${i}-${clip.url}`} className="pn-clip"><button onClick={() => setPreviewIndex(i)}>▶ Clipe {i + 1}</button><div className="pn-grid"><label>Início<input type="number" min="0" step="0.1" value={clip.start} onChange={e => editClip(i, { start: Number(e.target.value) })} /></label><label>Fim<input type="number" min="0" step="0.1" value={clip.end} onChange={e => editClip(i, { end: Number(e.target.value) })} /></label></div><div className="pn-actions"><button disabled={i === 0} onClick={() => { const next = [...clips]; [next[i], next[i - 1]] = [next[i - 1], next[i]]; patch({ clips: next }); }}>←</button><button disabled={i === clips.length - 1} onClick={() => { const next = [...clips]; [next[i], next[i + 1]] = [next[i + 1], next[i]]; patch({ clips: next }); }}>→</button><button onClick={() => editClip(i, { muted: !clip.muted })}>{clip.muted ? "Ativar áudio" : "Silenciar"}</button><button onClick={() => patch({ clips: clips.filter((_, j) => j !== i) })}>Remover</button></div></div>)}</div>
+    <label>Instruções de edição<textarea value={String(data.prompt ?? "")} onChange={e => patch({ prompt: e.target.value })} placeholder="Ex.: abra com o segundo clipe, corte para 3s e termine com o primeiro." /></label><label>Modo<select value={String(data.editMode ?? "Default")} onChange={e => patch({ editMode: e.target.value })}>{["Default", "Explainer Video", "Batch Ads", "Smart Mix-Cut", "Talking Head Video"].map(m => <option key={m}>{m}</option>)}</select></label>
+    <button disabled={busy || !clips.length || !data.prompt} onClick={() => void act(async signal => { const reply = await productionAI(`Você é montador de vídeo. Reorganize e recorte a timeline conforme as instruções. Retorne APENAS JSON array de {index,start,end,muted}. index se refere ao índice de clipe (base 0), não invente fontes; tempos dentro dos intervalos originais. Modo ${data.editMode || "Default"}. Clipes: ${JSON.stringify(clips.map((c, i) => ({ index: i, start: c.start, end: c.end })))}. Pedido: ${data.prompt}` , String(data.model ?? "claude-sonnet-4-6"), signal); const plan = parseProductionJSON<{ index: number; start: number; end: number; muted?: boolean }[]>(reply); if (!Array.isArray(plan) || !plan.length || plan.length > 100 || plan.some(p => !Number.isInteger(p.index) || !clips[p.index] || !Number.isFinite(p.start) || !Number.isFinite(p.end) || p.start < clips[p.index].start || p.end > clips[p.index].end || p.end <= p.start)) throw new Error("A IA propôs cortes inválidos. A timeline anterior foi preservada."); patch({ clips: plan.map(p => ({ ...clips[p.index], start: p.start, end: p.end, muted: !!p.muted })) }); })}>Aplicar edição com IA</button>
+    <div className="pn-grid">{[{ key: "bgmUrl", label: "Música de fundo" }, { key: "narrationUrl", label: "Narração" }].map(p => <label key={p.key}>{p.label}<select value={String(data[p.key] ?? "")} onChange={e => patch({ [p.key]: e.target.value })}><option value="">Nenhuma</option>{audioNodes.map(n => <option key={n.id} value={String(n.data.audioUrl)}>{n.data.label}</option>)}</select></label>)}<label>Volume da música<input type="number" min="0" max="2" step="0.1" value={Number(data.bgmVolume ?? 0.3)} onChange={e => patch({ bgmVolume: Number(e.target.value) })} /></label><label>Formato<select value={`${data.outputWidth ?? 1280}x${data.outputHeight ?? 720}`} onChange={e => { const [w, h] = e.target.value.split("x").map(Number); patch({ outputWidth: w, outputHeight: h }); }}><option value="1280x720">16:9 · 720p</option><option value="1920x1080">16:9 · 1080p</option><option value="1080x1920">9:16 · 1080p</option><option value="1080x1080">1:1 · 1080p</option></select></label></div><button disabled={busy || !clips.length} onClick={() => void act(render)}>Renderizar montagem → Canvas</button><p className="pn-note">Prévia de cortes no player. Música, narração e mixagem são aplicadas à exportação final.</p>
+    <button disabled={busy || !data.videoUrl} onClick={() => void act(caption)}>Gerar legenda estilo TikTok</button><p className="pn-note">Transcreve a montagem já renderizada e queima a legenda com destaque palavra a palavra. Renderize de novo depois de trocar cortes, música ou narração.</p>
+    <button disabled={busy} onClick={() => void act(openTimelineEditor)}>Abrir editor completo (multi-trilha)</button><p className="pn-note">Várias trilhas de vídeo/imagem sobrepostas, texto, stickers, prévia ao vivo com playhead, corte e transições por fade.</p>
+    </>}{busy && <p role="status">Processando mídia…</p>}{error && <p className="pn-error" role="alert">{error}</p>}
+    {editorTimeline && <TimelineEditor initial={editorTimeline} onClose={() => setEditorTimeline(null)} onRendered={(url) => { patch({ videoUrl: url }); outputToCanvas(id, url, "video", "Montagem multi-trilha"); setEditorTimeline(null); }} />}
+  </>;
+}

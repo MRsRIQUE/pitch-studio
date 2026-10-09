@@ -1,0 +1,182 @@
+/* ============================================================
+   SUPERFÍCIES FLUTUANTES — frente das telas escuras
+
+   CSS próprio de Toaster / UpdateBanner / MediaPickerModal /
+   QuickAssist / SettingsModal. Só o que não cabe em utilitário
+   do Tailwind: keyframes e o gradiente da marca.
+
+   A entrada é a da referência (`miora/sections/03-home-composer`,
+   "Animações e estados"): opacity + scale(.96) translateY(-4px)
+   em 150ms cubic-bezier(.4,0,.2,1). O HeliosGen usava 220ms e
+   -10px, um salto que na linguagem clara fica pesado demais.
+   ============================================================ */
+
+@keyframes ms-superficie-entrada {
+  from { opacity: 0; transform: translateY(-4px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);   }
+}
+
+.ms-superficie-entrada {
+  animation: ms-superficie-entrada 150ms cubic-bezier(.4, 0, .2, 1) both;
+}
+
+/* Entrada de baixo — usada pelo banner de atualização, que sobe
+   do rodapé. Mesmo tempo e mesma curva, só o sentido muda. */
+@keyframes ms-superficie-entrada-baixo {
+  from { opacity: 0; transform: translateY(8px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);   }
+}
+
+.ms-superficie-entrada-baixo {
+  animation: ms-superficie-entrada-baixo 150ms cubic-bezier(.4, 0, .2, 1) both;
+}
+
+/* Esqueleto de carregamento — cinza claro do kit no lugar do
+   gradiente escuro do HeliosGen. Duas paradas do mesmo eixo de
+   componente, então continua legível sobre a superfície branca. */
+@keyframes ms-esqueleto {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.ms-esqueleto {
+  background: linear-gradient(
+    90deg,
+    var(--ms-bg-component) 25%,
+    var(--ms-bg-component-active) 50%,
+    var(--ms-bg-component) 75%
+  );
+  background-size: 200% 100%;
+  animation: ms-esqueleto 1.4s ease-in-out infinite;
+}
+
+/* Giro dos indicadores de carregamento. O aro é a borda fina do kit
+   e o setor aceso é a marca. */
+@keyframes ms-giro {
+  to { transform: rotate(360deg); }
+}
+
+.ms-giro {
+  border-radius: 9999px;
+  border-style: solid;
+  border-color: var(--ms-border-subtle);
+  border-top-color: var(--ms-solid-brand);
+  display: inline-block;
+  animation: ms-giro .75s linear infinite;
+}
+
+/* ── Assistente rápido ─────────────────────────────────────
+   A pílula flutuante é a única âncora de marca que aparece em
+   toda rota. Sobre o cinza claro da página (#F9F9F9) uma pílula
+   branca sumiria, então ela fica no gradiente da marca — é a
+   opção que o briefing da frente autoriza. */
+/* A pílula do assistente — o "botão Assistente" do pacote do Foguinho
+   (demo.html), na escala da pílula flutuante: a demo tem 132px de altura,
+   aqui são 52, e tudo dentro dela desce na mesma proporção (~0,39). O
+   degradê e as sombras são os literais da demo. */
+.qa-pilula {
+  position: fixed;
+  right: 24px;
+  bottom: 12px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 52px;
+  padding: 5px 10px 5px 5px;
+  border: 1px solid #b7a7ff66;
+  border-radius: 999px;
+  background: linear-gradient(115deg, #aaa5ff 0%, #7770ff 33%, #4318ff 88%);
+  box-shadow: inset 0 1px 2px #ffffff91, inset 0 -1px 3px #cbbdff42, 0 10px 28px #4318ff45;
+  color: #fff;
+  font-family: inherit;
+  cursor: pointer;
+  isolation: isolate;
+  transition: box-shadow .2s ease;
+}
+
+.qa-pilula:hover {
+  box-shadow: inset 0 1px 2px #ffffff91, 0 12px 34px #6544ff70;
+}
+
+.qa-pilula:focus-visible {
+  outline: 2px solid #c8bdff;
+  outline-offset: 4px;
+}
+
+/* O círculo lilás; o Foguinho é maior que ele e passa por cima da borda. */
+.qa-pilula__avatar {
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(#f7f2ff, #d5cbff);
+  box-shadow: inset 0 1px 2px #fff;
+}
+
+.qa-pilula .qa-pilula__foguinho {
+  position: absolute !important;
+  left: -10px;
+  bottom: -5px;
+  pointer-events: none;
+}
+
+.qa-pilula__rotulo {
+  font-size: 15.5px;
+  font-weight: 650;
+  letter-spacing: -.02em;
+  line-height: 1;
+}
+
+.qa-pilula__atalho {
+  margin-left: 4px;
+  padding: 5px 7px;
+  border: 1px solid #ffffff36;
+  border-radius: 9px;
+  background: linear-gradient(145deg, #ffffff28, #ffffff0c);
+  box-shadow: inset 0 1px 2px #ffffff80, 0 2px 6px #260c9b20;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qa-pilula { transition: none; }
+}
+
+@keyframes qa-ponto {
+  0%, 80%, 100% { opacity: .3; transform: scale(.8); }
+  40%           { opacity: 1;  transform: scale(1);  }
+}
+
+@keyframes qa-cursor {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+/* Botão primário sólido na marca. Existe como classe porque o
+   `app/theme.css` expõe `--color-ms-solid-brand` mas não o par
+   `-hover`, então `hover:bg-ms-solid-brand-hover` não geraria CSS
+   nenhum — e um hover mudo passaria despercebido na revisão. */
+.ms-botao-marca {
+  background: var(--ms-solid-brand);
+  color: var(--ms-text-on-solid);
+}
+
+.ms-botao-marca:hover:not(:disabled) {
+  background: var(--ms-solid-brand-hover);
+}
+
+.qa-input-beam {
+  width: 100%;
+  border-radius: var(--ms-radius-lg);
+}
+
+.qa-send-metal {
+  display: inline-flex;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}

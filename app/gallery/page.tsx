@@ -1,0 +1,6241 @@
+"use client";
+import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { GyroNaCaixa } from "@/components/notas/GyroNaCaixa";
+import GridReveal from "@/components/ui/GridReveal";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { createPortal } from "react-dom";
+import Link from "next/link";
+import { CreationHero, CreationSuggestions } from "@/components/CreationHome";
+import { EmptyState } from "@/components/gallery/EmptyState";
+import { AcervoHeader, type AcervoSort, type AcervoWindow } from "@/components/gallery/AcervoHeader";
+import { ComposerIconButton, IconAttach, IconMention, IconPolish } from "@/components/gallery/Composer/ComposerControls";
+import type { Tab, RefImage, PendingGen, DownloadTask, TaggedImage, KlingElement } from "@/components/gallery/tipos";
+import { ComposerShell } from "@/components/gallery/Composer/ComposerShell";
+import { ModelPill, type LinhaMidia } from "@/components/gallery/Composer/ModelPill";
+import { HeroCriar } from "@/components/gallery/Composer/HeroCriar";
+import { BotaoConectores } from "@/components/gallery/Composer/BotaoConectores";
+import { PilulaModoExecucao } from "@/components/gallery/Composer/PilulaModoExecucao";
+import { BotaoDitado } from "@/components/gallery/Composer/BotaoDitado";
+import { CartaoConfirmacao } from "@/components/gallery/Composer/CartaoConfirmacao";
+import { lerModoExecucao, gravarModoExecucao, type ModoExecucao } from "@/lib/modoExecucao";
+import { FRASES_GERAIS, FRASES_POR_CATEGORIA, definirCategoria, type CategoriaId } from "@/lib/categoriaComposer";
+import { type ParamField } from "@/components/gallery/Composer/ParamsPill";
+import { AzureCustomSize } from "@/components/gallery/Composer/AzureCustomSize";
+import { usePolishPrompt } from "@/components/gallery/Composer/usePolishPrompt";
+import { useChatSessionStore } from "@/lib/chatSessionStore";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { PitchMark } from "@/components/PitchLogo";
+import { IMAGE_MODELS, VIDEO_MODELS, parseSegmentMaskIndexes } from "@/lib/modelConfig";
+import { PROVIDERS, getModelProvider, setModelProvider, modelHasProviderChoice } from "@/lib/providers";
+import { useWorkflowStore } from "@/lib/store";
+import "@/app/gallery/composer.css";
+import { generationBlocked } from "@/lib/generationGate";
+import { Maximize2, Minimize2, ShieldAlert, X } from "@/components/icones";
+
+/** Local stand-in for the removed Supabase user type. */
+type User = { id: string };
+import { GalleryItem, getToken, galleryCache } from "@/lib/galleryUtils";
+import { useFolderStore } from "@/lib/folderStore";
+import { MediaPickerModal } from "@/components/MediaPickerModal";
+import { useSidebar } from "@/components/ui/sidebar";
+import { QuickAssist } from "@/components/QuickAssist";
+import { browserNotify, requestNotificationPermission } from "@/lib/browserNotify";
+import { isSafetyBlocked } from "@/lib/generationError";
+
+class GenerationJobError extends Error {
+  constructor(message: string, readonly code?: string) {
+    super(message);
+  }
+}
+
+function randomUUID(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+const NEXT_IMG_WIDTHS = [16, 32, 48, 64, 96, 128, 256, 384, 640, 750, 828, 1080, 1200, 1920, 2048, 3840];
+
+function snapWidth(w: number): number {
+  const target = w * 2;
+  return NEXT_IMG_WIDTHS.find(s => s >= target) ?? NEXT_IMG_WIDTHS[NEXT_IMG_WIDTHS.length - 1];
+}
+
+function thumbSrc(url: string, snapped: number): string {
+  if (!url || url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("/_next/")) return url;
+  return `/_next/image?url=${encodeURIComponent(url)}&w=${snapped}&q=75`;
+}
+
+/**
+ * Os rótulos dos slots de referência em português.
+ *
+ * A derivação de `vidSlots` continua falando os nomes da API; a tradução vive
+ * aqui porque a mesma lista alimenta dois consumidores — o menu do "+" e os
+ * ladrilhos da trilha —, e duas traduções paralelas divergiriam em silêncio.
+ * `curto` é a versão que cabe nos 64px do ladrilho.
+ */
+const ROTULO_SLOT: Record<string, { nome: string; curto: string }> = {
+  "Start Frame": { nome: "Primeiro quadro", curto: "1º QUADRO" },
+  "End Frame":   { nome: "Último quadro",   curto: "ÚLT. QUADRO" },
+  "Ref Video":   { nome: "Vídeo de referência", curto: "VÍDEO" },
+  "Audio":       { nome: "Áudio",           curto: "ÁUDIO" },
+  "Image":       { nome: "Imagem",          curto: "IMAGEM" },
+  "Character":   { nome: "Personagem",      curto: "PERSONAGEM" },
+};
+
+function rotuloSlot(label: string): { nome: string; curto: string } {
+  return ROTULO_SLOT[label] ?? { nome: label, curto: label.toUpperCase() };
+}
+
+/** Quantas vagas ainda cabem no slot, com a concordância certa. */
+function restantes(n: number): string {
+  return n === 1 ? "resta 1" : `restam ${n}`;
+}
+
+function resolveGalleryMentions(
+  text: string,
+  tagged: TaggedImage[],
+  tagFormat: "default" | "grok" = "default",
+): { resolvedPrompt: string; extraUrls: string[]; extraAssets: { url: string; kind: "image" | "video" | "audio" }[] } {
+  if (!tagged.length) return { resolvedPrompt: text, extraUrls: [], extraAssets: [] };
+  type Span = { start: number; end: number; url: string; kind: "image" | "video" | "audio" };
+  const spans: Span[] = [];
+  const claimed = new Set<number>();
+  for (const t of [...tagged].sort((a, b) => b.label.length - a.label.length)) {
+    const escaped = t.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`@${escaped}(?!\\w)`, "g");
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      if (!claimed.has(m.index)) {
+        spans.push({ start: m.index, end: m.index + m[0].length, url: t.url, kind: t.kind || "image" });
+        claimed.add(m.index);
+      }
+    }
+  }
+  spans.sort((a, b) => a.start - b.start);
+  if (!spans.length) return { resolvedPrompt: text, extraUrls: [], extraAssets: [] };
+  const extraUrls: string[] = [];
+  const extraAssets: { url: string; kind: "image" | "video" | "audio" }[] = [];
+  const seenUrlIndex = new Map<string, number>(); // url → 1-based slot already assigned
+  let resolvedPrompt = "";
+  let lastEnd = 0;
+  let n = 1;
+  for (const span of spans) {
+    resolvedPrompt += text.slice(lastEnd, span.start);
+    let slot: number;
+    if (seenUrlIndex.has(span.url)) {
+      slot = seenUrlIndex.get(span.url)!;
+    } else {
+      slot = n++;
+      seenUrlIndex.set(span.url, slot);
+      extraUrls.push(span.url);
+      extraAssets.push({ url: span.url, kind: span.kind });
+    }
+    resolvedPrompt += tagFormat === "grok" ? `@image${slot} ` : `<<<image ${slot}>>>`;
+    lastEnd = span.end;
+  }
+  resolvedPrompt += text.slice(lastEnd);
+  return { resolvedPrompt, extraUrls, extraAssets };
+}
+
+function splitByMentions(
+  text: string,
+  baseColor: string | undefined,
+  tagged: TaggedImage[],
+  keyStart: number,
+  onEnter: (tag: TaggedImage, rect: DOMRect) => void,
+  onLeave: () => void,
+  onMouseDown: (tag: TaggedImage) => void,
+): { nodes: React.ReactNode[]; nextKey: number } {
+  if (!tagged.length) {
+    return {
+      nodes: [<span key={keyStart} style={baseColor ? { color: baseColor } : undefined}>{text}</span>],
+      nextKey: keyStart + 1,
+    };
+  }
+  const sorted = [...tagged].sort((a, b) => b.label.length - a.label.length);
+  const nodes: React.ReactNode[] = [];
+  let k = keyStart;
+  let rest = text;
+  while (rest.length > 0) {
+    let earliest: { idx: number; tag: TaggedImage } | null = null;
+    for (const tag of sorted) {
+      const idx = rest.indexOf(`@${tag.label}`);
+      if (idx !== -1 && (earliest === null || idx < earliest.idx)) earliest = { idx, tag };
+    }
+    if (!earliest) {
+      nodes.push(<span key={k++} style={baseColor ? { color: baseColor } : undefined}>{rest}</span>);
+      break;
+    }
+    if (earliest.idx > 0) {
+      nodes.push(<span key={k++} style={baseColor ? { color: baseColor } : undefined}>{rest.slice(0, earliest.idx)}</span>);
+    }
+    const tag = earliest.tag;
+    nodes.push(
+      <span
+        key={k++}
+        style={{ color: "#868CFF", fontWeight: 500, cursor: "text", pointerEvents: "auto", userSelect: "none", background: "rgba(1, 181, 116,0.15)", boxShadow: "0 0 0 3px rgba(1, 181, 116,0.15)", borderRadius: "3px" }}
+        onMouseEnter={e => onEnter(tag, e.currentTarget.getBoundingClientRect())}
+        onMouseLeave={onLeave}
+        onMouseDown={e => { e.preventDefault(); onMouseDown(tag); }}
+      >
+        @{tag.label}
+      </span>,
+    );
+    rest = rest.slice(earliest.idx + tag.label.length + 1);
+  }
+  return { nodes, nextKey: k };
+}
+
+function renderGalleryMentions(
+  text: string,
+  tagged: TaggedImage[],
+  onEnter: (tag: TaggedImage, rect: DOMRect) => void,
+  onLeave: () => void,
+  onMouseDown: (tag: TaggedImage) => void,
+): React.ReactNode {
+  if (!text) return null;
+  if (!tagged.length) return <span style={{ color: "inherit" }}>{text}</span>;
+
+  const sorted = [...tagged].sort((a, b) => b.label.length - a.label.length);
+  const parts: React.ReactNode[] = [];
+  let rest = text;
+  let key = 0;
+
+  while (rest.length > 0) {
+    let earliest: { idx: number; tag: TaggedImage } | null = null;
+    for (const tag of sorted) {
+      const idx = rest.indexOf(`@${tag.label}`);
+      if (idx !== -1 && (earliest === null || idx < earliest.idx)) earliest = { idx, tag };
+    }
+    if (!earliest) { parts.push(<span key={key++} style={{ color: "inherit" }}>{rest}</span>); break; }
+    if (earliest.idx > 0) parts.push(<span key={key++} style={{ color: "inherit" }}>{rest.slice(0, earliest.idx)}</span>);
+    const tag = earliest.tag;
+    parts.push(
+      <span
+        key={key++}
+        style={{
+          color: "#868CFF",
+          fontWeight: 500,
+          cursor: "text",
+          pointerEvents: "auto",
+          userSelect: "none",
+          background: "rgba(1, 181, 116,0.15)",
+          boxShadow: "0 0 0 3px rgba(1, 181, 116,0.15)",
+          borderRadius: "3px",
+        }}
+        onMouseEnter={e => onEnter(tag, e.currentTarget.getBoundingClientRect())}
+        onMouseLeave={onLeave}
+        onMouseDown={e => { e.preventDefault(); onMouseDown(tag); }}
+      >
+        @{tag.label}
+      </span>,
+    );
+    rest = rest.slice(earliest.idx + tag.label.length + 1);
+  }
+  return <>{parts}</>;
+}
+
+
+const loadedImageUrls = new Set<string>();
+const naturalRatioCache = new Map<string, string>(); // url → "w / h"
+
+// Concurrency limiter: at most 4 gallery images load simultaneously.
+const _imgQueue: Array<() => void> = [];
+let _imgActive = 0;
+const IMG_CONCURRENCY = 4;
+function requestImageSlot(fn: () => void): () => void {
+  if (_imgActive < IMG_CONCURRENCY) { _imgActive++; fn(); return () => {}; }
+  _imgQueue.push(fn);
+  return () => { const i = _imgQueue.indexOf(fn); if (i !== -1) _imgQueue.splice(i, 1); };
+}
+function releaseImageSlot() {
+  _imgActive = Math.max(0, _imgActive - 1);
+  const next = _imgQueue.shift();
+  if (next) { _imgActive++; next(); }
+}
+
+// Module-level store for gallery drag — avoids dataTransfer.getData() browser quirks
+let _galleryDragItem: { url: string; mediaType: string } | null = null;
+let _reorderDragItem: { id: string; listTarget: "refImage" | "resource" | "referenceVideo" | "audioRef" } | null = null;
+let _reorderOverId: string | null = null; // last non-ghost item entered during reorder drag
+let _reorderJustDropped = false; // set synchronously in handleReorderDrop; read in onClick to block accidental preview open
+
+// Restore previously discovered aspect ratios and loaded state from
+// sessionStorage so the layout is correct immediately on cold page loads.
+if (typeof window !== "undefined") {
+  try {
+    const ratios = JSON.parse(sessionStorage.getItem("hg-ratios") ?? "{}") as Record<string, string>;
+    for (const [url, r] of Object.entries(ratios)) naturalRatioCache.set(url, r);
+  } catch {}
+  try {
+    const loaded = JSON.parse(sessionStorage.getItem("hg-loaded") ?? "[]") as string[];
+    for (const url of loaded) loadedImageUrls.add(url);
+  } catch {}
+}
+
+function mergeByNewest(prev: GalleryItem[], incoming: GalleryItem[]): GalleryItem[] {
+  const seen = new Set(prev.map(i => i.id));
+  const brandNew = incoming.filter(i => !seen.has(i.id));
+  if (brandNew.length === 0) return prev;
+  return [...prev, ...brandNew].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+interface SavedSettings {
+  prompt: string; modelId: string; aspectRatio: string;
+  quality: string; count: number; duration: number; mode: string;
+  sound?: boolean;
+  refImageUrls?: string[];
+  azureResolution?: string;
+  azureCustomWidth?: number;
+  azureCustomHeight?: number;
+  segmentTaskId?: string;
+  segmentMaskIndexes?: string;
+  promptTextMode?: "text" | "json" | "yaml";
+  multiPromptMode?: boolean;
+  vidStartFrameUrl?: string | null;
+  vidEndFrameUrl?: string | null;
+  vidResourceUrls?: string[];
+  vidVideoRefUrl?: string | null;
+  vidRefVideoUrls?: string[];
+  vidRefAudioUrls?: string[];
+  vidElements?: KlingElement[];
+  taggedImages?: TaggedImage[];
+}
+
+function settingsKey(tab: Tab, folderId: string | null): string {
+  return folderId ? `nf-gallery-${tab}-folder-${folderId}` : `nf-gallery-${tab}`;
+}
+
+function loadSettings(tab: Tab, folderId: string | null): Partial<SavedSettings> | null {
+  if (typeof window === "undefined") return null;
+  try { const r = localStorage.getItem(settingsKey(tab, folderId)); return r ? JSON.parse(r) : null; }
+  catch { return null; }
+}
+
+function saveSettings(tab: Tab, folderId: string | null, s: SavedSettings) {
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem(settingsKey(tab, folderId), JSON.stringify(s)); } catch {}
+}
+
+/** Whether Azure is fully configured (provider + base URL + deployment) for a given model. */
+function isAzureActiveForModel(modelId: string, azureResolutionOptions?: string[]): boolean {
+  if (typeof window === "undefined" || !azureResolutionOptions?.length) return false;
+  try {
+    const provider = JSON.parse(localStorage.getItem("aiui-model-providers") ?? "{}")[modelId] ?? "kie";
+    const base     = localStorage.getItem("aiui-azure-base-url") ?? "";
+    const deploy   = JSON.parse(localStorage.getItem("aiui-azure-endpoints") ?? "{}")[modelId] ?? "";
+    return provider === "azure" && !!base && !!deploy;
+  } catch { return false; }
+}
+
+function loadKlingElements(): KlingElement[] {
+  if (typeof window === "undefined") return [];
+  try { const r = localStorage.getItem("nf-kling-elements"); return r ? (JSON.parse(r) as KlingElement[]) : []; } catch { return []; }
+}
+
+function saveKlingElements(elements: KlingElement[]) {
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem("nf-kling-elements", JSON.stringify(elements)); } catch { }
+}
+
+// ── O ladrilho de uma geração em voo ─────────────────────────────────────────
+
+/**
+ * O estado "Generating" do bloco 09: um retângulo neutro que já ocupa a caixa
+ * final do artefato, para a mídia entrar sem o layout pular. Não é um spinner
+ * centrado numa caixa genérica — é a própria caixa, com o brilho varrendo o
+ * cinza e uma pílula dizendo em que fase está.
+ *
+ * A geometria não vem daqui: quem reserva a largura e a altura é a linha da
+ * grade, que já conhece a proporção pedida. Este componente só preenche.
+ */
+function PendingGenTile({ pg, onCancel }: { pg: PendingGen; onCancel: () => void }) {
+  return (
+    <>
+      {/* O loop da nota portada, no lugar do shimmer. Ele preenche a caixa que
+          a linha da grade já reservou e se centra dentro dela — não define
+          tamanho nenhum, que é o que mantém a mídia entrando sem o layout
+          pular. Sem rótulo: quem fala aqui é a pílula de status abaixo. */}
+      {pg.tab === "videos" ? <GyroNaCaixa /> : <GridReveal estimatedDuration={45000} className="absolute inset-0 h-full rounded-none" style={{ aspectRatio: "auto" }} />}
+
+      {/* A pílula de status, centrada nos dois eixos — 85×28 na referência. */}
+      <div className="pgt-status" role="status">
+        <span className="pgt-spinner" aria-hidden />
+        {pg.prePending ? "Na fila" : "Gerando"}
+      </div>
+
+      {/* Cancelar só existe enquanto o pedido não subiu: depois disso não há
+          o que cancelar, e um botão que não cancela seria mentira. */}
+      {pg.prePending && (
+        <button
+          type="button"
+          className="pgt-cancel"
+          onClick={onCancel}
+          aria-label="Cancelar esta geração"
+          title="Cancelar"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+
+      {/* Com várias gerações em voo ao mesmo tempo, o prompt é a única coisa
+          que distingue um ladrilho do outro. */}
+      {pg.prompt && <p className="pgt-prompt">{pg.prompt}</p>}
+    </>
+  );
+}
+
+// ── Logged-out empty state ────────────────────────────────────────────────────
+
+// ── Tag renumbering helper ─────────────────────────────────────────────────────
+
+function removeTagAndRenumber(
+  removedRefId: string,
+  removedUrl: string | null,
+  currentTaggedImages: TaggedImage[],
+  currentPrompt: string,
+): { newTaggedImages: TaggedImage[]; newPrompt: string } {
+  const removedTag = currentTaggedImages.find(
+    t => t.refId === removedRefId || (removedUrl != null && t.url === removedUrl),
+  );
+  if (!removedTag) return { newTaggedImages: currentTaggedImages, newPrompt: currentPrompt };
+
+  const m = removedTag.label.match(/^([^\d]*)(\d+)$/);
+  if (!m) {
+    return {
+      newTaggedImages: currentTaggedImages.filter(t => t !== removedTag),
+      newPrompt: currentPrompt.replace(new RegExp(`@${removedTag.label}\\b`, 'g'), ''),
+    };
+  }
+
+  const prefix = m[1];
+  const removedN = parseInt(m[2]);
+
+  const newTaggedImages = currentTaggedImages
+    .filter(t => t !== removedTag)
+    .map(t => {
+      const tm = t.label.match(/^([^\d]*)(\d+)$/);
+      if (!tm || tm[1] !== prefix) return t;
+      const n = parseInt(tm[2]);
+      return n > removedN ? { ...t, label: `${prefix}${n - 1}` } : t;
+    });
+
+  // Remove the deleted tag from prompt, then renumber higher ones ascending
+  // (ascending order avoids regex collision: @image2→@image1 before @image3→@image2)
+  let newPrompt = currentPrompt.replace(new RegExp(`@${prefix}${removedN}\\b`, 'g'), '');
+
+  const higherNs = currentTaggedImages
+    .filter(t => t !== removedTag)
+    .flatMap(t => { const tm = t.label.match(/^([^\d]*)(\d+)$/); return tm && tm[1] === prefix && parseInt(tm[2]) > removedN ? [parseInt(tm[2])] : []; })
+    .sort((a, b) => a - b);
+
+  for (const n of higherNs) {
+    newPrompt = newPrompt.replace(new RegExp(`@${prefix}${n}\\b`, 'g'), `@${prefix}${n - 1}`);
+  }
+
+  return { newTaggedImages, newPrompt };
+}
+
+function getDisplayOrder(arr: RefImage[], draggingId: string | null, overId: string | null): RefImage[] {
+  if (!draggingId || !overId || draggingId === overId) return arr;
+  const dragIdx = arr.findIndex(r => r.id === draggingId);
+  const overIdx = arr.findIndex(r => r.id === overId);
+  if (dragIdx === -1 || overIdx === -1) return arr;
+  const next = [...arr];
+  const [moved] = next.splice(dragIdx, 1);
+  next.splice(overIdx, 0, moved);
+  return next;
+}
+
+function reorderAndRenumberTags(
+  _oldArr: RefImage[],
+  newArr: RefImage[],
+  prefix: string,
+  currentTaggedImages: TaggedImage[],
+  currentPrompt: string,
+): { newTaggedImages: TaggedImage[]; newPrompt: string } {
+  // Build label → RefImage mapping for the new order.
+  // @imageN is a positional reference to the Nth attached item; when the user
+  // reorders, we update the URL/refId behind each label rather than renaming
+  // labels in the prompt — that way resolveGalleryMentions produces extraUrls
+  // in the new order and <<<image N>>> in the resolved prompt matches the
+  // dragged position.
+  const labelToRef = new Map<string, RefImage>();
+  for (let i = 0; i < newArr.length; i++) {
+    labelToRef.set(`${prefix}${i + 1}`, newArr[i]);
+  }
+
+  let changed = false;
+  const newTaggedImages = currentTaggedImages.map(t => {
+    const ref = labelToRef.get(t.label);
+    if (!ref || ref.id === t.refId) return t;
+    changed = true;
+    return { ...t, refId: ref.id, url: ref.cdnUrl ?? ref.objectUrl };
+  });
+
+  if (!changed) return { newTaggedImages: currentTaggedImages, newPrompt: currentPrompt };
+  return { newTaggedImages, newPrompt: currentPrompt };
+}
+
+// ── Inner page ────────────────────────────────────────────────────────────────
+
+function GalleryInner() {
+  const { state, isMobile } = useSidebar();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const rawTab = searchParams.get("tab");
+  const tab = (rawTab === "videos" ? "videos" : "images") as Tab;
+  const rawSource = searchParams.get("source");
+  const initialSource = (rawSource === "uploaded" ? "uploaded" : "generated") as "generated" | "uploaded";
+
+  const { selectedFolderId, itemFolderMap, assignItemsToFolder, removeItemsFromFolder, folders, addUnseenFolder } = useFolderStore();
+
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoaded, setAuthLoaded] = useState(false);
+
+  const [items, setItems] = useState<GalleryItem[]>(() => {
+    const initSrc = initialSource === "uploaded" ? "upload" : "generation";
+    return galleryCache.get(`${tab}-${initSrc}`)?.items ?? [];
+  });
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(() => {
+    const initSrc = initialSource === "uploaded" ? "upload" : "generation";
+    return galleryCache.get(`${tab}-${initSrc}`)?.hasMore ?? true;
+  });
+  const [lightboxItem, setLightboxItem] = useState<GalleryItem | null>(null);
+  const [lightboxThumb, setLightboxThumb] = useState<string>("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const anySelected = selectedIds.size > 0;
+  const toggleSelect = (id: string) => setSelectedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  const clearSelection = () => { setSelectedIds(new Set()); setFolderPickerOpen(false); };
+  const marqueeStartRef = useRef<{x: number; y: number} | null>(null);
+  const [marqueeRect, setMarqueeRect] = useState<{x: number; y: number; w: number; h: number} | null>(null);
+  const marqueeRectRef = useRef<{x: number; y: number; w: number; h: number} | null>(null);
+  const isDraggingMarqueeRef = useRef(false);
+  const wasDraggingRef = useRef(false);
+  const preDragSelectedIdsRef = useRef<Set<string>>(new Set());
+
+  const isVideo = tab === "videos";
+  const models = isVideo ? VIDEO_MODELS : IMAGE_MODELS;
+
+  const skipNextModelEffect = useRef(false);
+
+  const [prompt, setPrompt] = useState<string>(() => loadSettings(tab, selectedFolderId)?.prompt ?? "");
+
+  /* Espelho não reativo do prompt e dos chips.
+     Quatro tratadores da trilha de anexos (`removeImage`, `removeVidRef`,
+     `openPicker`, `handleReorderDrop`) precisavam do texto para renumerar as
+     menções. Lendo `prompt` direto, eles nasciam de novo a cada tecla, e com
+     eles a subárvore inteira da trilha — 182 linhas recriadas por caractere.
+     Lendo o espelho, os quatro ficam estáveis e a trilha sai do caminho da
+     tecla. O espelho é atualizado no efeito, então em qualquer tratador de
+     evento (que só roda depois do commit) ele já está no valor corrente. */
+  const promptRef = useRef(prompt);
+  const taggedImagesRef = useRef<TaggedImage[]>([]);
+
+  /* O modo de execução (pílula 4) e o cartão que ele abre. O valor
+     persistido só é lido depois da hidratação — o servidor não tem
+     `localStorage`, e um valor diferente ali quebraria a hidratação. */
+  const [modoExecucao, setModoExecucao] = useState<ModoExecucao>("auto");
+  const [confirmando, setConfirmando] = useState(false);
+  useEffect(() => { setModoExecucao(lerModoExecucao()); }, []);
+
+  /* A categoria das abas do hero. Mora aqui porque também escolhe as
+     frases do typewriter; quem lê do outro lado (a linha de
+     especialistas) assina o evento de `lib/categoriaComposer`. */
+  const [categoria, setCategoria] = useState<CategoriaId | null>(null);
+  const prevFolderIdRef = useRef<string | null>(selectedFolderId);
+  const settingsSnapshotRef = useRef<SavedSettings | null>(null);
+  const [modelId, setModelId] = useState<string>(() => {
+    const s = loadSettings(tab, selectedFolderId);
+    return (s?.modelId && models.find(m => m.id === s.modelId)) ? s.modelId : models[0].id;
+  });
+  const [aspectRatio, setAspectRatio] = useState<string>(() => {
+    const s = loadSettings(tab, selectedFolderId);
+    const mId = (s?.modelId && models.find(m => m.id === s.modelId)) ? s.modelId : models[0].id;
+    const mdl = models.find(m => m.id === mId) ?? models[0];
+    const azureOpts = (mdl as { azureResolutionOptions?: string[] }).azureResolutionOptions;
+    if (s?.aspectRatio === "custom" && Number.isFinite(s.azureCustomWidth) && Number.isFinite(s.azureCustomHeight) && isAzureActiveForModel(mId, azureOpts)) {
+      return "custom";
+    }
+    if (s?.aspectRatio && mdl.ratios.includes(s.aspectRatio)) return s.aspectRatio;
+    return ("defaultRatio" in mdl ? (mdl as { defaultRatio: string }).defaultRatio : null) ?? mdl.ratios[0] ?? "1:1";
+  });
+  const [azureCustomWidth, setAzureCustomWidth] = useState<number | undefined>(() => loadSettings(tab, selectedFolderId)?.azureCustomWidth);
+  const [azureCustomHeight, setAzureCustomHeight] = useState<number | undefined>(() => loadSettings(tab, selectedFolderId)?.azureCustomHeight);
+  const [quality, setQuality] = useState<string>(() => loadSettings(tab, selectedFolderId)?.quality ?? "2k");
+  const [isAzureProvider, setIsAzureProvider] = useState<boolean>(false);
+  const [providerId, setProviderId] = useState<ReturnType<typeof getModelProvider>>("kie");
+  const [count, setCount] = useState<number>(() => loadSettings(tab, selectedFolderId)?.count ?? 1);
+  const [duration, setDuration] = useState<number>(() => loadSettings(tab, selectedFolderId)?.duration ?? 5);
+  const [mode, setMode] = useState<string>(() => loadSettings(tab, selectedFolderId)?.mode ?? "");
+  const [resolution, setResolution] = useState<string>("");
+  const [azureResolution, setAzureResolution] = useState<string>(() => loadSettings(tab, selectedFolderId)?.azureResolution ?? "1k");
+  const [segmentTaskId, setSegmentTaskId] = useState<string>(() => loadSettings(tab, selectedFolderId)?.segmentTaskId ?? "");
+  const [segmentMaskIndexes, setSegmentMaskIndexes] = useState<string>(() => loadSettings(tab, selectedFolderId)?.segmentMaskIndexes ?? "1");
+  const [sound, setSound] = useState<boolean>(() => loadSettings(tab, selectedFolderId)?.sound ?? false);
+  const [seed, setSeed] = useState<number | undefined>(0);
+  const [pendingGens, setPendingGens] = useState<PendingGen[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = localStorage.getItem("aiui-pending-gens");
+      // Strip prePending on restore — on page refresh, skip the 3-second delay
+      const parsed = stored ? (JSON.parse(stored) as PendingGen[]) : [];
+      return parsed.map(p => ({ ...p, prePending: false }));
+    } catch { return []; }
+  });
+  const prePendingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const pendingGensRef = useRef(pendingGens);
+  useEffect(() => {
+    if (!("caches" in window)) return;
+    const CACHE_NAME = "hg-empty-state-v1";
+    // Only cache same-origin assets — cross-origin video URLs require CORS headers
+    // on the remote server which aren't configured, causing fetch errors.
+    const ASSETS = ["/1.webp", "/2.webp", "/3.webp", "/4.webp"];
+    caches.open(CACHE_NAME).then(cache => {
+      ASSETS.forEach(url => {
+        cache.match(url).then(hit => {
+          if (!hit) cache.add(url).catch(() => {});
+        });
+      });
+    });
+  }, []);
+
+  useEffect(() => { pendingGensRef.current = pendingGens; }, [pendingGens]);
+
+  // Sync active-generation folders to the sidebar
+  useEffect(() => {
+    const ids = [...new Set(
+      pendingGens.filter(pg => !pg.error && pg.folderId).map(pg => pg.folderId!)
+    )];
+    useFolderStore.getState().setGeneratingFolderIds(ids);
+    const hasNullFolderGen = pendingGens.some(pg => !pg.error && !pg.folderId);
+    useFolderStore.getState().setGeneratingAllAssets(hasNullFolderGen);
+  }, [pendingGens]);
+
+  const [newItemIds, setNewItemIds] = useState<Set<string>>(new Set());
+  const onGenComplete = React.useCallback((folderId: string | null | undefined, freshIds: string[]) => {
+    if (folderId && folderId !== useFolderStore.getState().selectedFolderId) {
+      useFolderStore.getState().addUnseenFolder(folderId);
+    }
+    if (!folderId && useFolderStore.getState().selectedFolderId !== null) {
+      useFolderStore.getState().setUnseenAllAssets(true);
+    }
+    if (freshIds.length > 0) {
+      setNewItemIds(prev => { const n = new Set(prev); freshIds.forEach(id => n.add(id)); return n; });
+    }
+  }, []);
+  const [submitting, setSubmitting] = useState(false);
+  const [veoMode, setVeoMode] = useState<"frames" | "references">("frames");
+  const [promptTextMode, setPromptTextMode] = useState<"text" | "json" | "yaml">(() => loadSettings(tab, selectedFolderId)?.promptTextMode ?? "text");
+  const [multiPromptMode, setMultiPromptMode] = useState<boolean>(() => loadSettings(tab, selectedFolderId)?.multiPromptMode ?? false);
+  const [expandedPromptIdx, setExpandedPromptIdx] = useState<number | null>(null);
+  const [promptExpanded, setPromptExpanded] = useState(false);
+  const [genError, setGenError] = useState<string>("");
+  const debugMode        = useWorkflowStore((s) => s.debugMode);
+  const addToast         = useWorkflowStore((s) => s.addToast);
+  const kieKeySet        = useWorkflowStore((s) => s.kieKeySet);
+  /* O botão de conectores e a faixa levam para os ajustes, que é onde a
+     chave de cada provedor realmente mora. */
+  const setSettingsOpen  = useWorkflowStore((s) => s.setSettingsOpen);
+  const setKieKeySet     = useWorkflowStore((s) => s.setKieKeySet);
+  const [sourceFilter, setSourceFilter] = useState<"generated" | "uploaded">(initialSource);
+
+  useEffect(() => {
+    if (rawSource === "uploaded" || rawSource === "generated") {
+      setSourceFilter(rawSource);
+    }
+  }, [rawSource]);
+  const [zoom, setZoom] = useState<number>(() => {
+    if (typeof window === "undefined") return 6;
+    const saved = localStorage.getItem("aiui-gallery-zoom");
+    return saved ? parseInt(saved, 10) : 6;
+  });
+
+  // ── Filtros do Acervo ──────────────────────────────────────────────────────
+  // Quatro eixos independentes, no desenho do bloco 07 da referência. Todos
+  // derivam de campos que o GalleryItem já carrega — nenhum backend novo.
+  const [acervoQuery, setAcervoQuery] = useState("");
+  const [acervoModel, setAcervoModel] = useState("all");
+  const [acervoSort, setAcervoSort] = useState<AcervoSort>("recent");
+  const [acervoWindow, setAcervoWindow] = useState<AcervoWindow>("all");
+  const gridRef = useRef<HTMLDivElement>(null);
+  const gridOuterRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [natRatioVersion, setNatRatioVersion] = useState(0);
+  const [downloads, setDownloads] = useState<DownloadTask[]>([]);
+  const [refError, setRefError] = useState("");
+
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+  const [videoMuted, setVideoMuted] = useState(true);
+  const [refPreview, setRefPreview] = useState<{ url: string; mediaKind: "image" | "video" | "audio" } | null>(null);
+  const [hoveredRefId, setHoveredRefId] = useState<string | null>(null);
+
+  // Folder picker (multi-select toolbar)
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false);
+  const folderPickerRef = useRef<HTMLDivElement>(null);
+  const folderPickerBtnRef = useRef<HTMLButtonElement>(null);
+  const [expandedPickerFolders, setExpandedPickerFolders] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    if (!folderPickerOpen) return;
+    function onPointerDown(e: MouseEvent) {
+      if (
+        folderPickerRef.current && !folderPickerRef.current.contains(e.target as Node) &&
+        folderPickerBtnRef.current && !folderPickerBtnRef.current.contains(e.target as Node)
+      ) {
+        setFolderPickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [folderPickerOpen]);
+
+  useEffect(() => {
+    const MIN_DRAG = 5;
+    const selectIntersecting = (r: {x: number; y: number; w: number; h: number}) => {
+      if (!gridOuterRef.current) return;
+      const toAdd: string[] = [];
+      gridOuterRef.current.querySelectorAll<HTMLElement>("[data-item-id]").forEach(el => {
+        const b = el.getBoundingClientRect();
+        if (b.right > r.x && b.left < r.x + r.w && b.bottom > r.y && b.top < r.y + r.h) {
+          const id = el.getAttribute("data-item-id");
+          if (id) toAdd.push(id);
+        }
+      });
+      setSelectedIds(() => {
+        const s = new Set(preDragSelectedIdsRef.current);
+        toAdd.forEach(id => s.add(id));
+        return s;
+      });
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      if (!marqueeStartRef.current) return;
+      const dx = e.clientX - marqueeStartRef.current.x;
+      const dy = e.clientY - marqueeStartRef.current.y;
+      if (!isDraggingMarqueeRef.current) {
+        if (Math.abs(dx) < MIN_DRAG && Math.abs(dy) < MIN_DRAG) return;
+        isDraggingMarqueeRef.current = true;
+      }
+      const x1 = Math.min(marqueeStartRef.current.x, e.clientX);
+      const y1 = Math.min(marqueeStartRef.current.y, e.clientY);
+      const x2 = Math.max(marqueeStartRef.current.x, e.clientX);
+      const y2 = Math.max(marqueeStartRef.current.y, e.clientY);
+      const r = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+      marqueeRectRef.current = r;
+      setMarqueeRect(r);
+      selectIntersecting(r);
+    };
+    const onMouseUp = () => {
+      const wasDragging = isDraggingMarqueeRef.current;
+      marqueeStartRef.current = null;
+      isDraggingMarqueeRef.current = false;
+      marqueeRectRef.current = null;
+      setMarqueeRect(null);
+      if (wasDragging) {
+        wasDraggingRef.current = true;
+        setTimeout(() => { wasDraggingRef.current = false; }, 80);
+      }
+    };
+    const onClickCapture = (e: MouseEvent) => {
+      if (wasDraggingRef.current) { e.stopPropagation(); e.preventDefault(); }
+    };
+    // Prevent native drag-and-drop from stealing mousemove events during marquee
+    const onDragStart = (e: DragEvent) => {
+      if (marqueeStartRef.current) e.preventDefault();
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    document.addEventListener("click", onClickCapture, true);
+    document.addEventListener("dragstart", onDragStart, true);
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.removeEventListener("click", onClickCapture, true);
+      document.removeEventListener("dragstart", onDragStart, true);
+    };
+  }, []);
+
+  // Media picker
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerTarget, setPickerTarget] = useState<"refImage" | "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo" | null>(null);
+  const pickerTargetRef = useRef<typeof pickerTarget>(null);
+  const [pickerUploadKind, setPickerUploadKind] = useState<"image" | "video">("image");
+  const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null);
+  const [reorderOverId, setReorderOverId] = useState<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  // Reference images — restored from localStorage on mount
+  const [refImages, setRefImages] = useState<RefImage[]>(() => {
+    const s = loadSettings(tab, selectedFolderId);
+    return (s?.refImageUrls ?? []).map(url => ({
+      id: url, objectUrl: url, cdnUrl: url, uploading: false, error: false,
+    }));
+  });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Video reference state
+  const urlToRef = (url: string): RefImage => ({ id: url, objectUrl: url, cdnUrl: url, uploading: false, error: false });
+  const [vidStartFrame, setVidStartFrame] = useState<RefImage | null>(() => { const u = loadSettings(tab, selectedFolderId)?.vidStartFrameUrl; return u ? urlToRef(u) : null; });
+  const [vidEndFrame, setVidEndFrame]     = useState<RefImage | null>(() => { const u = loadSettings(tab, selectedFolderId)?.vidEndFrameUrl;   return u ? urlToRef(u) : null; });
+  const [vidResources, setVidResources]   = useState<RefImage[]>(() => (loadSettings(tab, selectedFolderId)?.vidResourceUrls ?? []).map(urlToRef));
+  const [vidVideoRef, setVidVideoRef]     = useState<RefImage | null>(() => { const u = loadSettings(tab, selectedFolderId)?.vidVideoRefUrl;   return u ? urlToRef(u) : null; });
+  const [vidRefVideos, setVidRefVideos]   = useState<RefImage[]>(() => (loadSettings(tab, selectedFolderId)?.vidRefVideoUrls ?? []).map(urlToRef));
+  const [vidRefAudios, setVidRefAudios]   = useState<RefImage[]>(() => (loadSettings(tab, selectedFolderId)?.vidRefAudioUrls ?? []).map(urlToRef));
+  const [vidElements, setVidElements]     = useState<KlingElement[]>(() => loadSettings(tab, selectedFolderId)?.vidElements ?? []);
+  const [elementPickerOpen, setElementPickerOpen] = useState(false);
+  const vidImgInputRef   = useRef<HTMLInputElement>(null);
+  const vidVideoInputRef = useRef<HTMLInputElement>(null);
+  const vidAudioInputRef = useRef<HTMLInputElement>(null);
+  const vidPickTarget = useRef<"startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo" | "audioRef" | null>(null);
+
+  // Prompt expansion
+
+  // @ mention state — tagged images also restored from localStorage
+  const [taggedImages, setTaggedImages] = useState<TaggedImage[]>(() => {
+    const s = loadSettings(tab, selectedFolderId);
+    if (s?.taggedImages?.length) return s.taggedImages;
+    // fallback: reconstruct from refImageUrls for backwards compat
+    const urls = s?.refImageUrls ?? [];
+    const p = s?.prompt ?? "";
+    return urls.flatMap((url, idx) => {
+      const label = `image${idx + 1}`;
+      return p.includes(`@${label}`) ? [{ label, refId: url, url }] : [];
+    });
+  });
+
+  /* Mantém os dois espelhos em dia. Roda depois do commit, então qualquer
+     tratador de evento lê o valor corrente. */
+  useEffect(() => { promptRef.current = prompt; }, [prompt]);
+  useEffect(() => { taggedImagesRef.current = taggedImages; }, [taggedImages]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionSelIdx, setMentionSelIdx] = useState(0);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  /* O campo também vive em estado, não só em ref: o composer só entra na
+     árvore depois que a Home de criação decide se aparece, e um efeito que
+     só lê o ref roda antes disso — uma vez, com `null`, e nunca mais. Guardar
+     o elemento em estado faz o efeito rodar de novo quando ele existe. */
+  const [campoPrompt, setCampoPrompt] = useState<HTMLTextAreaElement | null>(null);
+  const fixarCampoPrompt = useCallback((el: HTMLTextAreaElement | null) => {
+    inputRef.current = el;
+    setCampoPrompt(el);
+  }, []);
+  const activeBlockRef = useRef<HTMLTextAreaElement | null>(null);
+  const activeBlockIdxRef = useRef<number | null>(null);
+  const promptBarRef = useRef<HTMLDivElement>(null);
+  const overlayInnerRef = useRef<HTMLDivElement>(null);
+  const [chipPreview, setChipPreview] = useState<{ tag: TaggedImage; rect: DOMRect } | null>(null);
+
+  const pageRef = useRef(0);
+  const tabRef = useRef<Tab>(tab);
+  const sourceFilterRef = useRef<"generated" | "uploaded">(initialSource);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef(false);
+  const loadingMoreRef = useRef(false);
+  const hasMoreRef = useRef(true);
+  const postLoadCheckRef = useRef<() => void>(() => {});
+  const prevScrollHeightRef = useRef(0);
+  const [windowWidth, setWindowWidth] = useState(0);
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => { refImages.forEach(r => URL.revokeObjectURL(r.objectUrl)); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
+  // Close ref preview on Escape
+  useEffect(() => {
+    if (!refPreview) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setRefPreview(null); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [refPreview]);
+
+  // Persist pendingGens so generating/failed jobs survive page refresh
+  useEffect(() => {
+    try { localStorage.setItem("aiui-pending-gens", JSON.stringify(pendingGens)); } catch { }
+  }, [pendingGens]);
+
+  // Handle "Clean failed jobs" dispatched from the sidebar
+  useEffect(() => {
+    function handle(e: Event) {
+      const { folderId } = (e as CustomEvent<{ folderId: string | null }>).detail;
+      setPendingGens(prev => prev.filter(pg => {
+        if (!pg.error) return true;
+        if (folderId === null) return false;
+        return pg.folderId !== folderId;
+      }));
+    }
+    window.addEventListener("clean-failed-jobs", handle);
+    return () => window.removeEventListener("clean-failed-jobs", handle);
+  }, []);
+
+  // On mount, resume polling for any pending gens that were in-flight before the refresh
+  useEffect(() => {
+    const toResume = pendingGens.filter(p => p.taskId && !p.error);
+    toResume.forEach(async (pending) => {
+      try {
+        // Check immediately (no 3s delay) before entering the regular poll loop
+        const immediateRes = await fetch(`/api/job-status?taskId=${pending.taskId!}`);
+        const immediateResult = await immediateRes.json() as { status: string; error?: string; errorCode?: string };
+        if (immediateResult.status === "error") throw new GenerationJobError(immediateResult.error ?? "Generation failed", immediateResult.errorCode);
+        if (immediateResult.status === "not_found") {
+          // Task expired from server memory — image was likely already saved; just remove the spinner
+          setPendingGens(prev => prev.filter(p => p.id !== pending.id));
+          return;
+        }
+        if (immediateResult.status !== "done") {
+          // Still generating — enter the regular poll loop
+          await pollTask(pending.taskId!);
+        }
+        const existingIds = new Set((galleryCache.get(`${tabRef.current}-generation`)?.items ?? []).map((i: GalleryItem) => i.id));
+        const fresh = await fetchNewItems(tabRef.current);
+        setPendingGens(prev => prev.filter(p => p.id !== pending.id));
+        if (fresh.length > 0) {
+          if (pending.folderId) {
+            const existingMap = useFolderStore.getState().itemFolderMap;
+            const pendingTime = pending.createdAt ? new Date(pending.createdAt).getTime() - 30_000 : 0;
+            const untaggedIds = fresh
+              .filter(i => new Date(i.created_at).getTime() >= pendingTime)
+              .map(i => i.id)
+              .filter(id => !existingMap[id]);
+            if (untaggedIds.length > 0) assignItemsToFolder(untaggedIds, pending.folderId);
+          }
+          const genCacheKey = `${tabRef.current}-generation`;
+          setItems(prev => {
+            const base = sourceFilterRef.current === "generated" ? prev : (galleryCache.get(genCacheKey)?.items ?? []);
+            const merged = mergeByNewest(base, fresh);
+            galleryCache.set(genCacheKey, { items: merged, hasMore: true });
+            return sourceFilterRef.current === "generated" ? (merged === base ? prev : merged) : prev;
+          });
+        }
+        onGenComplete(pending.folderId, fresh.filter(i => !existingIds.has(i.id)).map(i => i.id));
+        window.dispatchEvent(new Event("credits-refresh"));
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const errorCode = e instanceof GenerationJobError ? e.code : undefined;
+        setPendingGens(prev => prev.map(p => p.id === pending.id ? { ...p, error: msg, errorCode } : p));
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    setUser({ id: "guest" });
+    setAuthLoaded(true);
+  }, []);
+
+  // ── Load items ────────────────────────────────────────────────────────────
+
+  const loadItems = useCallback(async (currentTab: Tab, page: number, replace = false) => {
+    // Apply cache / loading state synchronously before any await so the UI
+    // updates in the very next render rather than after the token promise.
+    const apiSource = sourceFilterRef.current === "uploaded" ? "upload" : "generation";
+    const cacheKey = `${currentTab}-${apiSource}`;
+    if (replace) {
+      const cached = galleryCache.get(cacheKey);
+      if (cached) { setItems(cached.items); setHasMore(cached.hasMore); }
+      else setLoading(true);
+    } else {
+      loadingMoreRef.current = true; // synchronous lock — prevents concurrent fetches before React re-renders
+      setLoadingMore(true);
+    }
+    const token = await getToken();
+    if (!token) { setLoading(false); setLoadingMore(false); return; }
+    try {
+      const genType = currentTab === "videos" ? "video" : "image";
+      const res = await fetch(`/api/gallery?type=${genType}&page=${page}&source=${apiSource}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const { items: newItems, hasMore: more, total } = await res.json() as { items: GalleryItem[]; hasMore: boolean; total?: number };
+      if (replace) {
+        setItems(newItems);
+        galleryCache.set(cacheKey, { items: newItems, hasMore: more });
+      } else {
+        setItems(prev => {
+          const merged = mergeByNewest(prev, newItems);
+          galleryCache.set(cacheKey, { items: merged, hasMore: more });
+          return merged;
+        });
+      }
+      setHasMore(more);
+      pageRef.current = page;
+      if (typeof total === "number") {
+        useFolderStore.getState().setGalleryCount(currentTab, total);
+      }
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      loadingMoreRef.current = false;
+      // Only auto-trigger next load if visible content didn't grow (all-filtered pages)
+      // or the grid doesn't fill the viewport. Skip when a folder is active — the sparse
+      // match rate would cascade into many empty-page fetches; let scroll drive it instead.
+      requestAnimationFrame(() => {
+        const el = gridOuterRef.current;
+        if (!el || !hasMoreRef.current) return;
+        if (useFolderStore.getState().selectedFolderId) return;
+        const grew = el.scrollHeight > prevScrollHeightRef.current;
+        const fillsViewport = el.scrollHeight > el.clientHeight + 1;
+        if (!fillsViewport || !grew) postLoadCheckRef.current();
+      });
+    }
+  }, []);
+
+  // Fetches page 0 and returns only brand-new items (not already in the list).
+  // Returns data without touching state so callers can batch it with other updates.
+  const fetchNewItems = useCallback(async (currentTab: Tab): Promise<GalleryItem[]> => {
+    const token = await getToken();
+    if (!token) return [];
+    try {
+      const genType = currentTab === "videos" ? "video" : "image";
+      const res = await fetch(`/api/gallery?type=${genType}&page=0&source=generation`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      const { items: fresh } = await res.json() as { items: GalleryItem[]; hasMore: boolean };
+      return fresh;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!authLoaded) return;
+    loadItems(tab, 0, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoaded, kieKeySet]);
+
+  useEffect(() => {
+    clearSelection();
+    tabRef.current = tab;
+    pageRef.current = 0;
+    setHasMore(true);
+    {
+      const src = sourceFilterRef.current === "uploaded" ? "upload" : "generation";
+      const cached = galleryCache.get(`${tab}-${src}`);
+      if (cached) { setItems(cached.items); setHasMore(cached.hasMore); } else setItems([]);
+      if (user) loadItems(tab, 0, true);
+    }
+    const newModels = tab === "videos" ? VIDEO_MODELS : IMAGE_MODELS;
+    const saved = loadSettings(tab, prevFolderIdRef.current);
+    const model = (saved?.modelId ? newModels.find(m => m.id === saved.modelId) : null) ?? newModels[0];
+    const azureOpts = (model as { azureResolutionOptions?: string[] }).azureResolutionOptions;
+    const savedIsCustom = saved?.aspectRatio === "custom" && Number.isFinite(saved.azureCustomWidth) && Number.isFinite(saved.azureCustomHeight) && isAzureActiveForModel(model.id, azureOpts);
+    const savedAR = savedIsCustom ? "custom" : (saved?.aspectRatio && model.ratios.includes(saved.aspectRatio) ? saved.aspectRatio : null);
+    skipNextModelEffect.current = true;
+    setModelId(model.id);
+    const resolvedPrompt = saved?.prompt ?? "";
+    setPrompt(resolvedPrompt);
+    setAspectRatio(savedAR ?? ("defaultRatio" in model ? (model as { defaultRatio: string }).defaultRatio : null) ?? model.ratios[0] ?? "16:9");
+    setAzureCustomWidth(saved?.azureCustomWidth);
+    setAzureCustomHeight(saved?.azureCustomHeight);
+    setSegmentTaskId(saved?.segmentTaskId ?? "");
+    setSegmentMaskIndexes(saved?.segmentMaskIndexes ?? "1");
+    setQuality(saved?.quality ?? "2k");
+    setCount(saved?.count ?? 1);
+    if ("defaultDuration" in model) setDuration(saved?.duration ?? (model as { defaultDuration: number }).defaultDuration ?? 5);
+    if ("defaultMode" in model) setMode(saved?.mode ?? (model as { defaultMode: string }).defaultMode ?? "");
+    if ("defaultResolution" in model) setResolution((model as { defaultResolution: string }).defaultResolution);
+    setSound(saved?.sound ?? false);
+    const savedUrls = saved?.refImageUrls ?? [];
+    const savedPrompt = resolvedPrompt;
+    setRefImages(prev => {
+      prev.forEach(r => URL.revokeObjectURL(r.objectUrl));
+      return savedUrls.map(url => ({ id: url, objectUrl: url, cdnUrl: url, uploading: false, error: false }));
+    });
+    setTaggedImages(
+      saved?.taggedImages?.length
+        ? saved.taggedImages
+        : savedUrls.flatMap((url, idx) => {
+            const label = `image${idx + 1}`;
+            return savedPrompt.includes(`@${label}`) ? [{ label, refId: url, url }] : [];
+          })
+    );
+    const toRef = (url: string): RefImage => ({ id: url, objectUrl: url, cdnUrl: url, uploading: false, error: false });
+    setVidStartFrame(saved?.vidStartFrameUrl ? toRef(saved.vidStartFrameUrl) : null);
+    setVidEndFrame(saved?.vidEndFrameUrl ? toRef(saved.vidEndFrameUrl) : null);
+    setVidResources((saved?.vidResourceUrls ?? []).map(toRef));
+    setVidVideoRef(saved?.vidVideoRefUrl ? toRef(saved.vidVideoRefUrl) : null);
+    setVidRefVideos((saved?.vidRefVideoUrls ?? []).map(toRef));
+    setVidRefAudios((saved?.vidRefAudioUrls ?? []).map(toRef));
+    setVidElements(saved?.vidElements ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  useEffect(() => {
+    if (skipNextModelEffect.current) { skipNextModelEffect.current = false; return; }
+    const m = models.find(m => m.id === modelId);
+    if (!m) return;
+    setAspectRatio(("defaultRatio" in m ? m.defaultRatio : null) ?? m.ratios[0] ?? "1:1");
+    if ("defaultDuration" in m) setDuration(m.defaultDuration ?? 5);
+    if ("defaultMode" in m) setMode(m.defaultMode ?? "");
+    if ("defaultResolution" in m) setResolution((m as { defaultResolution: string }).defaultResolution);
+    if (!isVideo) {
+      const im = m as { apiInput?: { qualityOptions?: string[] }; azureQualityOptions?: string[]; defaultQuality?: string };
+      const provider = (() => { try { return JSON.parse(localStorage.getItem("aiui-model-providers") ?? "{}")[m.id] ?? "kie"; } catch { return "kie"; } })();
+      const base     = (() => { try { return localStorage.getItem("aiui-azure-base-url") ?? ""; } catch { return ""; } })();
+      const deploy   = (() => { try { return JSON.parse(localStorage.getItem("aiui-azure-endpoints") ?? "{}")[m.id] ?? ""; } catch { return ""; } })();
+      const azure    = provider === "azure" && !!base && !!deploy && !!im.azureQualityOptions;
+      const validQ   = azure ? im.azureQualityOptions! : (im.apiInput?.qualityOptions ?? []);
+      if (validQ.length) {
+        setQuality(prev => im.defaultQuality && validQ.includes(im.defaultQuality) ? im.defaultQuality : validQ.includes(prev) ? prev : validQ[0]);
+      }
+    }
+    if (isVideo) {
+      // We don't clear video refs here anymore to allow persistence when switching between video models
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modelId]);
+
+  // Keep isAzureProvider in sync with localStorage whenever model or provider settings change
+  useEffect(() => {
+    const m = models.find(m => m.id === modelId);
+    const im = m as { azureQualityOptions?: string[] } | undefined;
+    const read = () => {
+      try {
+        const provider = getModelProvider(modelId);
+        setProviderId(provider);
+        const base     = localStorage.getItem("aiui-azure-base-url") ?? "";
+        const deploy   = JSON.parse(localStorage.getItem("aiui-azure-endpoints") ?? "{}")[modelId] ?? "";
+        const azure    = provider === "azure" && !!base && !!deploy && !!im?.azureQualityOptions;
+        setIsAzureProvider(azure);
+        if (!isVideo && im) {
+          const validQ = azure ? (im.azureQualityOptions ?? []) : ((m as { apiInput?: { qualityOptions?: string[] } })?.apiInput?.qualityOptions ?? []);
+          if (validQ.length) setQuality(prev => validQ.includes(prev) ? prev : validQ[0]);
+        }
+      } catch { setIsAzureProvider(false); }
+    };
+    read();
+    window.addEventListener("storage", read);
+    window.addEventListener("aiui-providers-changed", read);
+    return () => {
+      window.removeEventListener("storage", read);
+      window.removeEventListener("aiui-providers-changed", read);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modelId, isVideo]);
+
+  // Keep refs in sync so the observer callback can gate without needing to be recreated
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
+  useEffect(() => { loadingMoreRef.current = loadingMore; }, [loadingMore]);
+  useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
+
+  // Infinite scroll — scroll events are reliable; postLoadCheckRef handles the case where
+  // content doesn't fill the container after a page loads (no scroll event fires).
+  useEffect(() => {
+    const container = gridOuterRef.current;
+    if (!container || !hasMore) return;
+
+    const checkAndLoad = () => {
+      if (!hasMoreRef.current || loadingRef.current || loadingMoreRef.current) return;
+      if (container.scrollHeight - container.scrollTop - container.clientHeight < 800) {
+        prevScrollHeightRef.current = container.scrollHeight;
+        loadItems(tabRef.current, pageRef.current + 1);
+      }
+    };
+
+    postLoadCheckRef.current = checkAndLoad;
+    container.addEventListener("scroll", checkAndLoad, { passive: true });
+    checkAndLoad();
+    return () => {
+      container.removeEventListener("scroll", checkAndLoad);
+      postLoadCheckRef.current = () => {};
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, loadItems, authLoaded]);
+
+  // When sourceFilter changes, reset to page 0 and fetch only the relevant source.
+  useEffect(() => {
+    sourceFilterRef.current = sourceFilter;
+    pageRef.current = 0;
+    setHasMore(true);
+    const src = sourceFilter === "uploaded" ? "upload" : "generation";
+    const cached = galleryCache.get(`${tabRef.current}-${src}`);
+    if (cached) { setItems(cached.items); setHasMore(cached.hasMore); } else setItems([]);
+    loadItems(tabRef.current, 0, true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceFilter]);
+
+  // Persist settings
+  useEffect(() => {
+    const refImageUrls = [...new Set(refImages
+      .filter(r => r.cdnUrl && !r.uploading && !r.error)
+      .map(r => r.cdnUrl!))];
+    const readyCdnUrl = (r: RefImage) => !r.uploading && !r.error && !!r.cdnUrl;
+    const s: SavedSettings = {
+      prompt, modelId, aspectRatio, quality, count, duration, mode, sound, refImageUrls, azureResolution, azureCustomWidth, azureCustomHeight, segmentTaskId, segmentMaskIndexes, promptTextMode, multiPromptMode,
+      vidStartFrameUrl: vidStartFrame?.cdnUrl ?? null,
+      vidEndFrameUrl: vidEndFrame?.cdnUrl ?? null,
+      vidResourceUrls: vidResources.filter(readyCdnUrl).map(r => r.cdnUrl!),
+      vidVideoRefUrl: vidVideoRef?.cdnUrl ?? null,
+      vidRefVideoUrls: vidRefVideos.filter(readyCdnUrl).map(r => r.cdnUrl!),
+      vidRefAudioUrls: vidRefAudios.filter(readyCdnUrl).map(r => r.cdnUrl!),
+      vidElements,
+      taggedImages,
+    };
+    settingsSnapshotRef.current = s;
+    saveSettings(tab, prevFolderIdRef.current, s);
+  }, [tab, prompt, modelId, aspectRatio, quality, count, duration, mode, sound, refImages, azureResolution, azureCustomWidth, azureCustomHeight, segmentTaskId, segmentMaskIndexes, promptTextMode, multiPromptMode, vidStartFrame, vidEndFrame, vidResources, vidVideoRef, vidRefVideos, vidRefAudios, vidElements, taggedImages]);
+
+  // Save/restore all settings when switching folders
+  useEffect(() => {
+    if (prevFolderIdRef.current === selectedFolderId) return;
+    // Save current state to previous folder before switching
+    if (settingsSnapshotRef.current) saveSettings(tab, prevFolderIdRef.current, settingsSnapshotRef.current);
+    prevFolderIdRef.current = selectedFolderId;
+    // Load settings for the new folder
+    const saved = loadSettings(tab, selectedFolderId);
+    const newModels = tab === "videos" ? VIDEO_MODELS : IMAGE_MODELS;
+    const model = (saved?.modelId ? newModels.find(m => m.id === saved.modelId) : null) ?? newModels[0];
+    const azureOpts = (model as { azureResolutionOptions?: string[] }).azureResolutionOptions;
+    const savedIsCustom = saved?.aspectRatio === "custom" && Number.isFinite(saved.azureCustomWidth) && Number.isFinite(saved.azureCustomHeight) && isAzureActiveForModel(model.id, azureOpts);
+    const savedAR = savedIsCustom ? "custom" : (saved?.aspectRatio && model.ratios.includes(saved.aspectRatio) ? saved.aspectRatio : null);
+    const savedUrls = saved?.refImageUrls ?? [];
+    const savedPrompt = saved?.prompt ?? "";
+    const toRef = (url: string): RefImage => ({ id: url, objectUrl: url, cdnUrl: url, uploading: false, error: false });
+    skipNextModelEffect.current = true;
+    setPrompt(savedPrompt);
+    setModelId(model.id);
+    setAspectRatio(savedAR ?? ("defaultRatio" in model ? (model as { defaultRatio: string }).defaultRatio : null) ?? model.ratios[0] ?? "1:1");
+    setAzureCustomWidth(saved?.azureCustomWidth);
+    setAzureCustomHeight(saved?.azureCustomHeight);
+    setSegmentTaskId(saved?.segmentTaskId ?? "");
+    setSegmentMaskIndexes(saved?.segmentMaskIndexes ?? "1");
+    setQuality(saved?.quality ?? "2k");
+    setCount(saved?.count ?? 1);
+    if ("defaultDuration" in model) setDuration(saved?.duration ?? (model as { defaultDuration: number }).defaultDuration ?? 5);
+    if ("defaultMode" in model) setMode(saved?.mode ?? (model as { defaultMode: string }).defaultMode ?? "");
+    setSound(saved?.sound ?? false);
+    setAzureResolution(saved?.azureResolution ?? "1k");
+    setPromptTextMode(saved?.promptTextMode ?? "text");
+    setMultiPromptMode(saved?.multiPromptMode ?? false);
+    setRefImages(prev => { prev.forEach(r => URL.revokeObjectURL(r.objectUrl)); return savedUrls.map(toRef); });
+    setTaggedImages(
+      saved?.taggedImages?.length
+        ? saved.taggedImages
+        : savedUrls.flatMap((url, idx) => {
+            const label = `image${idx + 1}`;
+            return savedPrompt.includes(`@${label}`) ? [{ label, refId: url, url }] : [];
+          })
+    );
+    setVidStartFrame(saved?.vidStartFrameUrl ? toRef(saved.vidStartFrameUrl) : null);
+    setVidEndFrame(saved?.vidEndFrameUrl ? toRef(saved.vidEndFrameUrl) : null);
+    setVidResources((saved?.vidResourceUrls ?? []).map(toRef));
+    setVidVideoRef(saved?.vidVideoRefUrl ? toRef(saved.vidVideoRefUrl) : null);
+    setVidRefVideos((saved?.vidRefVideoUrls ?? []).map(toRef));
+    setVidRefAudios((saved?.vidRefAudioUrls ?? []).map(toRef));
+    setVidElements(saved?.vidElements ?? []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFolderId]);
+
+  // Track window width; set initial zoom from breakpoints only if NOT saved
+  useEffect(() => {
+    const w = window.innerWidth;
+    setWindowWidth(w);
+    if (!localStorage.getItem("aiui-gallery-zoom")) {
+      setZoom(w >= 1400 ? 6 : w >= 900 ? 5 : w >= 640 ? 5 : 4);
+    }
+    const handler = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+
+  // Save zoom to localStorage
+  useEffect(() => {
+    localStorage.setItem("aiui-gallery-zoom", zoom.toString());
+  }, [zoom]);
+
+  useEffect(() => {
+    const el = gridOuterRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setContainerWidth(e.contentRect.width));
+    ro.observe(el);
+    const styles = getComputedStyle(el);
+    setContainerWidth(el.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight));
+    return () => ro.disconnect();
+  // Re-run once the full layout is mounted (after auth loads and user is present)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoaded, user]);
+
+  // Cancel reorder drag if pointer released outside any item
+  useEffect(() => {
+    if (!draggingId) return;
+    const cancel = () => {
+      _reorderDragItem = null;
+      _reorderOverId = null;
+      setDraggingId(null);
+      setReorderOverId(null);
+    };
+    document.addEventListener('pointerup', cancel);
+    document.addEventListener('pointercancel', cancel);
+    return () => {
+      document.removeEventListener('pointerup', cancel);
+      document.removeEventListener('pointercancel', cancel);
+    };
+  }, [draggingId]);
+
+  // ── Image upload ──────────────────────────────────────────────────────────
+
+  const imgModel = IMAGE_MODELS.find(m => m.id === modelId);
+  const maxImgs = imgModel?.maxImages ?? 0;
+  const canAddImgs = !isVideo && !!imgModel?.supportsImages && refImages.length < maxImgs;
+  const effectiveQuality = !isVideo && imgModel?.oneKOnlyRatios?.includes(aspectRatio) ? "1k" : quality;
+  const parsedSegmentMaskIndexes = parseSegmentMaskIndexes(segmentMaskIndexes);
+  const isSegmentEdit = !isVideo && !!imgModel?.requiresSegmentTask;
+  const segmentReady = !isSegmentEdit || (!!segmentTaskId.trim() && parsedSegmentMaskIndexes.length > 0);
+  const promptMaxLength = (() => {
+    if (isVideo) {
+      const vm = VIDEO_MODELS.find(m => m.id === modelId);
+      return vm?.apiInput.promptMaxLength ?? null;
+    }
+    if (!imgModel) return null;
+    const hasRefImgs = refImages.length > 0;
+    if (!hasRefImgs && imgModel.textOnlyPromptMaxLength) return imgModel.textOnlyPromptMaxLength;
+    return imgModel.apiInput.promptMaxLength;
+  })();
+  const promptOverLimit = promptMaxLength !== null && prompt.length > promptMaxLength;
+
+  const handleFilePick = async (files: FileList) => {
+    if (!imgModel?.supportsImages) return;
+    const remaining = maxImgs - refImages.length;
+    const toAdd = Array.from(files).slice(0, remaining).filter(f => f.type.startsWith("image/"));
+    if (toAdd.length === 0) return;
+
+    const newEntries: RefImage[] = toAdd.map(f => ({
+      id: randomUUID(),
+      objectUrl: URL.createObjectURL(f),
+      cdnUrl: null,
+      uploading: true,
+      error: false,
+    }));
+    setRefImages(prev => [...prev, ...newEntries]);
+
+    const token = await getToken();
+    await Promise.all(toAdd.map(async (file, i) => {
+      const entry = newEntries[i];
+      try {
+        const res = await fetch("/api/upload-asset", {
+          method: "POST",
+          headers: {
+            "Content-Type": file.type,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: file,
+        });
+        const data = await res.json() as { cdnUrl?: string; error?: string };
+        if (!res.ok || !data.cdnUrl) throw new Error(data.error ?? "Upload failed");
+        setRefImages(prev => prev.map(r => r.id === entry.id ? { ...r, cdnUrl: data.cdnUrl!, uploading: false } : r));
+      } catch {
+        setRefImages(prev => prev.map(r => r.id === entry.id ? { ...r, uploading: false, error: true } : r));
+      }
+    }));
+  };
+
+  const removeImage = useCallback((id: string) => {
+    const el = document.querySelector(`[data-refimg-id="${id}"]`) as HTMLElement | null;
+    if (el) {
+      // Synchronous DOM write — zero frame delay, starts before React scheduler
+      el.style.transition = "opacity 170ms cubic-bezier(0.4,0,1,1), transform 170ms cubic-bezier(0.4,0,1,1)";
+      el.style.opacity = "0";
+      el.style.transform = "translateY(-10px) scale(0.92)";
+    }
+    // React state as a backup so any re-render in the window doesn't reset the styles
+    setRemovingIds(prev => new Set(prev).add(id));
+    const removedImg = refImages.find(r => r.id === id);
+    const { newTaggedImages, newPrompt } = removeTagAndRenumber(id, removedImg?.cdnUrl ?? null, taggedImagesRef.current, promptRef.current);
+    setTimeout(() => {
+      setRemovingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+      setRefImages(prev => {
+        const img = prev.find(r => r.id === id);
+        if (img) URL.revokeObjectURL(img.objectUrl);
+        return prev.filter(r => r.id !== id);
+      });
+      setTaggedImages(newTaggedImages);
+      setPrompt(newPrompt);
+    }, 190);
+  }, [refImages]);
+
+  // ── Video reference upload ────────────────────────────────────────────────
+
+  const handleVidFilePick = async (
+    files: FileList | null,
+    target: "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo" | "audioRef",
+  ) => {
+    if (!files || files.length === 0) return;
+    const vm = VIDEO_MODELS.find(m => m.id === modelId);
+    const isSingle = target === "startFrame" || target === "endFrame" || target === "videoRef";
+
+    const maxCount = isSingle ? 1 : (
+      target === "resource"        ? (vm?.maxResources      ?? 3) :
+      target === "referenceVideo"  ? (vm?.maxReferenceVideos ?? 3) :
+                                     (vm?.maxReferenceAudios ?? 3)
+    );
+    const currentCount = isSingle ? 0 : (
+      target === "resource"        ? vidResources.length :
+      target === "referenceVideo"  ? vidRefVideos.length :
+                                     vidRefAudios.length
+    );
+    const toAdd = Array.from(files).slice(0, maxCount - currentCount);
+    if (toAdd.length === 0) return;
+
+    const newEntries: RefImage[] = toAdd.map(f => ({
+      id: randomUUID(),
+      objectUrl: URL.createObjectURL(f),
+      cdnUrl: null,
+      uploading: true,
+      error: false,
+    }));
+
+    const isSeedanceModel = modelId === "seedance-2" || modelId === "seedance-2-fast" || modelId === "minimax-h3";
+    if (isSingle) {
+      const [entry] = newEntries;
+      if (target === "startFrame") {
+        setVidStartFrame(entry);
+        if (modelId === "happyhorse") setVidResources([]);
+        if (isSeedanceModel) { setVidResources([]); setVidRefVideos([]); setVidRefAudios([]); }
+      } else if (target === "endFrame") {
+        setVidEndFrame(entry);
+        if (isSeedanceModel) { setVidResources([]); setVidRefVideos([]); setVidRefAudios([]); }
+      } else setVidVideoRef(entry);
+    } else {
+      if (target === "resource") {
+        if (modelId === "happyhorse") setVidStartFrame(null);
+        if (isSeedanceModel) { setVidStartFrame(null); setVidEndFrame(null); }
+        setVidResources(prev => [...prev, ...newEntries]);
+      } else if (target === "referenceVideo") {
+        if (isSeedanceModel) { setVidStartFrame(null); setVidEndFrame(null); }
+        setVidRefVideos(prev => [...prev, ...newEntries]);
+      } else {
+        if (isSeedanceModel) { setVidStartFrame(null); setVidEndFrame(null); }
+        setVidRefAudios(prev => [...prev, ...newEntries]);
+      }
+    }
+
+    const token = await getToken();
+    await Promise.all(toAdd.map(async (file, i) => {
+      const entry = newEntries[i];
+      try {
+        const res = await fetch("/api/upload-asset", {
+          method: "POST",
+          headers: { "Content-Type": file.type, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: file,
+        });
+        const data = await res.json() as { cdnUrl?: string; error?: string };
+        if (!res.ok || !data.cdnUrl) throw new Error(data.error ?? "Upload failed");
+        const ok = (r: RefImage) => r.id === entry.id ? { ...r, cdnUrl: data.cdnUrl!, uploading: false } : r;
+        if (isSingle) {
+          if (target === "startFrame") setVidStartFrame(p => p?.id === entry.id ? { ...p, cdnUrl: data.cdnUrl!, uploading: false } : p);
+          else if (target === "endFrame") setVidEndFrame(p => p?.id === entry.id ? { ...p, cdnUrl: data.cdnUrl!, uploading: false } : p);
+          else setVidVideoRef(p => p?.id === entry.id ? { ...p, cdnUrl: data.cdnUrl!, uploading: false } : p);
+        } else {
+          if (target === "resource")       setVidResources(prev => prev.map(ok));
+          else if (target === "referenceVideo") setVidRefVideos(prev => prev.map(ok));
+          else                             setVidRefAudios(prev => prev.map(ok));
+        }
+      } catch {
+        const err = (r: RefImage) => r.id === entry.id ? { ...r, uploading: false, error: true } : r;
+        if (isSingle) {
+          if (target === "startFrame") setVidStartFrame(p => p?.id === entry.id ? { ...p, uploading: false, error: true } : p);
+          else if (target === "endFrame") setVidEndFrame(p => p?.id === entry.id ? { ...p, uploading: false, error: true } : p);
+          else setVidVideoRef(p => p?.id === entry.id ? { ...p, uploading: false, error: true } : p);
+        } else {
+          if (target === "resource")       setVidResources(prev => prev.map(err));
+          else if (target === "referenceVideo") setVidRefVideos(prev => prev.map(err));
+          else                             setVidRefAudios(prev => prev.map(err));
+        }
+      }
+    }));
+  };
+
+  const removeVidRef = useCallback((id: string, target: "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo" | "audioRef") => {
+    let removedUrl: string | null = null;
+    if (target === "startFrame") {
+      removedUrl = vidStartFrame?.cdnUrl ?? null;
+      setVidStartFrame(null);
+    } else if (target === "endFrame") {
+      removedUrl = vidEndFrame?.cdnUrl ?? null;
+      setVidEndFrame(null);
+    } else if (target === "videoRef") {
+      removedUrl = vidVideoRef?.cdnUrl ?? null;
+      setVidVideoRef(null);
+    } else if (target === "resource") {
+      removedUrl = vidResources.find(r => r.id === id)?.cdnUrl ?? null;
+      setVidResources(prev => prev.filter(r => r.id !== id));
+    } else if (target === "referenceVideo") {
+      removedUrl = vidRefVideos.find(r => r.id === id)?.cdnUrl ?? null;
+      setVidRefVideos(prev => prev.filter(r => r.id !== id));
+    } else {
+      removedUrl = vidRefAudios.find(r => r.id === id)?.cdnUrl ?? null;
+      setVidRefAudios(prev => prev.filter(r => r.id !== id));
+    }
+    const { newTaggedImages, newPrompt } = removeTagAndRenumber(id, removedUrl, taggedImagesRef.current, promptRef.current);
+    setTaggedImages(newTaggedImages);
+    setPrompt(newPrompt);
+  }, [vidEndFrame?.cdnUrl, vidRefAudios, vidRefVideos, vidResources, vidStartFrame?.cdnUrl, vidVideoRef?.cdnUrl]);
+
+  // ── Media picker ──────────────────────────────────────────────────────────
+
+  const openPicker = useCallback((target: NonNullable<typeof pickerTarget>, uploadKind: "image" | "video") => {
+    pickerTargetRef.current = target;
+    setPickerTarget(target);
+    setPickerUploadKind(uploadKind);
+    setPickerOpen(true);
+  }, []);
+
+  const handlePickerSelect = (url: string) => {
+    const target = pickerTargetRef.current;
+    const isMulti = target === "refImage" || target === "resource" || target === "referenceVideo";
+    if (!isMulti) setPickerOpen(false);
+    if (!target) return;
+    if (target === "refImage") {
+      handleAddReference(url);
+      return;
+    }
+    const isDup = (slots: RefImage[]) => slots.some(r => r.cdnUrl === url || r.objectUrl === url);
+
+    const isSeedancePicker = modelId === "seedance-2" || modelId === "seedance-2-fast" || modelId === "minimax-h3";
+    if (target === "resource") {
+      if (isDup(vidResources)) return;
+      if (modelId === "happyhorse") setVidStartFrame(null);
+      if (isSeedancePicker) { setVidStartFrame(null); setVidEndFrame(null); }
+      setVidResources(prev => [...prev, { id: randomUUID(), objectUrl: url, cdnUrl: url, uploading: false, error: false }]);
+      return;
+    }
+    if (target === "referenceVideo") {
+      if (isDup(vidRefVideos)) return;
+      if (isSeedancePicker) { setVidStartFrame(null); setVidEndFrame(null); }
+      setVidRefVideos(prev => [...prev, { id: randomUUID(), objectUrl: url, cdnUrl: url, uploading: false, error: false }]);
+      return;
+    }
+    const entry: RefImage = { id: randomUUID(), objectUrl: url, cdnUrl: url, uploading: false, error: false };
+    if (target === "startFrame") {
+      setVidStartFrame(entry);
+      if (modelId === "happyhorse") setVidResources([]);
+      if (isSeedancePicker) { setVidResources([]); setVidRefVideos([]); setVidRefAudios([]); }
+    } else if (target === "endFrame") {
+      setVidEndFrame(entry);
+      if (isSeedancePicker) { setVidResources([]); setVidRefVideos([]); setVidRefAudios([]); }
+    } else if (target === "videoRef") setVidVideoRef(entry);
+  };
+
+  const handlePickerDeselect = (url: string) => {
+    const target = pickerTargetRef.current;
+    if (target === "refImage") {
+      const removedImg = refImages.find(r => r.cdnUrl === url || r.objectUrl === url);
+      const { newTaggedImages, newPrompt } = removeTagAndRenumber(removedImg?.id ?? "", url, taggedImages, prompt);
+      setRefImages(prev => prev.filter(r => r.cdnUrl !== url && r.objectUrl !== url));
+      setTaggedImages(newTaggedImages);
+      setPrompt(newPrompt);
+    } else if (target === "resource") {
+      const removedRef = vidResources.find(r => r.cdnUrl === url || r.objectUrl === url);
+      const { newTaggedImages, newPrompt } = removeTagAndRenumber(removedRef?.id ?? "", url, taggedImages, prompt);
+      setVidResources(prev => prev.filter(r => r.cdnUrl !== url && r.objectUrl !== url));
+      setTaggedImages(newTaggedImages);
+      setPrompt(newPrompt);
+    } else if (target === "referenceVideo") {
+      const removedRef = vidRefVideos.find(r => r.cdnUrl === url || r.objectUrl === url);
+      const { newTaggedImages, newPrompt } = removeTagAndRenumber(removedRef?.id ?? "", url, taggedImages, prompt);
+      setVidRefVideos(prev => prev.filter(r => r.cdnUrl !== url && r.objectUrl !== url));
+      setTaggedImages(newTaggedImages);
+      setPrompt(newPrompt);
+    }
+  };
+
+  const handlePickerUpload = () => {
+    setPickerOpen(false);
+    if (pickerTarget === "refImage") {
+      fileInputRef.current?.click();
+    } else if (pickerTarget) {
+      vidPickTarget.current = pickerTarget as "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo";
+      if (pickerUploadKind === "image") vidImgInputRef.current?.click();
+      else vidVideoInputRef.current?.click();
+    }
+  };
+
+  // ── Generate ──────────────────────────────────────────────────────────────
+
+  const generateOne = async (token: string, promptOverride?: string, submissionId?: string): Promise<string> => {
+    const effectivePrompt = promptOverride ?? prompt;
+    if (!isVideo) {
+      const { resolvedPrompt, extraUrls } = resolveGalleryMentions(effectivePrompt, taggedImages);
+      const extraUrlSet = new Set(extraUrls);
+      const refUrls = imgModel?.supportsImages ? refImages.filter(r => r.cdnUrl && !r.error && !extraUrlSet.has(r.cdnUrl!)).map(r => r.cdnUrl!) : [];
+      const imageUrls = imgModel?.supportsImages ? [...new Set([...extraUrls, ...refUrls])] : [];
+
+      // Read provider settings from localStorage (same keys as GenerateNode)
+      const azureBaseUrl    = (() => { try { return localStorage.getItem("aiui-azure-base-url") ?? ""; } catch { return ""; } })();
+      const azureDeployment = (() => { try { return JSON.parse(localStorage.getItem("aiui-azure-endpoints") ?? "{}")[modelId] ?? ""; } catch { return ""; } })();
+      const providerForModel = (() => { try { return JSON.parse(localStorage.getItem("aiui-model-providers") ?? "{}")[modelId] ?? "kie"; } catch { return "kie"; } })();
+      const isAzure = !!(azureBaseUrl && azureDeployment && providerForModel === "azure");
+      const isCodex = providerForModel === "codex";
+
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          prompt: resolvedPrompt, model: modelId, aspectRatio, quality: effectiveQuality, imageUrls,
+          ...(isSegmentEdit ? { segmentTaskId: segmentTaskId.trim(), maskIndexes: parsedSegmentMaskIndexes } : {}),
+          ...(isAzure ? {
+            azureBaseUrl, azureDeployment, azureQuality: quality, azureResolution,
+            ...(aspectRatio === "custom" ? { azureCustomWidth, azureCustomHeight } : {}),
+          } : {}),
+          ...(isCodex ? { codexProvider: true } : {}),
+        }),
+      });
+      const text = await res.text();
+      let d: { taskId?: string; error?: string } = {};
+      try { d = JSON.parse(text); } catch { throw new Error(res.ok ? "Invalid server response" : `Server error ${res.status}`); }
+      if (!res.ok) throw new Error(d.error ?? `Server error ${res.status}`);
+      return d.taskId!;
+    } else {
+      const vm = VIDEO_MODELS.find(m => m.id === modelId);
+      const handles = vm?.handles ?? [];
+
+      const { resolvedPrompt, extraAssets } = resolveGalleryMentions(effectivePrompt, taggedImages, vm?.resourceTagFormat ?? "default");
+
+      const startFrameUrl = handles.includes("startFrame") && vidStartFrame?.cdnUrl ? vidStartFrame.cdnUrl : undefined;
+      const endFrameUrl   = handles.includes("endFrame")   && vidEndFrame?.cdnUrl   ? vidEndFrame.cdnUrl   : undefined;
+      const videoRefUrl   = handles.includes("videoRef")   && vidVideoRef?.cdnUrl   ? vidVideoRef.cdnUrl   : undefined;
+
+      const useElements = !!(vm?.apiInput.useKlingElements);
+
+      const taggedImageUrls = extraAssets.filter(a => a.kind === "image").map(a => a.url);
+      const taggedVideoUrls = extraAssets.filter(a => a.kind === "video").map(a => a.url);
+      const taggedAudioUrls = extraAssets.filter(a => a.kind === "audio").map(a => a.url);
+
+      const extraImageSet = new Set(taggedImageUrls);
+      const extraVideoSet = new Set(taggedVideoUrls);
+      const extraAudioSet = new Set(taggedAudioUrls);
+
+      // Non-kling resource models send referenceImageUrls
+      const resourceUrls = handles.includes("resource") && !useElements
+        ? vidResources.filter(r => r.cdnUrl && !r.error && !extraImageSet.has(r.cdnUrl!)).map(r => r.cdnUrl!)
+        : [];
+      const referenceImageUrls = !useElements && (taggedImageUrls.length > 0 || resourceUrls.length > 0)
+        ? [...taggedImageUrls, ...resourceUrls]
+        : undefined;
+
+      // Kling: send structured elements
+      const baseElements = useElements && handles.includes("resource") && vidElements.length > 0
+        ? vidElements.map(el => ({ name: el.name, description: el.description, imageUrls: el.imageUrls }))
+        : [];
+      const mentionElements = useElements ? taggedImageUrls.map((url, i) => ({
+        name: `element_${i + 1}`,
+        description: `Mentioned image ${i + 1}`,
+        imageUrls: [url],
+      })) : [];
+      const klingElements = useElements && (mentionElements.length > 0 || baseElements.length > 0)
+        ? [...mentionElements, ...baseElements]
+        : undefined;
+
+      const baseVideoUrls = handles.includes("referenceVideo")
+        ? vidRefVideos.filter(r => r.cdnUrl && !r.error && !extraVideoSet.has(r.cdnUrl!)).map(r => r.cdnUrl!)
+        : [];
+      const referenceVideoUrls = handles.includes("referenceVideo") && (taggedVideoUrls.length > 0 || baseVideoUrls.length > 0)
+        ? [...taggedVideoUrls, ...baseVideoUrls]
+        : undefined;
+
+      const baseAudioUrls = handles.includes("audioRef")
+        ? vidRefAudios.filter(r => r.cdnUrl && !r.error && !extraAudioSet.has(r.cdnUrl!)).map(r => r.cdnUrl!)
+        : [];
+      const referenceAudioUrls = handles.includes("audioRef") && (taggedAudioUrls.length > 0 || baseAudioUrls.length > 0)
+        ? [...taggedAudioUrls, ...baseAudioUrls]
+        : undefined;
+
+      const isVeo = !!(vm?.apiInput.useGoogleVeo);
+      const veoImageUrls: string[] = [];
+      if (isVeo) {
+        if (veoMode === "frames") {
+          if (startFrameUrl) veoImageUrls.push(startFrameUrl);
+          if (endFrameUrl)   veoImageUrls.push(endFrameUrl);
+        } else if (veoMode === "references") {
+          if (referenceImageUrls) veoImageUrls.push(...referenceImageUrls.slice(0, 3));
+        }
+      }
+
+      const generationType = isVeo
+        ? (veoMode === "references" ? "REFERENCE_2_VIDEO" : (veoImageUrls.length > 0 ? "FIRST_AND_LAST_FRAMES_2_VIDEO" : "TEXT_2_VIDEO"))
+        : undefined;
+
+      const res = await fetch("/api/generate-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(isVeo ? {
+          model: modelId,
+          prompt: resolvedPrompt,
+          aspect_ratio: aspectRatio,
+          generationType,
+          imageUrls: veoImageUrls,
+          enableTranslation: true,
+          enableFallback: false,
+          watermark: "",
+        } : {
+          videoModel: modelId,
+          prompt: resolvedPrompt,
+          aspectRatio,
+          duration,
+          ...(vm?.sound ? { sound } : {}),
+          ...(vm?.modes?.length ? { mode: mode || vm.defaultMode || "pro" } : {}),
+          resolution: vm && "resolutions" in vm && vm.resolutions?.length ? resolution || vm.defaultResolution : undefined,
+          ...(startFrameUrl               ? { startFrameUrl }               : {}),
+          ...(endFrameUrl                 ? { endFrameUrl }                 : {}),
+          ...(videoRefUrl                 ? { videoRefUrl }                 : {}),
+          ...(klingElements?.length       ? { klingElements }               : {}),
+          ...(referenceImageUrls?.length  ? { referenceImageUrls }          : {}),
+          ...(referenceVideoUrls?.length  ? { referenceVideoUrls }          : {}),
+          ...(referenceAudioUrls?.length  ? { referenceAudioUrls }          : {}),
+          ...(vm?.supportsSeeds && seed ? { seed } : {}),
+          ...(vm?.apiInput.useHiggsfield ? { submissionId: submissionId ?? randomUUID() } : {}),
+        }),
+      });
+      const text = await res.text();
+      let d: { taskId?: string; error?: string } = {};
+      try { d = JSON.parse(text); } catch { throw new Error(res.ok ? "Invalid server response" : `Server error ${res.status}`); }
+      if (!res.ok) throw new Error(d.error ?? `Server error ${res.status}`);
+      return d.taskId!;
+    }
+  };
+
+  const pollTask = async (taskId: string): Promise<void> => {
+    // Resolves after `ms` OR immediately when the tab becomes visible — whichever is first.
+    // This ensures polling catches up instantly after the user returns to the tab,
+    // even if the browser throttled the timer while it was hidden.
+    const waitOrVisible = (ms: number) => new Promise<void>(resolve => {
+      let done = false;
+      const finish = () => { if (done) return; done = true; clearTimeout(t); document.removeEventListener("visibilitychange", onVisible); resolve(); };
+      const onVisible = () => { if (!document.hidden) finish(); };
+      const t = setTimeout(finish, ms);
+      document.addEventListener("visibilitychange", onVisible);
+    });
+
+    for (let i = 0; i < 150; i++) {
+      await waitOrVisible(3_000);
+      const poll = await fetch(`/api/job-status?taskId=${taskId}`);
+      const result = await poll.json() as { status: string; error?: string; errorCode?: string };
+      if (result.status === "done") return;
+      if (result.status === "error") throw new GenerationJobError(result.error ?? "Generation failed", result.errorCode);
+    }
+    throw new Error("Timed out");
+  };
+
+  const generate = async () => {
+    if (!(isVideo && vidModel?.apiInput.useHiggsfield) && generationBlocked(kieKeySet)) return;
+    if (!prompt.trim() && !isVideo) return;
+    if (!segmentReady) {
+      addToast("O Grok Segment Edit precisa do task_id de origem e de pelo menos um índice de máscara.", "error");
+      return;
+    }
+    requestNotificationPermission();
+    if (refImages.some(r => r.uploading)) { setGenError("Images still uploading…"); setTimeout(() => setGenError(""), 3_000); return; }
+    if (isVideo && [vidStartFrame, vidEndFrame, vidVideoRef, ...vidResources, ...vidRefVideos, ...vidRefAudios].some(r => r?.uploading)) {
+      setGenError("References still uploading…"); setTimeout(() => setGenError(""), 3_000); return;
+    }
+    if (isVideo) {
+      const vm = VIDEO_MODELS.find(m => m.id === modelId);
+      if (vm?.requiredHandles?.length) {
+        const handleHasContent = (h: string) => {
+          if (h === "resource")        return vidResources.some(r => r.cdnUrl && !r.error);
+          if (h === "startFrame")      return !!(vidStartFrame?.cdnUrl && !vidStartFrame.error);
+          if (h === "endFrame")        return !!(vidEndFrame?.cdnUrl && !vidEndFrame.error);
+          if (h === "videoRef")        return !!(vidVideoRef?.cdnUrl && !vidVideoRef.error);
+          if (h === "referenceVideo")  return vidRefVideos.some(r => r.cdnUrl && !r.error);
+          if (h === "audioRef")        return vidRefAudios.some(r => r.cdnUrl && !r.error);
+          if (h === "prompt")          return !!prompt.trim();
+          return true;
+        };
+        const HANDLE_LABELS: Record<string, string> = {
+          resource: "Reference image",
+          startFrame: "Start frame image",
+          endFrame: "End frame image",
+          videoRef: "Reference video",
+          referenceVideo: "Reference video",
+          audioRef: "Reference audio",
+          prompt: "Text prompt",
+        };
+        const missing = vm.requiredHandles.filter(h => !handleHasContent(h));
+        if (missing.length > 0) {
+          const labels = missing.map(h => HANDLE_LABELS[h] ?? h).join(", ");
+          addToast(`Missing required input${missing.length > 1 ? "s" : ""}: ${labels}.`, "error");
+          return;
+        }
+      }
+    }
+    setGenError("");
+
+    const multiPrompts = multiPromptMode ? prompt.split(/\n\n+/).map(p => p.trim()).filter(Boolean) : null;
+    const n = multiPrompts ? multiPrompts.length : (isVideo ? 1 : count);
+    const snapshotRefUrls = isVideo
+      ? [
+          ...(vidStartFrame?.cdnUrl && !vidStartFrame.error ? [vidStartFrame.cdnUrl] : []),
+          ...(vidEndFrame?.cdnUrl   && !vidEndFrame.error   ? [vidEndFrame.cdnUrl]   : []),
+          ...vidResources.filter(r => r.cdnUrl && !r.error).map(r => r.cdnUrl!),
+        ]
+      : [...new Set(refImages.filter(r => r.cdnUrl && !r.error).map(r => r.cdnUrl!))];
+    const snapshotFolderId = selectedFolderId;
+    const newPendings: PendingGen[] = Array.from({ length: n }, (_, i) => ({
+      id: randomUUID(), aspectRatio, prompt: multiPrompts ? multiPrompts[i] : prompt, modelId, quality: effectiveQuality,
+      ...(isSegmentEdit ? { segmentTaskId: segmentTaskId.trim(), maskIndexes: parsedSegmentMaskIndexes } : {}),
+      referenceImageUrls: snapshotRefUrls, createdAt: new Date().toISOString(), tab, prePending: true, folderId: snapshotFolderId,
+    }));
+    setPendingGens(prev => [...newPendings, ...prev]);
+    if (searchParams.get("view") === "create") {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("view");
+      params.set("source", "generated");
+      setSourceFilter("generated");
+      router.replace(`${pathname}?${params.toString()}`);
+    }
+
+    // ── Debug mode: log + simulate, no real API call ────────────────────────
+    if (debugMode) {
+      const dbgVm = isVideo ? VIDEO_MODELS.find(m => m.id === modelId) : undefined;
+      const { resolvedPrompt: dbgPrompt, extraUrls: dbgExtra, extraAssets: dbgAssets } = resolveGalleryMentions(prompt, taggedImages, dbgVm?.resourceTagFormat ?? "default");
+      const dbgExtraSet = new Set(dbgExtra);
+      const dbgRefUrls = refImages.filter(r => r.cdnUrl && !r.error && !dbgExtraSet.has(r.cdnUrl!)).map(r => r.cdnUrl!);
+      const dbgAzureBaseUrl    = (() => { try { return localStorage.getItem("aiui-azure-base-url") ?? ""; } catch { return ""; } })();
+      const dbgAzureDeployment = (() => { try { return JSON.parse(localStorage.getItem("aiui-azure-endpoints") ?? "{}")[modelId] ?? ""; } catch { return ""; } })();
+      const dbgProvider        = (() => { try { return JSON.parse(localStorage.getItem("aiui-model-providers") ?? "{}")[modelId] ?? "kie"; } catch { return "kie"; } })();
+      const dbgIsAzure = !!(dbgAzureBaseUrl && dbgAzureDeployment && dbgProvider === "azure");
+      const dbgTaggedImageUrls = dbgAssets.filter(a => a.kind === "image").map(a => a.url);
+      const dbgTaggedVideoUrls = dbgAssets.filter(a => a.kind === "video").map(a => a.url);
+      const dbgTaggedAudioUrls = dbgAssets.filter(a => a.kind === "audio").map(a => a.url);
+      const dbgExtraImageSet = new Set(dbgTaggedImageUrls);
+      const dbgExtraVideoSet = new Set(dbgTaggedVideoUrls);
+      const dbgExtraAudioSet = new Set(dbgTaggedAudioUrls);
+      console.log("[Gallery Debug] Generate request:", {
+        type: isVideo ? "video" : "image",
+        prompt: dbgPrompt, model: modelId, aspectRatio, quality: effectiveQuality,
+        provider: dbgIsAzure ? "azure" : "kie",
+        ...(isSegmentEdit ? { segmentTaskId: segmentTaskId.trim(), maskIndexes: parsedSegmentMaskIndexes } : {}),
+        ...(dbgIsAzure ? {
+          azureBaseUrl: dbgAzureBaseUrl, azureDeployment: dbgAzureDeployment, azureQuality: quality, azureResolution,
+          ...(aspectRatio === "custom" ? { azureCustomWidth, azureCustomHeight } : {}),
+        } : {}),
+        ...(isVideo ? {
+          duration, mode,
+          startFrameUrl:       vidStartFrame?.cdnUrl ?? null,
+          endFrameUrl:         vidEndFrame?.cdnUrl   ?? null,
+          taggedImageUrls:     dbgTaggedImageUrls,
+          taggedVideoUrls:     dbgTaggedVideoUrls,
+          taggedAudioUrls:     dbgTaggedAudioUrls,
+          resourceUrls:        vidResources.filter(r => r.cdnUrl && !r.error && !dbgExtraImageSet.has(r.cdnUrl!)).map(r => r.cdnUrl!),
+          referenceVideoUrls:  vidRefVideos.filter(r => r.cdnUrl && !r.error && !dbgExtraVideoSet.has(r.cdnUrl!)).map(r => r.cdnUrl!),
+          referenceAudioUrls:  vidRefAudios.filter(r => r.cdnUrl && !r.error && !dbgExtraAudioSet.has(r.cdnUrl!)).map(r => r.cdnUrl!),
+        } : { imageUrls: [...new Set([...dbgExtra, ...dbgRefUrls])], count: n }),
+      });
+      setTimeout(() => {
+        setPendingGens(prev => prev.filter(p => !newPendings.some(np => np.id === p.id)));
+      }, 3_000);
+      return;
+    }
+
+    // ── 3-second pre-pending window before actual API call ────────────────
+    const batchKey = newPendings[0].id;
+    const submitBatch = async () => {
+      prePendingTimersRef.current.delete(batchKey);
+      // Only process entries that weren't cancelled during the pre-pending window
+      const active = newPendings.filter(p => pendingGensRef.current.some(pg => pg.id === p.id && pg.prePending));
+      if (active.length === 0) return;
+
+      const activeIds = new Set(active.map(p => p.id));
+      setPendingGens(prev => prev.map(p => activeIds.has(p.id) ? { ...p, prePending: false } : p));
+
+      const token = await getToken();
+      if (!token) {
+        setPendingGens(prev => prev.map(p =>
+          activeIds.has(p.id) ? { ...p, error: "Please sign in to generate." } : p
+        ));
+        return;
+      }
+
+      setSubmitting(true);
+      const promptByPendingId = new Map(newPendings.map((p, i) => [p.id, multiPrompts ? multiPrompts[i] : undefined]));
+      let taskIds: string[];
+      try {
+        taskIds = await Promise.all(active.map(p => generateOne(token, promptByPendingId.get(p.id), p.id)));
+      } catch (e: unknown) {
+        setSubmitting(false);
+        const msg = e instanceof Error ? e.message : String(e);
+        setPendingGens(prev => prev.map(p =>
+          activeIds.has(p.id) ? { ...p, error: msg, errorCode: undefined } : p
+        ));
+        return;
+      }
+      setSubmitting(false);
+
+      // Store taskIds so polls can be resumed after a page refresh
+      setPendingGens(prev => prev.map(p => {
+        const idx = active.findIndex(np => np.id === p.id);
+        return idx >= 0 ? { ...p, taskId: taskIds[idx] } : p;
+      }));
+
+      // ── Poll each task independently ──────────────────────────────────────
+      taskIds.forEach(async (taskId, i) => {
+        const pending = active[i];
+        try {
+          await pollTask(taskId);
+          // Fetch fresh items before touching state so both updates land in one render.
+          const existingIds = new Set((galleryCache.get(`${tabRef.current}-generation`)?.items ?? []).map((i: GalleryItem) => i.id));
+          const fresh = await fetchNewItems(tabRef.current);
+          setPendingGens(prev => prev.filter(p => p.id !== pending.id));
+          if (fresh.length > 0) {
+            if (pending.folderId) {
+              const existingMap = useFolderStore.getState().itemFolderMap;
+              const pendingTime = pending.createdAt ? new Date(pending.createdAt).getTime() - 30_000 : 0;
+              const untaggedIds = fresh
+                .filter(i => new Date(i.created_at).getTime() >= pendingTime)
+                .map(i => i.id)
+                .filter(id => !existingMap[id]);
+              if (untaggedIds.length > 0) assignItemsToFolder(untaggedIds, pending.folderId);
+            }
+            const genCacheKey = `${tabRef.current}-generation`;
+            setItems(prev => {
+              const base = sourceFilterRef.current === "generated" ? prev : (galleryCache.get(genCacheKey)?.items ?? []);
+              const merged = mergeByNewest(base, fresh);
+              galleryCache.set(genCacheKey, { items: merged, hasMore: true });
+              return sourceFilterRef.current === "generated" ? (merged === base ? prev : merged) : prev;
+            });
+          }
+          onGenComplete(pending.folderId, fresh.filter(i => !existingIds.has(i.id)).map(i => i.id));
+          window.dispatchEvent(new Event("credits-refresh"));
+          browserNotify(
+            isVideo ? "Video ready" : "Image ready",
+            (pending.prompt || "Your generation is ready").slice(0, 100),
+          );
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e);
+          const errorCode = e instanceof GenerationJobError ? e.code : undefined;
+          setPendingGens(prev => prev.map(p => p.id === pending.id ? { ...p, error: msg, errorCode } : p));
+          browserNotify("Generation failed", msg.slice(0, 100));
+        }
+      });
+    };
+
+    const batchTimer = setTimeout(submitBatch, 3000);
+    prePendingTimersRef.current.set(batchKey, batchTimer);
+  };
+
+  // ── @ mention derived + helpers ───────────────────────────────────────────
+
+  const mentionableAssets = useMemo(() => {
+    if (!isVideo) {
+      return refImages
+        .filter(r => !r.uploading && !r.error && r.cdnUrl)
+        .map((r, i) => ({ ...r, kind: "image" as const, label: `image${i + 1}`, role: `Referência ${i + 1}` }));
+    } else {
+      const isVeo = modelId === "veo3" || modelId === "veo3_fast" || modelId === "veo3_lite";
+      const assets: (RefImage & { kind: "image" | "video" | "audio"; label: string; role: string })[] = [];
+      
+      // Images
+      const imgs: { ref: RefImage; role: string }[] = [];
+      const startOk = vidStartFrame?.cdnUrl && !vidStartFrame.uploading && !vidStartFrame.error;
+      const endOk = vidEndFrame?.cdnUrl && !vidEndFrame.uploading && !vidEndFrame.error;
+      const resOk = vidResources.filter(r => r.cdnUrl && !r.uploading && !r.error);
+
+      if (isVeo) {
+        if (veoMode === "frames") {
+          if (startOk) imgs.push({ ref: vidStartFrame!, role: "Primeiro quadro" });
+          if (endOk) imgs.push({ ref: vidEndFrame!, role: "Último quadro" });
+        } else if (veoMode === "references") {
+          resOk.forEach((r, i) => imgs.push({ ref: r, role: `Referência ${i + 1}` }));
+        }
+      } else {
+        if (startOk) imgs.push({ ref: vidStartFrame!, role: "Primeiro quadro" });
+        if (endOk) imgs.push({ ref: vidEndFrame!, role: "Último quadro" });
+        resOk.forEach((r, i) => imgs.push({ ref: r, role: `Referência ${i + 1}` }));
+      }
+      assets.push(...imgs.map((item, i) => ({ ...item.ref, kind: "image" as const, label: `image${i + 1}`, role: item.role })));
+
+      // Videos (hide for Veo)
+      if (!isVeo) {
+        const vids: { ref: RefImage; role: string }[] = [];
+        if (vidVideoRef?.cdnUrl && !vidVideoRef.uploading && !vidVideoRef.error) vids.push({ ref: vidVideoRef, role: "Vídeo de referência" });
+        vidRefVideos.filter(r => r.cdnUrl && !r.uploading && !r.error).forEach((r, i) => vids.push({ ref: r, role: `Vídeo ${i + 1}` }));
+        assets.push(...vids.map((item, i) => ({ ...item.ref, kind: "video" as const, label: `vid${i + 1}`, role: item.role })));
+      }
+
+      // Audios (hide for Veo)
+      if (!isVeo) {
+        const auds = vidRefAudios.filter(r => r.cdnUrl && !r.uploading && !r.error);
+        assets.push(...auds.map((r, i) => ({ ...r, kind: "audio" as const, label: `aud${i + 1}`, role: `Áudio ${i + 1}` })));
+      }
+
+      return assets;
+    }
+  }, [isVideo, modelId, veoMode, refImages, vidStartFrame, vidEndFrame, vidVideoRef, vidResources, vidRefVideos, vidRefAudios]);
+
+  const filteredMentions = useMemo(() => {
+    if (mentionQuery === null) return [];
+    return mentionableAssets.slice(0, 8);
+  }, [mentionableAssets, mentionQuery]);
+
+  const atMenuOpen = mentionQuery !== null && filteredMentions.length > 0;
+
+  useEffect(() => { setMentionSelIdx(0); }, [filteredMentions.length]);
+
+  // Stable content key so the effect only re-runs when assets actually change, not just reference
+  const mentionableAssetsKey = mentionableAssets.map(a => `${a.id}:${a.label}:${a.cdnUrl ?? ""}`).join("|");
+
+  // Sync: remove stale chips; auto-tag @mentions that match attached assets (paste support)
+  useEffect(() => {
+    setTaggedImages(prev => {
+      const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const filtered = prev.filter(t => new RegExp(`@${esc(t.label)}(?!\\w)`).test(prompt));
+      const newTags: TaggedImage[] = [];
+      for (const asset of mentionableAssets) {
+        if (!filtered.some(t => t.label === asset.label) && asset.cdnUrl) {
+          if (new RegExp(`@${esc(asset.label)}(?!\\w)`).test(prompt)) {
+            newTags.push({ label: asset.label, refId: asset.id, url: asset.cdnUrl, kind: asset.kind });
+          }
+        }
+      }
+      const next = newTags.length === 0 ? filtered : [...filtered, ...newTags];
+      if (next.length === prev.length && next.every((t, i) => t.refId === prev[i].refId && t.label === prev[i].label)) return prev;
+      return next;
+    });
+    if (overlayInnerRef.current) {
+      const st = inputRef.current?.scrollTop ?? 0;
+      overlayInnerRef.current.style.transform = st > 0 ? `translateY(-${st}px)` : "";
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prompt, mentionableAssetsKey]);
+
+  /* O `ComposerShell` é dono do <textarea>, e o contrato dele está congelado
+     porque o /chat depende dele — não há prop para `onSelect` nem para
+     `onScroll`. Os dois são necessários aqui: o primeiro descobre o `@`
+     quando o cursor anda sem que o texto mude, o segundo mantém a camada de
+     chips colada ao texto que rola por baixo. Ligamos os dois no elemento,
+     que é justamente o que o `textareaRef` entrega.
+
+     O `data-prompt-input` entra junto porque é por esse atributo que o menu
+     de menções reconhece o campo ao decidir se um clique caiu fora dele. */
+  useEffect(() => {
+    const el = campoPrompt;
+    if (!el) return;
+    el.setAttribute("data-prompt-input", "");
+
+    const lerCursor = () => {
+      const cursor = el.selectionStart ?? el.value.length;
+      const match = el.value.slice(0, cursor).match(/@(\w*)$/);
+      setMentionQuery(match ? match[1] : null);
+    };
+    /* Com o painel aberto, seta, Enter e Esc pertencem a ele: reler o cursor
+       aqui desfaria o que o `onKeyDown` acabou de decidir — um Esc voltaria a
+       abrir o menu que ele mesmo fechou. */
+    const aoSoltarTecla = (e: KeyboardEvent) => {
+      if (atMenuOpen && ["ArrowUp", "ArrowDown", "Enter", "Escape"].includes(e.key)) return;
+      lerCursor();
+    };
+    const acompanharRolagem = () => {
+      if (overlayInnerRef.current)
+        overlayInnerRef.current.style.transform = `translateY(-${el.scrollTop}px)`;
+    };
+
+    el.addEventListener("keyup", aoSoltarTecla);
+    el.addEventListener("click", lerCursor);
+    el.addEventListener("scroll", acompanharRolagem);
+    return () => {
+      el.removeEventListener("keyup", aoSoltarTecla);
+      el.removeEventListener("click", lerCursor);
+      el.removeEventListener("scroll", acompanharRolagem);
+    };
+  }, [campoPrompt, atMenuOpen]);
+
+  // Close @ menu on outside click
+  useEffect(() => {
+    if (!atMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest("[data-at-menu]") &&
+        !(e.target as HTMLElement).closest("[data-prompt-input]")) {
+        setMentionQuery(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [atMenuOpen]);
+
+  // Close element picker on outside click — does NOT collapse the prompt
+  useEffect(() => {
+    if (!elementPickerOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest("[data-element-picker-modal]")) {
+        setElementPickerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [elementPickerOpen]);
+
+  // Collapse expanded prompt on outside click — passes through to gallery
+  useEffect(() => {
+    if (!promptExpanded) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-prompt-overlay]")) return;
+      if (target.closest("[data-element-picker-modal]")) return;
+      if (target.closest("[data-at-menu]")) return;
+      if (target.closest("[data-custom-dropdown-portal]")) return;
+      if (promptBarRef.current && !promptBarRef.current.contains(target)) {
+        setPromptExpanded(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [promptExpanded]);
+
+  const insertMention = (ref: RefImage & { kind?: "image" | "video" | "audio"; label?: string }) => {
+    const label = ref.label || "image1";
+    if (!taggedImages.some(t => t.refId === ref.id))
+      setTaggedImages(prev => [...prev, { label, refId: ref.id, url: ref.cdnUrl!, kind: isVideo ? (ref.kind || "image") : "image" }]);
+
+    if (multiPromptMode && activeBlockIdxRef.current !== null) {
+      const blocks = prompt.split(/\n\n+/).reduce<string[]>((acc, b) => {
+        if (!b.trim() && acc.some(x => !x.trim())) return acc;
+        return [...acc, b];
+      }, []);
+      const idx = activeBlockIdxRef.current;
+      if (idx < blocks.length) {
+        const blockInput = activeBlockRef.current;
+        const blockText = blocks[idx];
+        const cursor = blockInput?.selectionStart ?? blockText.length;
+        const before = blockText.slice(0, cursor);
+        const after = blockText.slice(cursor);
+        const lastAt = before.lastIndexOf("@");
+        const newBlockText = lastAt >= 0
+          ? `${before.slice(0, lastAt)}@${label} ${after}`
+          : `${before}@${label} ${after}`;
+        const newPos = (lastAt >= 0 ? lastAt : cursor) + label.length + 2;
+        const updatedBlocks = [...blocks];
+        updatedBlocks[idx] = newBlockText;
+        setPrompt(updatedBlocks.join('\n\n'));
+        setMentionQuery(null);
+        requestAnimationFrame(() => {
+          if (!blockInput) return;
+          blockInput.focus();
+          blockInput.setSelectionRange(newPos, newPos);
+        });
+      }
+      return;
+    }
+
+    const input = inputRef.current;
+    const cursor = input?.selectionStart ?? prompt.length;
+    const before = prompt.slice(0, cursor);
+    const after = prompt.slice(cursor);
+    const lastAt = before.lastIndexOf("@");
+    const newText = lastAt >= 0
+      ? `${before.slice(0, lastAt)}@${label} ${after}`
+      : `${before}@${label} ${after}`;
+    const newPos = (lastAt >= 0 ? lastAt : cursor) + label.length + 2;
+
+    setPrompt(newText);
+    setMentionQuery(null);
+    requestAnimationFrame(() => {
+      if (!input) return;
+      input.focus();
+      input.setSelectionRange(newPos, newPos);
+    });
+  };
+
+  // ── Derived ───────────────────────────────────────────────────────────────
+
+  const vidModel = VIDEO_MODELS.find(m => m.id === modelId);
+  const ratios = (isVideo ? vidModel?.ratios : imgModel?.ratios) ?? [];
+  const supportsQ = !isVideo && !!imgModel?.supportsQuality;
+
+  const baseQualityOpts: string[] = isAzureProvider
+    ? (imgModel!.azureQualityOptions ?? [])
+    : (imgModel?.apiInput.qualityOptions ?? ["2k", "4k"]);
+  const qualityOpts = !isVideo && imgModel?.oneKOnlyRatios?.includes(aspectRatio)
+    ? baseQualityOpts.filter(q => q.toLowerCase() === "1k")
+    : baseQualityOpts;
+  const azureResolutionOpts: string[] = isAzureProvider ? (imgModel?.azureResolutionOptions ?? []) : [];
+  const durations = vidModel?.durations ?? [];
+  const vidModes = vidModel?.modes ?? [];
+  const activeModel = models.find(m => m.id === modelId);
+  const hasRefImgs = refImages.length > 0;
+  const allUploaded = refImages.every(r => !r.uploading);
+  const vidRefHandles = (vidModel?.handles ?? []).filter(h => h !== "prompt");
+  const hasVidRefs = isVideo && (!!vidStartFrame || !!vidEndFrame || !!vidVideoRef || vidResources.length > 0 || vidElements.length > 0 || vidRefVideos.length > 0 || vidRefAudios.length > 0);
+
+  const displayRefImages    = getDisplayOrder(refImages,    draggingId, reorderOverId);
+  const displayVidResources = getDisplayOrder(vidResources, draggingId, reorderOverId);
+  const displayVidRefVideos = getDisplayOrder(vidRefVideos, draggingId, reorderOverId);
+  const displayVidRefAudios = getDisplayOrder(vidRefAudios, draggingId, reorderOverId);
+
+  /* A derivacao dos slots de referencia de video foi levantada de dentro
+     do JSX da trilha para ca, sem alterar uma linha da logica: agora a
+     trilha (que desenha os cheios) e o botao "+" da barra (que oferece os
+     vazios) leem a MESMA lista. Duas derivacoes paralelas divergiriam, e
+     e justamente aqui que mora a regra de quais slots um modelo aceita
+     dado o que ja esta anexado. */
+  const vidSlots = useMemo(() => {
+    type VidSlot =
+      | { kind: "filled"; target: "startFrame"|"endFrame"|"resource"|"videoRef"|"referenceVideo"|"audioRef"; mediaKind: "image"|"video"|"audio"; label: string; ref: RefImage }
+      | { kind: "add";    target: "startFrame"|"endFrame"|"resource"|"videoRef"|"referenceVideo"|"audioRef"; mediaKind: "image"|"video"|"audio"; label: string; countLeft: number }
+      | { kind: "element-filled"; element: KlingElement }
+      | { kind: "element-add"; countLeft: number };
+    const slots: VidSlot[] = [];
+    const useElems = !!(vidModel?.apiInput.useKlingElements);
+    const isHappyHorse = vidModel?.id === "happyhorse";
+    const isVeo = modelId === "veo3" || modelId === "veo3_fast" || modelId === "veo3_lite";
+    for (const h of vidRefHandles) {
+      if (isVeo) {
+        if (veoMode === "references" && (h === "startFrame" || h === "endFrame")) continue;
+        if (veoMode === "frames" && h === "resource") continue;
+        if (h === "videoRef" || h === "referenceVideo" || h === "audioRef") continue;
+      }
+      if (isHappyHorse && h === "startFrame" && vidResources.length > 0) continue;
+      if (isHappyHorse && h === "resource" && vidStartFrame) continue;
+      const isSeedance = vidModel?.id === "seedance-2" || vidModel?.id === "seedance-2-fast" || vidModel?.id === "minimax-h3";
+      const seedanceHasFrame = !!(vidStartFrame || vidEndFrame);
+      const seedanceHasRef   = vidResources.length > 0 || vidRefVideos.length > 0 || vidRefAudios.length > 0;
+      if (isSeedance && seedanceHasFrame && (h === "resource" || h === "referenceVideo" || h === "audioRef")) continue;
+      if (isSeedance && seedanceHasRef   && (h === "startFrame" || h === "endFrame")) continue;
+      if (h === "startFrame") {
+        if (vidStartFrame) slots.push({ kind: "filled", target: h, mediaKind: "image", label: "Start Frame", ref: vidStartFrame });
+        else               slots.push({ kind: "add",    target: h, mediaKind: "image", label: "Start Frame", countLeft: 1 });
+      } else if (h === "endFrame") {
+        if (vidEndFrame)   slots.push({ kind: "filled", target: h, mediaKind: "image", label: "End Frame", ref: vidEndFrame });
+        else               slots.push({ kind: "add",    target: h, mediaKind: "image", label: "End Frame", countLeft: 1 });
+      } else if (h === "videoRef") {
+        if (vidVideoRef)   slots.push({ kind: "filled", target: h, mediaKind: "video", label: "Ref Video", ref: vidVideoRef });
+        else               slots.push({ kind: "add",    target: h, mediaKind: "video", label: "Ref Video", countLeft: 1 });
+      } else if (h === "resource") {
+        if (useElems) {
+          vidElements.forEach(el => slots.push({ kind: "element-filled", element: el }));
+          if (vidElements.length < 3) slots.push({ kind: "element-add", countLeft: 3 - vidElements.length });
+        } else {
+          const maxRes = vidModel?.maxResources ?? 3;
+          const resLabel = vidModel?.id === "happyhorse" ? "Character" : "Image";
+          displayVidResources.forEach(r => slots.push({ kind: "filled", target: h, mediaKind: "image", label: resLabel, ref: r }));
+          if (vidResources.length < maxRes)
+            slots.push({ kind: "add", target: h, mediaKind: "image", label: resLabel, countLeft: maxRes - vidResources.length });
+        }
+      } else if (h === "referenceVideo") {
+        const maxRefVid = vidModel?.maxReferenceVideos ?? 3;
+        displayVidRefVideos.forEach(r => slots.push({ kind: "filled", target: h, mediaKind: "video", label: "Ref Video", ref: r }));
+        if (vidRefVideos.length < maxRefVid)
+          slots.push({ kind: "add", target: h, mediaKind: "video", label: "Ref Video", countLeft: maxRefVid - vidRefVideos.length });
+      } else if (h === "audioRef") {
+        const maxRefAud = vidModel?.maxReferenceAudios ?? 3;
+        displayVidRefAudios.forEach(r => slots.push({ kind: "filled", target: h, mediaKind: "audio", label: "Audio", ref: r }));
+        if (vidRefAudios.length < maxRefAud)
+          slots.push({ kind: "add", target: h, mediaKind: "audio", label: "Audio", countLeft: maxRefAud - vidRefAudios.length });
+      }
+    }
+    return slots;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVideo, vidRefHandles, vidModel, modelId, veoMode, vidResources, vidStartFrame,
+      vidEndFrame, vidVideoRef, vidElements, vidRefVideos, vidRefAudios,
+      displayVidResources, displayVidRefVideos, displayVidRefAudios]);
+
+  const vidRequiresPrompt = isVideo && !!(vidModel?.apiInput.promptMaxLength) && !vidModel?.promptOptional;
+  const canGenerate = (!(isVideo && vidModel?.apiInput.useHiggsfield) && generationBlocked(kieKeySet)) ? false : submitting ? false : promptOverLimit ? false : !segmentReady ? false : (vidRequiresPrompt || !isVideo) ? prompt.trim().length > 0 : true;
+
+  /* ── O bloco multimodal da pílula 5 ──────────────────────────────────
+     Duas linhas, Imagem e Vídeo, porque são os dois meios que o app tem.
+     A linha do meio que a aba usa mostra o modelo em efeito; a do outro
+     mostra o que ficou guardado lá.
+
+     Escolher um modelo do OUTRO meio troca a aba — e como o efeito de
+     troca de aba restaura o modelo a partir da gaveta daquela aba, o
+     caminho honesto é escrever nela antes de navegar, em vez de brigar
+     com o efeito depois. Desde que o segmentado Imagem/Vídeo saiu da
+     Home, esta é a única porta para o vídeo. */
+  const fixarModeloDaAba = useCallback((destino: Tab, id: string) => {
+    try {
+      const guardado = loadSettings(destino, selectedFolderId) ?? {};
+      localStorage.setItem(settingsKey(destino, selectedFolderId), JSON.stringify({ ...guardado, modelId: id }));
+    } catch { /* modo privado do navegador */ }
+  }, [selectedFolderId]);
+
+  const trocarAba = useCallback((destino: Tab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", destino);
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [router, pathname, searchParams]);
+
+  const linhasDeMidia: LinhaMidia[] = useMemo(() => {
+    const paraOpcao = (m: (typeof IMAGE_MODELS)[number] | (typeof VIDEO_MODELS)[number]) => ({
+      value: m.id,
+      label: m.name,
+      group: "provider" in m ? (m as { provider: string }).provider : undefined,
+      icon: "provider" in m ? <ProviderIcon provider={(m as { provider: string }).provider} /> : undefined,
+    });
+
+    return ([
+      { destino: "images" as Tab, rotulo: "Imagem", lista: IMAGE_MODELS },
+      { destino: "videos" as Tab, rotulo: "Vídeo",  lista: VIDEO_MODELS },
+    ]).map(({ destino, rotulo, lista }) => {
+      const ativa = destino === tab;
+      const guardado = ativa ? modelId : loadSettings(destino, selectedFolderId)?.modelId;
+      const valor = guardado && lista.some(m => m.id === guardado) ? guardado : lista[0].id;
+      return {
+        id: destino,
+        rotulo,
+        ativa,
+        valor,
+        opcoes: lista.map(paraOpcao),
+        onEscolher: (id: string) => {
+          if (ativa) { setModelId(id); return; }
+          fixarModeloDaAba(destino, id);
+          trocarAba(destino);
+        },
+      };
+    });
+  }, [tab, modelId, selectedFolderId, fixarModeloDaAba, trocarAba]);
+
+  /* O que o botão de enviar dispara. Em "Confirmar" ele abre o cartão de
+     parâmetros e espera; em "Direto" gera na hora. É a diferença entre o
+     usuário aprovar cada gasto e o app gastar sozinho, e é a razão de a
+     pílula 4 existir. */
+  const pedirGeracao = () => {
+    if (modoExecucao === "confirmar") { setConfirmando(true); return; }
+    void generate();
+  };
+
+  /* O "melhorar" usa o mesmo modelo do assistente. Um seletor de modelo
+     só para reescrever prompt seria um décimo quarto controle, que é
+     exatamente o que este trabalho está desfazendo. */
+  const { preferredModel, setPreferredModel } = useChatSessionStore();
+  const polishState = usePolishPrompt({ onChange: setPrompt, model: preferredModel });
+
+  /* ── A segunda pílula: os parâmetros que dependem do modelo ────────
+     Declarados aqui porque quem sabe o que o modelo atual aceita é esta
+     função — a pílula só desenha. É o que garante que uma linha nunca
+     apareça para um modelo que não a suporta, e que o resumo da pílula
+     nunca afirme um valor que não está em jogo. */
+  const paramFields: ParamField[] = [];
+  const paramSummary: string[] = [];
+
+  /* Tamanho livre so existe no gpt-image-2 servido pela Azure. */
+  const permiteTamanhoLivre = !isVideo && isAzureProvider && azureResolutionOpts.length > 0;
+
+  if (ratios.length > 0) {
+    paramFields.push({
+      kind: "select", id: "ratio", label: "Proporção", value: aspectRatio,
+      options: [
+        ...ratios.map(r => ({ value: r, label: r })),
+        ...(permiteTamanhoLivre ? [{ value: "custom", label: "Personalizado" }] : []),
+      ],
+      onChange: value => {
+        setAspectRatio(value);
+        if (!isVideo && imgModel?.oneKOnlyRatios?.includes(value)) setQuality("1k");
+      },
+    });
+    paramSummary.push(
+      aspectRatio === "custom" && azureCustomWidth && azureCustomHeight
+        ? `${azureCustomWidth}×${azureCustomHeight}`
+        : aspectRatio
+    );
+  }
+
+  /* A linha do tamanho so aparece com "Personalizado" escolhido — é
+     comportamento condicional, não detalhe do seletor acima. */
+  if (permiteTamanhoLivre && aspectRatio === "custom") {
+    paramFields.push({
+      kind: "custom", id: "azuresize", label: "Tamanho",
+      node: (
+        <AzureCustomSize
+          width={azureCustomWidth}
+          height={azureCustomHeight}
+          onApply={(w, h) => {
+            setAzureCustomWidth(w);
+            setAzureCustomHeight(h);
+            setAspectRatio("custom");
+          }}
+        />
+      ),
+    });
+  }
+
+  if (!isVideo) {
+    if (isSegmentEdit) {
+      paramFields.push({
+        kind: "custom", id: "grok-segments", label: "Segmentação",
+        node: (
+          <div className="grid gap-2 px-2 pb-1">
+            <input
+              value={segmentTaskId}
+              onChange={e => setSegmentTaskId(e.target.value)}
+              placeholder="task_id da KIE.ai"
+              aria-label="Task ID de origem do Grok"
+              className="w-full rounded-ms border border-ms-border-subtle bg-ms-bg-component px-2 py-1.5 text-ms-base text-ms-text outline-none focus-visible:ring-2 focus-visible:ring-ms-ring"
+            />
+            <input
+              value={segmentMaskIndexes}
+              onChange={e => setSegmentMaskIndexes(e.target.value)}
+              placeholder="Índices: 1, 2"
+              aria-label="Índices das máscaras do Grok"
+              className="w-full rounded-ms border border-ms-border-subtle bg-ms-bg-component px-2 py-1.5 text-ms-base text-ms-text outline-none focus-visible:ring-2 focus-visible:ring-ms-ring"
+            />
+            <p className="px-0.5 text-[10px] leading-4 text-ms-text-tertiary">
+              Use o task_id de uma geração Grok Imagine 2.0 ou Segment Map e informe as regiões a editar.
+            </p>
+          </div>
+        ),
+      });
+      paramSummary.push(parsedSegmentMaskIndexes.length > 0 ? `Máscaras ${parsedSegmentMaskIndexes.join(",")}` : "Máscaras");
+    }
+    if (supportsQ && qualityOpts.length > 0) {
+      paramFields.push({
+        kind: "select", id: "quality", label: "Qualidade", value: effectiveQuality,
+        options: qualityOpts.map(q => ({ value: q, label: q.toUpperCase() })),
+        onChange: setQuality,
+      });
+      paramSummary.push(effectiveQuality.toUpperCase());
+    }
+    if (azureResolutionOpts.length > 0) {
+      paramFields.push({
+        kind: "select", id: "azres", label: "Resolução", value: azureResolution,
+        options: azureResolutionOpts.map(r => ({ value: r, label: r.toUpperCase() })),
+        onChange: setAzureResolution,
+      });
+    }
+    if (!multiPromptMode) {
+      paramFields.push({
+        kind: "stepper", id: "count", label: "Quantidade", value: count, min: 1, max: 4,
+        onChange: setCount,
+      });
+      paramSummary.push(`×${count}`);
+    }
+  } else {
+    if (durations.length > 0) {
+      paramFields.push({
+        kind: "steps", id: "duration", label: "Duração", value: duration,
+        steps: durations, suffix: "s", onChange: setDuration,
+      });
+      paramSummary.push(`${duration}s`);
+    }
+    if (vidModes.length > 0) {
+      paramFields.push({
+        kind: "select", id: "mode", label: "Modo", value: mode,
+        options: vidModes.map(m => ({ value: m.value, label: m.label })),
+        onChange: setMode,
+      });
+    }
+    if ((vidModel?.resolutions?.length ?? 0) > 0) {
+      const res = resolution || vidModel!.defaultResolution!;
+      paramFields.push({
+        kind: "select", id: "resolution", label: "Resolução", value: res,
+        options: vidModel!.resolutions!.map(r => ({ value: r, label: r })),
+        onChange: setResolution,
+      });
+      paramSummary.push(res);
+    }
+    if (vidModel?.sound) {
+      paramFields.push({
+        kind: "toggle", id: "sound", label: "Som", value: sound, onChange: setSound,
+      });
+    }
+    if (modelId === "veo3" || modelId === "veo3_fast") {
+      paramFields.push({
+        kind: "choice", id: "veo", label: "Entrada", value: veoMode,
+        options: [{ value: "frames", label: "Quadros" }, { value: "references", label: "Referências" }],
+        onChange: v => setVeoMode(v as "frames" | "references"),
+      });
+    }
+    /* Seed por último: é o parâmetro que ninguém lê de relance, e o único
+       que se consulta só quando se quer repetir uma geração. */
+    if (vidModel?.supportsSeeds) {
+      paramFields.push({
+        kind: "number", id: "seed", label: "Seed", value: seed ?? 0,
+        min: 0, max: 2147483647, onChange: setSeed,
+      });
+    }
+  }
+
+  /* Os slots de referência ainda vazios — é o que o botão "+" oferece.
+     Sai da mesma lista que a trilha usa para desenhar os cheios. */
+  const addSlots = vidSlots.filter(s => s.kind === "add" || s.kind === "element-add");
+
+  const handleAddReference = useCallback((url: string) => {
+    if (refImages.some(r => r.cdnUrl === url || r.objectUrl === url)) {
+      setRefError("Already added as a reference.");
+      setTimeout(() => setRefError(""), 3000);
+      return;
+    }
+    if (refImages.length >= maxImgs) return;
+    setRefImages(prev => [...prev, { id: randomUUID(), objectUrl: url, cdnUrl: url, uploading: false, error: false }]);
+  }, [refImages, maxImgs]);
+
+  const handleGalleryItemDrop = useCallback((
+    e: React.DragEvent,
+    target: "refImage" | "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo",
+    expectedKind: "image" | "video",
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverSlotKey(null);
+    const dragged = _galleryDragItem;
+    _galleryDragItem = null;
+    if (!dragged) return;
+    const { url, mediaType } = dragged;
+    if (mediaType !== expectedKind) return;
+    const entry: RefImage = { id: randomUUID(), objectUrl: url, cdnUrl: url, uploading: false, error: false };
+    if (target === "refImage") {
+      handleAddReference(url);
+    } else if (target === "startFrame") {
+      setVidStartFrame(entry);
+      if (modelId === "happyhorse") setVidResources([]);
+      if (modelId === "seedance-2" || modelId === "seedance-2-fast" || modelId === "minimax-h3") { setVidResources([]); setVidRefVideos([]); setVidRefAudios([]); }
+    } else if (target === "endFrame") {
+      setVidEndFrame(entry);
+      if (modelId === "seedance-2" || modelId === "seedance-2-fast" || modelId === "minimax-h3") { setVidResources([]); setVidRefVideos([]); setVidRefAudios([]); }
+    } else if (target === "videoRef") {
+      setVidVideoRef(entry);
+    } else if (target === "resource") {
+      if (modelId === "seedance-2" || modelId === "seedance-2-fast" || modelId === "minimax-h3") { setVidStartFrame(null); setVidEndFrame(null); }
+      setVidResources(prev => [...prev, entry]);
+    } else if (target === "referenceVideo") {
+      if (modelId === "seedance-2" || modelId === "seedance-2-fast" || modelId === "minimax-h3") { setVidStartFrame(null); setVidEndFrame(null); }
+      setVidRefVideos(prev => [...prev, entry]);
+    }
+  }, [handleAddReference, modelId]);
+
+  const handleReorderDrop = useCallback((targetId: string, listTarget: "refImage" | "resource" | "referenceVideo" | "audioRef") => {
+    const dragId = _reorderDragItem?.id;
+    _reorderDragItem = null;
+    _reorderOverId = null;
+    setReorderOverId(null);
+    setDraggingId(null);
+    if (!dragId || dragId === targetId) return;
+    _reorderJustDropped = true;
+    setTimeout(() => { _reorderJustDropped = false; }, 300);
+
+    let oldArr: RefImage[];
+    let setter: (fn: (prev: RefImage[]) => RefImage[]) => void;
+    if (listTarget === "refImage")         { oldArr = refImages;    setter = setRefImages; }
+    else if (listTarget === "resource")    { oldArr = vidResources; setter = setVidResources; }
+    else if (listTarget === "referenceVideo") { oldArr = vidRefVideos; setter = setVidRefVideos; }
+    else                                   { oldArr = vidRefAudios; setter = setVidRefAudios; }
+
+    const dragIdx = oldArr.findIndex(r => r.id === dragId);
+    const targetIdx = oldArr.findIndex(r => r.id === targetId);
+    if (dragIdx === -1 || targetIdx === -1) return;
+
+    const newArr = [...oldArr];
+    const [moved] = newArr.splice(dragIdx, 1);
+    newArr.splice(targetIdx, 0, moved);
+    setter(() => newArr);
+
+    const { newTaggedImages, newPrompt } = reorderAndRenumberTags(oldArr, newArr, "image", taggedImagesRef.current, promptRef.current);
+    setTaggedImages(newTaggedImages);
+    setPrompt(newPrompt);
+  }, [refImages, vidRefAudios, vidRefVideos, vidResources]);
+
+  const handleCopyPrompt = useCallback((text: string, refUrls?: string[], meta?: { model?: string; aspectRatio?: string; quality?: string; azureResolution?: string }) => {
+    const newRefs = (refUrls ?? []).map(url => ({
+      id: randomUUID(), objectUrl: url, cdnUrl: url, uploading: false, error: false,
+    }));
+
+    let processedText = text;
+    const tagged: TaggedImage[] = [];
+
+    if (refUrls?.length) {
+      // Attempt to un-resolve mentions: <<<image N>>> or @imageN -> @imageN
+      processedText = text.replace(/<<<image (\d+)>>>|@image(\d+)/gi, (m, g1, g2) => {
+        const n = parseInt(g1 || g2);
+        const url = refUrls[n - 1];
+        if (url) {
+          const label = `image${n}`;
+          if (!tagged.some(t => t.label === label)) {
+            tagged.push({ label, refId: url, url });
+          }
+          return `@${label}`;
+        }
+        return m;
+      });
+    }
+
+    if (tab === "videos") {
+      // Use the source model's handles (meta.model), not the currently-selected model.
+      // setModelId runs after this block so modelId is stale here.
+      const targetModelId = meta?.model ?? modelId;
+      const vm = VIDEO_MODELS.find(m => m.id === targetModelId) ?? VIDEO_MODELS.find(m => m.id === modelId);
+      const handles = vm?.handles ?? [];
+      const useElements = !!(vm?.apiInput.useKlingElements);
+
+      // Clear existing video refs
+      setVidStartFrame(null);
+      setVidEndFrame(null);
+      setVidResources([]);
+      setVidVideoRef(null);
+      setVidRefVideos([]);
+      setVidRefAudios([]);
+      setVidElements([]);
+
+      const remaining = [...newRefs];
+      if (handles.includes("startFrame") && remaining.length > 0) {
+        setVidStartFrame(remaining.shift()!);
+      }
+      if (handles.includes("endFrame") && remaining.length > 0) {
+        setVidEndFrame(remaining.shift()!);
+      }
+      if (handles.includes("videoRef") && remaining.length > 0) {
+        setVidVideoRef(remaining.shift()!);
+      }
+      if (handles.includes("resource") && remaining.length > 0) {
+        if (useElements) {
+          // Kling-style: resource slot renders vidElements, not vidResources
+          setVidElements(remaining.map(r => ({
+            id: r.id,
+            name: "image",
+            description: "",
+            imageUrls: [r.cdnUrl!, r.cdnUrl!],
+          })));
+        } else {
+          setVidResources(remaining);
+        }
+      }
+    } else {
+      setRefImages(prev => {
+        prev.forEach(r => URL.revokeObjectURL(r.objectUrl));
+        return newRefs;
+      });
+    }
+
+    setTaggedImages(tagged);
+    setPrompt(processedText);
+    if (meta?.model) {
+      const knownModels = tab === "videos" ? VIDEO_MODELS : IMAGE_MODELS;
+      if (knownModels.some(m => m.id === meta.model)) setModelId(meta.model);
+    }
+    if (meta?.aspectRatio) setAspectRatio(meta.aspectRatio);
+    if (meta?.quality) setQuality(meta.quality);
+    if (meta?.azureResolution) setAzureResolution(meta.azureResolution);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [tab, modelId]);
+
+  const clearDeletedFromNodes = useCallback((deletedUrls: Set<string>) => {
+    const { nodes, updateNodeData } = useWorkflowStore.getState();
+    for (const node of nodes) {
+      const gens = ((node.data.generations as (string | null | { error: string })[]) ?? []);
+      const filtered = gens.filter(g => !(typeof g === "string" && deletedUrls.has(g)));
+      if (filtered.length === gens.length) continue;
+      const newIdx = Math.max(0, Math.min((node.data.currentGenIdx as number | undefined) ?? 0, filtered.length - 1));
+      const last = filtered[newIdx];
+      const lastUrl = filtered.length > 0 && typeof last === "string" ? last : undefined;
+      const isVideo = node.type === "videoGeneratorNode";
+      updateNodeData(node.id, {
+        generations: filtered,
+        currentGenIdx: filtered.length > 0 ? newIdx : 0,
+        ...(isVideo ? { videoUrl: lastUrl } : { imageUrl: lastUrl }),
+        status: filtered.length > 0 ? "done" : "idle",
+      });
+    }
+  }, []);
+
+  const handleDelete = useCallback(async (id: string, source: "generation" | "upload") => {
+    const token = await getToken();
+    if (!token) return;
+    const item = items.find(i => i.id === id);
+    await fetch("/api/gallery", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id, source }),
+    });
+    if (item) clearDeletedFromNodes(new Set([item.url, ...(item.imageUrls ?? [])]));
+    setItems(prev => {
+      const updated = prev.filter(i => i.id !== id);
+      const src = sourceFilterRef.current === "uploaded" ? "upload" : "generation";
+      galleryCache.set(`${tabRef.current}-${src}`, { items: updated, hasMore });
+      return updated;
+    });
+  }, [hasMore, items, clearDeletedFromNodes]);
+
+  const handleDownload = useCallback(async (url: string, itemIsVideo: boolean): Promise<void> => {
+    const urlExt = url.split("?")[0].split(".").pop()?.toLowerCase();
+    const ext = itemIsVideo ? "mp4" : (urlExt && ["png","jpg","jpeg","webp","gif"].includes(urlExt) ? urlExt : "png");
+    const filename = `${Date.now()}.${ext}`;
+    const taskId = randomUUID();
+    setDownloads(prev => [...prev, { id: taskId, filename, status: "preparing" }]);
+    try {
+      const res = await fetch(`/api/download?url=${encodeURIComponent(url)}&filename=${filename}`);
+      if (!res.ok) throw new Error("Failed");
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+      setDownloads(prev => prev.map(t => t.id === taskId ? { ...t, status: "ready" } : t));
+    } catch {
+      setDownloads(prev => prev.map(t => t.id === taskId ? { ...t, status: "error" } : t));
+    }
+  }, []);
+
+  // Auto-dismiss download toast when all tasks complete
+  useEffect(() => {
+    if (downloads.length > 0 && downloads.every(d => d.status !== "preparing")) {
+      const timer = setTimeout(() => setDownloads([]), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [downloads]);
+
+  const handleDownloadSelected = useCallback(async () => {
+    const toDownload = items.filter(i => selectedIds.has(i.id));
+    clearSelection();
+    for (const item of toDownload) {
+      await handleDownload(item.url, item.mediaType === "video");
+    }
+  }, [items, selectedIds, handleDownload]);
+
+  const handleDeleteSelected = useCallback(async () => {
+    const toDelete = items.filter(i => selectedIds.has(i.id));
+    clearSelection();
+    const token = await getToken();
+    if (!token) return;
+    await Promise.all(toDelete.map(item =>
+      fetch("/api/gallery", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: item.id, source: item.source }),
+      })
+    ));
+    const deletedUrls = new Set(toDelete.flatMap(i => [i.url, ...(i.imageUrls ?? [])]));
+    clearDeletedFromNodes(deletedUrls);
+    setItems(prev => {
+      const ids = new Set(toDelete.map(i => i.id));
+      const updated = prev.filter(i => !ids.has(i.id));
+      const src = sourceFilterRef.current === "uploaded" ? "upload" : "generation";
+      galleryCache.set(`${tabRef.current}-${src}`, { items: updated, hasMore });
+      return updated;
+    });
+  }, [items, selectedIds, hasMore, clearDeletedFromNodes]);
+
+  const GALLERY_GAP = 12;
+
+  // All folder IDs in the selected folder's subtree (selected + all descendants).
+  const selectedFolderIds = useMemo<Set<string> | null>(() => {
+    if (!selectedFolderId) return null;
+    const ids = new Set<string>();
+    const queue = [selectedFolderId];
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      ids.add(id);
+      for (const f of folders) {
+        if (f.parentId === id) queue.push(f.id);
+      }
+    }
+    return ids;
+  }, [selectedFolderId, folders]);
+
+  const filteredItems = useMemo(() => {
+    const bySource = sourceFilter === "generated"
+      ? items.filter(item => item.source === "generation")
+      : items.filter(item => item.source === "upload");
+    const byFolder = selectedFolderIds
+      ? bySource.filter(item => itemFolderMap[item.id]?.some(fid => selectedFolderIds.has(fid)))
+      : bySource;
+
+    // Os três filtros do cabeçalho do Acervo. Cada `if` só custa uma passada
+    // quando o eixo está fora do padrão, então a grade sem filtro não paga nada.
+    let result = byFolder;
+    if (acervoModel !== "all") result = result.filter(item => item.model === acervoModel);
+    if (acervoWindow !== "all") {
+      const days = acervoWindow === "7d" ? 7 : acervoWindow === "30d" ? 30 : 90;
+      const cutoff = Date.now() - days * 86_400_000;
+      result = result.filter(item => new Date(item.created_at).getTime() >= cutoff);
+    }
+    const needle = acervoQuery.trim().toLowerCase();
+    if (needle) result = result.filter(item => item.prompt?.toLowerCase().includes(needle));
+    return result;
+  }, [items, sourceFilter, selectedFolderIds, itemFolderMap, acervoModel, acervoWindow, acervoQuery]);
+
+  /** Modelos distintos presentes no acervo carregado — a lista do filtro. */
+  const acervoModels = useMemo(() => {
+    const seen = new Set<string>();
+    for (const item of items) if (item.model) seen.add(item.model);
+    return [...seen].sort((a, b) => a.localeCompare(b));
+  }, [items]);
+
+  /** "Acervo", ou o caminho da pasta aberta. Substitui o breadcrumb que
+      ficava centrado na barra escura — aqui ele é o próprio título. */
+  const acervoTitle = useMemo(() => {
+    if (!selectedFolderId) return "Acervo";
+    const path: string[] = [];
+    let cur: (typeof folders)[0] | undefined = folders.find(f => f.id === selectedFolderId);
+    while (cur) {
+      path.unshift(cur.name);
+      const parentId = cur.parentId;
+      cur = parentId ? folders.find(f => f.id === parentId) : undefined;
+    }
+    return path.length ? `Acervo / ${path.join(" / ")}` : "Acervo";
+  }, [selectedFolderId, folders]);
+
+  type GalleryLayoutItem =
+    | { kind: "pending"; pg: PendingGen; ratio: number; width: number }
+    | { kind: "gallery"; item: GalleryItem; ratio: number; width: number };
+
+  // Justified row layout: items are packed into rows that each fill the full container width.
+  // Zoom controls target row height — higher zoom = shorter rows = more items per row.
+  const justifiedRows = useMemo(() => {
+    if (containerWidth <= 0) return [] as Array<{ items: GalleryLayoutItem[]; height: number }>;
+    const targetH = Math.max(80, Math.round(containerWidth / Math.max(1, zoom)));
+
+    const toRatio = (ar: string | undefined, mediaType: "image" | "video", url: string): number => {
+      const fallback = mediaType === "video" ? 16 / 9 : 4 / 3;
+      if (ar && ar !== "auto") {
+        const [w, h] = ar.split(":");
+        const wn = parseFloat(w), hn = parseFloat(h);
+        if (wn && hn) return wn / hn;
+      }
+      const cached = naturalRatioCache.get(url);
+      if (cached) {
+        const [w, h] = cached.split(" / ");
+        const wn = parseFloat(w), hn = parseFloat(h);
+        if (wn && hn) return wn / hn;
+      }
+      return fallback;
+    };
+
+    const toPendingEntry = (pg: PendingGen): GalleryLayoutItem => {
+      const [ws, hs] = pg.aspectRatio.split(":");
+      const w = parseFloat(ws), h = parseFloat(hs);
+      return { kind: "pending" as const, pg, ratio: (w && h) ? w / h : 16 / 9, width: 0 };
+    };
+
+    // Pending gens are only shown in the "generated" source filter, not "uploaded".
+    const allPendingVisible = sourceFilter === "generated"
+      ? pendingGens.filter(pg => (pg.tab == null || pg.tab === tab) && (!selectedFolderIds || (pg.folderId != null && selectedFolderIds.has(pg.folderId))))
+      : [];
+    const activePendings = allPendingVisible.filter(pg => !pg.error && !pg.retried);
+    const mixedPendings = allPendingVisible.filter(pg => !!pg.error || !!pg.retried);
+
+    type Dated = { t: number; entry: GalleryLayoutItem };
+    const mixed: Dated[] = [
+      ...mixedPendings.map(pg => ({ t: pg.createdAt ? new Date(pg.createdAt).getTime() : Date.now(), entry: toPendingEntry(pg) })),
+      ...filteredItems.map(item => ({ t: new Date(item.created_at).getTime(), entry: { kind: "gallery" as const, item, ratio: toRatio(item.aspect_ratio, item.mediaType, item.url), width: 0 } })),
+    ].sort((a, b) => (acervoSort === "oldest" ? a.t - b.t : b.t - a.t));
+
+    const allItems: GalleryLayoutItem[] = [
+      ...activePendings.map(toPendingEntry),
+      ...mixed.map(d => d.entry),
+    ];
+
+    const rows: Array<{ items: GalleryLayoutItem[]; height: number }> = [];
+    let cur: GalleryLayoutItem[] = [];
+    let ratioSum = 0;
+
+    const sealRow = (items: GalleryLayoutItem[], rSum: number, rowH: number) => {
+      const totalGaps = (items.length - 1) * GALLERY_GAP;
+      const availW = containerWidth - totalGaps;
+      rows.push({ items: items.map(it => ({ ...it, width: availW * it.ratio / rSum })), height: rowH });
+    };
+
+    for (const entry of allItems) {
+      cur.push(entry);
+      ratioSum += entry.ratio;
+      const gaps = (cur.length - 1) * GALLERY_GAP;
+      const h = (containerWidth - gaps) / ratioSum;
+      if (h <= targetH) { sealRow(cur, ratioSum, h); cur = []; ratioSum = 0; }
+    }
+    if (cur.length > 0) {
+      // Last (partial) row: keep natural widths at targetH so ratios aren't distorted.
+      const totalGaps = (cur.length - 1) * GALLERY_GAP;
+      const naturalW = cur.reduce((s, it) => s + targetH * it.ratio, 0);
+      if (naturalW + totalGaps <= containerWidth) {
+        rows.push({ items: cur.map(it => ({ ...it, width: targetH * it.ratio })), height: targetH });
+      } else {
+        sealRow(cur, ratioSum, (containerWidth - totalGaps) / ratioSum);
+      }
+    }
+
+    return rows;
+  }, [containerWidth, zoom, pendingGens, filteredItems, GALLERY_GAP, natRatioVersion, tab, sourceFilter, selectedFolderIds, acervoSort]);
+
+  // Fixed-column justified layout: exactly `zoom` items per row, each row fills full width.
+  // Last partial row keeps column widths consistent with full rows; empty slots are padded.
+  const fixedRows = useMemo(() => {
+    if (containerWidth <= 0) return [] as Array<{ items: GalleryLayoutItem[]; height: number; emptyCount: number }>;
+    const allItems = justifiedRows.flatMap(row => row.items);
+    const rows: Array<{ items: GalleryLayoutItem[]; height: number; emptyCount: number }> = [];
+    const colWidth = (containerWidth - (zoom - 1) * GALLERY_GAP) / zoom;
+    for (let i = 0; i < allItems.length; i += zoom) {
+      const group = allItems.slice(i, i + zoom);
+      const isFull = group.length === zoom;
+      if (isFull) {
+        const ratioSum = group.reduce((s, it) => s + it.ratio, 0);
+        const totalGaps = (group.length - 1) * GALLERY_GAP;
+        const availW = containerWidth - totalGaps;
+        const height = availW / ratioSum;
+        rows.push({ items: group.map(it => ({ ...it, width: availW * it.ratio / ratioSum })), height, emptyCount: 0 });
+      } else {
+        // Partial last row: each item gets the standard column width; height from average ratio.
+        const avgRatio = group.reduce((s, it) => s + it.ratio, 0) / group.length;
+        const height = colWidth / avgRatio;
+        rows.push({ items: group.map(it => ({ ...it, width: colWidth })), height, emptyCount: zoom - group.length });
+      }
+    }
+    return rows;
+  }, [containerWidth, zoom, justifiedRows, GALLERY_GAP]);
+
+  const orderedGalleryItems = useMemo(
+    () => fixedRows.flatMap(r => r.items).filter((i): i is Extract<GalleryLayoutItem, { kind: "gallery" }> => i.kind === "gallery").map(i => i.item),
+    [fixedRows],
+  );
+
+  const isGalleryEmpty = filteredItems.length === 0 && (
+    sourceFilter !== "generated" ||
+    pendingGens.filter(pg => pg.tab == null || pg.tab === tab).length === 0
+  );
+
+  const isCreationView = searchParams.get("view") === "create";
+  const showCreationHome = isCreationView && !pendingGens.some(pg => !pg.error && (pg.tab == null || pg.tab === tab));
+
+  // Fire probes for every uncached item without a stored aspect_ratio.
+  // Images: 32px next/image probe (fast). Videos: <video preload="metadata"> probe.
+  // Results are non-blocking for video (uses 16:9 default until resolved).
+  useEffect(() => {
+    const toProbe = filteredItems.filter(
+      item => (!item.aspect_ratio || item.aspect_ratio === "auto") &&
+              !naturalRatioCache.has(item.url),
+    );
+    if (toProbe.length === 0) return;
+
+    let cancelled = false;
+    const bump = () => { if (!cancelled) setNatRatioVersion(v => v + 1); };
+
+    toProbe.forEach(item => {
+      if (item.mediaType === "video") {
+        const vid = document.createElement("video");
+        vid.preload = "metadata";
+        vid.onloadedmetadata = () => {
+          if (vid.videoWidth && vid.videoHeight)
+            naturalRatioCache.set(item.url, `${vid.videoWidth} / ${vid.videoHeight}`);
+          else
+            naturalRatioCache.set(item.url, "16 / 9");
+          bump();
+        };
+        vid.onerror = () => { naturalRatioCache.set(item.url, "16 / 9"); bump(); };
+        vid.src = item.url;
+      } else {
+        const probeUrl = item.imageUrls?.[0] ?? item.url;
+        const img = new window.Image();
+        img.onload = () => {
+          if (img.naturalWidth && img.naturalHeight)
+            naturalRatioCache.set(item.url, `${img.naturalWidth} / ${img.naturalHeight}`);
+          bump();
+        };
+        img.onerror = () => { naturalRatioCache.set(item.url, "4 / 3"); bump(); };
+        img.src = probeUrl;
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, [filteredItems]);
+
+  // Persist discovered aspect ratios whenever a new one is found so the next
+  // cold page load skips the probe reflow entirely.
+  useEffect(() => {
+    try {
+      const ratios = Object.fromEntries(naturalRatioCache);
+      sessionStorage.setItem("hg-ratios", JSON.stringify(ratios));
+    } catch {}
+  }, [natRatioVersion]);
+
+  // Persist loaded-image URLs on unmount so the shimmer is suppressed on the
+  // next visit (images already in browser HTTP cache load instantly anyway).
+  useEffect(() => {
+    return () => {
+      try { sessionStorage.setItem("hg-loaded", JSON.stringify([...loadedImageUrls])); } catch {}
+    };
+  }, []);
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  /* A grade fica memoizada porque o custo por tecla do composer é, medido,
+     o número de elementos que a página recria a cada render. Nada aqui
+     depende do texto do prompt: com o elemento estável, o React nem entra
+     nesta subárvore quando só o prompt muda. */
+  const grade = useMemo(() => (
+        <div className="miora-gallery-scroll" ref={gridOuterRef} style={{ flex: 1, overflowY: "auto", paddingBottom: showCreationHome ? 0 : "260px", display: "flex", flexDirection: "column", userSelect: marqueeRect ? "none" : undefined, cursor: marqueeRect ? "crosshair" : undefined }} onMouseDown={e => {
+          if (showCreationHome || e.button !== 0) return;
+          const target = e.target as HTMLElement;
+          if (target.closest("button, .gallery-action-btn, .gallery-checkbox")) return;
+          marqueeStartRef.current = { x: e.clientX, y: e.clientY };
+          preDragSelectedIdsRef.current = new Set(selectedIds);
+        }}>
+          {showCreationHome ? (
+            <CreationHero />
+          ) : loading || containerWidth === 0 ? (
+            /* Skeleton — shown while loading or before container is measured */
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${zoom}, 1fr)`, gap: "1px", padding: "1px", alignItems: "start" }}>
+              {Array.from({ length: zoom * 3 }).map((_, i) => (
+                <div key={i} className="gallery-skeleton" style={{ aspectRatio: i % 3 === 1 ? "4 / 5" : i % 5 === 0 ? "16 / 9" : "1 / 1" }} />
+              ))}
+            </div>
+          ) : isGalleryEmpty ? (
+            <EmptyState />
+          ) : (
+            <div ref={gridRef} className="miora-media-grid">
+              {fixedRows.map((row, rowIdx) => (
+                <div key={rowIdx} style={{ display: "flex", height: row.height, gap: `${GALLERY_GAP}px`, marginBottom: rowIdx < fixedRows.length - 1 ? `${GALLERY_GAP}px` : 0 }}>
+                  {row.items.map((layoutItem) => {
+                if (layoutItem.kind === "pending") {
+                  const pg = layoutItem.pg;
+                  return (
+                    <div key={pg.id} className={pg.error ? "error-pending-tile" : "pgt-tile"} style={{
+                      width: layoutItem.width,
+                      flex: "0 0 auto",
+                      height: "100%",
+                      position: "relative",
+                      overflow: "hidden",
+                      /* O erro tem fundo próprio; a geração em voo é pintada
+                         pelo brilho de `.pgt-tile`, em composer.css. */
+                      background: pg.error ? "var(--ms-bg-danger-subtle)" : undefined,
+                    }}>
+                          {pg.error ? (
+                            <>
+                              {/* Top radial glow */}
+                              <div style={{
+                                position: "absolute", top: "-40%", left: "50%", transform: "translateX(-50%)",
+                                width: "180%", height: "80%", pointerEvents: "none",
+                                background: "radial-gradient(ellipse at 50% 20%, hsl(var(--ms-red-9) / .13) 0%, transparent 70%)",
+                              }} />
+                              {/* Error card body */}
+                              <div style={{
+                                position: "absolute", inset: 0,
+                                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                                gap: "8px", padding: "16px",
+                                zIndex: 1,
+                              }}>
+                                {/* Icon with border ring + glow */}
+                                <div style={{
+                                  width: 40, height: 40, borderRadius: "50%",
+                                  border: "1px solid var(--ms-border-danger)",
+                                  background: "var(--ms-bg-danger)",
+                                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                                }}>
+                                  <ShieldAlert size={18} strokeWidth={1.75} style={{ color: "var(--signal-critical)" }} />
+                                </div>
+                                {/* Tag */}
+                                <span style={{
+                                  fontSize: "10px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase",
+                                  color: "var(--ms-text-danger)",
+                                  background: "var(--ms-bg-danger)",
+                                  padding: "2px 8px", borderRadius: "var(--ms-radius-sm)",
+                                }}>
+                                  {isSafetyBlocked(pg.error, pg.errorCode) ? "Bloqueado por NSFW" : "Falha da API"}
+                                </span>
+                                {/* Error message */}
+                                <div style={{
+                                  fontSize: "11px", color: "var(--ms-text-secondary)", textAlign: "center",
+                                  lineHeight: 1.5, wordBreak: "break-word",
+                                  display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden",
+                                }}>
+                                  {pg.error}
+                                </div>
+                                {/* Credits refunded — only for moderation */}
+                                {isSafetyBlocked(pg.error, pg.errorCode) && (
+                                  <div style={{ fontSize: "10px", color: "var(--ms-text-tertiary)", fontFamily: "var(--font-metric)", marginTop: 2 }}>
+                                    Créditos estornados
+                                  </div>
+                                )}
+                              </div>
+                              {/* Action buttons column */}
+                              <div className="error-tile-actions" style={{ position: "absolute", top: 8, right: 8, display: "flex", flexDirection: "column", gap: 5, zIndex: 5 }}>
+                                <button className="gallery-action-btn" title="Paste prompt & images" onClick={() => handleCopyPrompt(pg.prompt, pg.referenceImageUrls)}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                  </svg>
+                                </button>
+                                <button className="gallery-action-btn" title="Retry" onClick={async () => {
+                                  const newId = randomUUID();
+                                  const newPending: PendingGen = { ...pg, id: newId, createdAt: pg.createdAt ?? new Date().toISOString(), retried: true, error: undefined, errorCode: undefined, taskId: undefined, prePending: false };
+                                  setPendingGens(prev => [...prev.filter(p => p.id !== pg.id), newPending]);
+                                  const token = await getToken();
+                                  if (!token) { setPendingGens(prev => prev.map(p => p.id === newId ? { ...p, error: "Please sign in." } : p)); return; }
+                                  const storedRefs = pg.referenceImageUrls ?? [];
+                                  const retryIsVideo = pg.tab === "videos";
+                                  let taskId: string;
+                                  try {
+                                    if (retryIsVideo) {
+                                      const vm = VIDEO_MODELS.find(m => m.id === modelId);
+                                      const isVeo = !!(vm?.apiInput.useGoogleVeo);
+                                      const res = await fetch("/api/generate-video", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(isVeo ? {
+                                        model: modelId, prompt: pg.prompt, aspect_ratio: pg.aspectRatio, generationType: "TEXT_2_VIDEO",
+                                        imageUrls: storedRefs, enableTranslation: true, enableFallback: false, watermark: "",
+                                      } : {
+                                        videoModel: modelId, prompt: pg.prompt, aspectRatio: pg.aspectRatio, duration, mode, resolution, sound,
+                                        ...(vm?.apiInput.useHiggsfield ? { submissionId: randomUUID() } : {}),
+                                        ...(storedRefs.length > 0 ? { referenceImageUrls: storedRefs } : {}),
+                                      }) });
+                                      const d = await res.json() as { taskId?: string; error?: string };
+                                      if (!res.ok) throw new Error(d.error ?? "Failed");
+                                      taskId = d.taskId!;
+                                    } else {
+                                      const retryModelId = pg.modelId ?? modelId;
+                                      const retryQuality = pg.quality ?? quality;
+                                      const retryModel = IMAGE_MODELS.find(m => m.id === retryModelId);
+                                      const retryIsSegmentEdit = !!retryModel?.requiresSegmentTask;
+                                      const syntheticTagged: TaggedImage[] = storedRefs.map((url, i) => ({ label: `image${i + 1}`, refId: url, url }));
+                                      const { resolvedPrompt, extraUrls } = resolveGalleryMentions(pg.prompt, syntheticTagged);
+                                      const dedupedExtra = new Set(extraUrls);
+                                      const imageUrls = [...extraUrls, ...storedRefs.filter(u => !dedupedExtra.has(u))];
+                                      const azureBaseUrl    = (() => { try { return localStorage.getItem("aiui-azure-base-url") ?? ""; } catch { return ""; } })();
+                                      const azureDeployment = (() => { try { return JSON.parse(localStorage.getItem("aiui-azure-endpoints") ?? "{}")[retryModelId] ?? ""; } catch { return ""; } })();
+                                      const providerForModel = (() => { try { return JSON.parse(localStorage.getItem("aiui-model-providers") ?? "{}")[retryModelId] ?? "kie"; } catch { return "kie"; } })();
+                                      const isAzure = !!(azureBaseUrl && azureDeployment && providerForModel === "azure");
+                                      const isCodex = providerForModel === "codex";
+                                      const res = await fetch("/api/generate", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({
+                                        prompt: resolvedPrompt, model: retryModelId, aspectRatio: pg.aspectRatio, quality: retryQuality, imageUrls,
+                                        ...(retryIsSegmentEdit ? { segmentTaskId: pg.segmentTaskId, maskIndexes: pg.maskIndexes } : {}),
+                                        ...(isAzure ? { azureBaseUrl, azureDeployment, azureQuality: retryQuality } : {}),
+                                        ...(isCodex ? { codexProvider: true } : {}),
+                                      }) });
+                                      const d = await res.json() as { taskId?: string; error?: string };
+                                      if (!res.ok) throw new Error(d.error ?? "Failed");
+                                      taskId = d.taskId!;
+                                    }
+                                    setPendingGens(prev => prev.map(p => p.id === newId ? { ...p, taskId } : p));
+                                  } catch (e: unknown) {
+                                    setPendingGens(prev => prev.map(p => p.id === newId ? { ...p, error: e instanceof Error ? e.message : String(e), errorCode: undefined } : p));
+                                    return;
+                                  }
+                                  try {
+                                    await pollTask(taskId);
+                                    const existingIds = new Set((galleryCache.get(`${tabRef.current}-generation`)?.items ?? []).map((i: GalleryItem) => i.id));
+                                    const fresh = await fetchNewItems(tabRef.current);
+                                    setPendingGens(prev => prev.filter(p => p.id !== newId));
+                                    if (fresh.length > 0) {
+                                      if (newPending.folderId) {
+                                        const existingMap = useFolderStore.getState().itemFolderMap;
+                                        const pendingTime = newPending.createdAt ? new Date(newPending.createdAt).getTime() - 30_000 : 0;
+                                        const untaggedIds = fresh
+                                          .filter(i => new Date(i.created_at).getTime() >= pendingTime)
+                                          .map(i => i.id)
+                                          .filter(id => !existingMap[id]);
+                                        if (untaggedIds.length > 0) assignItemsToFolder(untaggedIds, newPending.folderId);
+                                      }
+                                      const genCacheKey = `${tabRef.current}-generation`;
+                                      setItems(prev => {
+                                        const base = sourceFilterRef.current === "generated" ? prev : (galleryCache.get(genCacheKey)?.items ?? []);
+                                        const merged = mergeByNewest(base, fresh);
+                                        galleryCache.set(genCacheKey, { items: merged, hasMore: true });
+                                        return sourceFilterRef.current === "generated" ? (merged === base ? prev : merged) : prev;
+                                      });
+                                    }
+                                    onGenComplete(newPending.folderId, fresh.filter(i => !existingIds.has(i.id)).map(i => i.id));
+                                    window.dispatchEvent(new Event("credits-refresh"));
+                                  } catch (e: unknown) {
+                                    const errorCode = e instanceof GenerationJobError ? e.code : undefined;
+                                    setPendingGens(prev => prev.map(p => p.id === newId ? { ...p, error: e instanceof Error ? e.message : String(e), errorCode } : p));
+                                  }
+                                }}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                                  </svg>
+                                </button>
+                                <button className="gallery-action-btn gallery-delete-btn" title="Dismiss" onClick={() => setPendingGens(prev => prev.filter(p => p.id !== pg.id))}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                  </svg>
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <PendingGenTile
+                              pg={pg}
+                              onCancel={() => setPendingGens(prev => prev.filter(p => p.id !== pg.id))}
+                            />
+                          )}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={layoutItem.item.id} data-item-id={layoutItem.item.id} style={{ width: layoutItem.width, flex: "0 0 auto", height: "100%", overflow: "hidden", borderRadius: 12, background: selectedIds.has(layoutItem.item.id) ? "var(--ms-bg)" : "transparent", transition: "background 180ms ease" }}>
+                        <GalleryCard
+                          item={layoutItem.item}
+                          displayWidth={layoutItem.width}
+                          onOpen={(thumbUrl) => { setLightboxItem(layoutItem.item); setLightboxThumb(thumbUrl); }}
+                          onAddReference={layoutItem.item.mediaType === "image" && canAddImgs ? handleAddReference : undefined}
+                          onCopyPrompt={handleCopyPrompt}
+                          onDownload={handleDownload}
+                          onDelete={handleDelete}
+                          videoMuted={videoMuted}
+                          onToggleMute={() => setVideoMuted(m => !m)}
+                          onNaturalRatioDiscovered={() => setNatRatioVersion(v => v + 1)}
+                          selected={selectedIds.has(layoutItem.item.id)}
+                          anySelected={anySelected}
+                          onSelect={() => toggleSelect(layoutItem.item.id)}
+                          scrollContainer={gridOuterRef}
+                          isTagged={taggedImages.some(t => t.refId === layoutItem.item.id)}
+                          isNew={newItemIds.has(layoutItem.item.id)}
+                          onMarkSeen={() => setNewItemIds(prev => { const n = new Set(prev); n.delete(layoutItem.item.id); return n; })}
+                        />
+                      </div>
+                    );
+                  })}
+                  {Array.from({ length: row.emptyCount }).map((_, i) => (
+                    <div key={`empty-${i}`} style={{ flex: "0 0 auto", width: row.items[0]?.width ?? 0, height: "100%" }} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+          {loadingMore && (
+            <div style={{ padding: "20px", display: "flex", justifyContent: "center" }}>
+              <span style={{ width: "20px", height: "20px", borderRadius: "50%", border: "2px solid var(--ms-border-subtle)", borderTopColor: "var(--brand-violet)", animation: "spin 0.8s linear infinite" }} />
+            </div>
+          )}
+          <div ref={sentinelRef} style={{ height: "1px", width: "100%" }} />
+
+          {/* ── Rodapé ──
+              Bloco 07: padding-top 48, gap 12, centrado, 12px/20px em
+              --app-v2-text-tertiary, com a figura de 48px à esquerda. O
+              mascote 3D do Miora é IP deles; aqui entra a marca "P".
+              `mt-auto` empurra o rodapé para a base do scroller quando a
+              lista é curta, como na referência. */}
+          {!showCreationHome && !isGalleryEmpty && (
+            <footer className="mx-auto mt-auto flex w-full max-w-[1310px] flex-wrap items-center justify-center gap-3 pt-12 text-ms-base leading-5 text-ms-text-tertiary">
+              <PitchMark size={48} />
+              <span>Tudo que você gera ou envia aparece aqui automaticamente.</span>
+            </footer>
+          )}
+        </div>
+  ), [
+    anySelected, assignItemsToFolder, canAddImgs, containerWidth, duration, fetchNewItems,
+    fixedRows, handleAddReference, handleCopyPrompt, handleDelete, handleDownload,
+    isGalleryEmpty, loading, loadingMore, marqueeRect, mode, modelId, newItemIds,
+    onGenComplete, quality, resolution, selectedIds, showCreationHome, sound,
+    taggedImages, videoMuted, zoom,
+  ]);
+
+  /* A trilha de anexos não lê o prompt: sete alvos de soltura que só
+     mudam quando um anexo entra ou sai. Memoizada, ela sai do caminho
+     da tecla — é a maior subárvore do composer fora do campo. */
+  const trilhaDeAnexos = useMemo(() => (
+              <div className="pcx-trilha-scroll">
+                {!isVideo && imgModel?.supportsImages && (hasRefImgs || canAddImgs) && (
+                  <div className="pcx-trilha" onPointerUp={() => { if (_reorderDragItem?.listTarget === "refImage") { _reorderDragItem = null; _reorderOverId = null; setDraggingId(null); setReorderOverId(null); } }}>
+                    {displayRefImages.map(img => {
+                      const isRemoving = removingIds.has(img.id);
+                      const isHovered = hoveredRefId === img.id;
+                      const isDragging = draggingId === img.id;
+                      const dragKey = `refimg-filled-${img.id}`;
+                      return (
+                        <div
+                          key={img.id}
+                          className="pcx-slot"
+                          data-estado={img.error ? "erro" : dragOverSlotKey === dragKey ? "alvo" : taggedImages.some(t => t.refId === img.id) ? "citado" : undefined}
+                          data-arrastando={isDragging ? "true" : undefined}
+                          data-saindo={isRemoving ? "true" : undefined}
+                          style={{
+                            touchAction: refImages.length > 1 ? "none" : undefined,
+                            cursor: (!img.uploading && !img.error) ? (refImages.length > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in") : "default",
+                          }}
+                          onMouseDown={e => e.preventDefault()}
+                          onPointerDown={() => { if (refImages.length <= 1 || img.uploading || img.error) return; _reorderDragItem = { id: img.id, listTarget: "refImage" }; _reorderOverId = null; setDraggingId(img.id); }}
+                          onPointerEnter={() => { if (!_reorderDragItem || _reorderDragItem.id === img.id || _reorderDragItem.listTarget !== "refImage") return; _reorderOverId = img.id; setReorderOverId(img.id); }}
+                          onPointerUp={e => { const info = _reorderDragItem; if (!info || info.listTarget !== "refImage") return; e.stopPropagation(); if (_reorderOverId) e.preventDefault(); const target = _reorderOverId ?? img.id; handleReorderDrop(target, "refImage"); }}
+                          onMouseEnter={() => { if (!draggingId) setHoveredRefId(img.id); }}
+                          onMouseLeave={() => setHoveredRefId(null)}
+                          onClick={() => { if (_reorderJustDropped) { _reorderJustDropped = false; return; } if (!img.uploading && !img.error && !draggingId) setRefPreview({ url: img.objectUrl, mediaKind: "image" }); }}
+                          onDragOver={e => { if (!e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(dragKey); }}
+                          onDragLeave={() => setDragOverSlotKey(null)}
+                          onDrop={e => handleGalleryItemDrop(e, "refImage", "image")}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={thumbSrc(img.objectUrl, snapWidth(64))} alt="" className="pcx-slot-midia" />
+                          {isHovered && !img.uploading && !img.error && (
+                            <div className="pcx-slot-lupa" onClick={e => { if (_reorderJustDropped || draggingId) { _reorderJustDropped = false; e.stopPropagation(); return; } e.stopPropagation(); setRefPreview({ url: img.objectUrl, mediaKind: "image" }); }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                            </div>
+                          )}
+                          <span className="pcx-slot-rotulo">Imagem</span>
+                          {img.uploading && (
+                            <div className="pcx-slot-veu"><span className="pcx-slot-spinner" /></div>
+                          )}
+                          {img.error && (
+                            <div className="pcx-slot-veu" data-erro="true">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>
+                            </div>
+                          )}
+                          <button type="button" className="pcx-slot-remover" aria-label="Remover esta referência" onClick={e => { e.stopPropagation(); removeImage(img.id); }}>
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {canAddImgs && (
+                      <button
+                        type="button"
+                        className="pcx-slot-add"
+                        data-estado={dragOverSlotKey === "refImage-add" ? "alvo" : undefined}
+                        aria-label="Adicionar imagem de referência"
+                        onClick={() => openPicker("refImage", "image")}
+                        disabled={submitting}
+                        onDragOver={e => { if (!e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey("refImage-add"); }}
+                        onDragLeave={() => setDragOverSlotKey(null)}
+                        onDrop={e => handleGalleryItemDrop(e, "refImage", "image")}
+                      >
+                        <span className="pcx-slot-add-nome">IMAGEM</span>
+                        <span className="pcx-slot-add-conta">{restantes(maxImgs - refImages.length)}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {isVideo && vidRefHandles.length > 0 && (
+                  <div className="pcx-trilha" onPointerUp={() => { if (_reorderDragItem) { _reorderDragItem = null; _reorderOverId = null; setDraggingId(null); setReorderOverId(null); } }}>
+                    {vidSlots.map((slot, idx) => {
+                      if (slot.kind === "element-filled") {
+                        const el = slot.element; const thumb = el.imageUrls[0]; const hovId = `elem-${el.id}`;
+                        return (
+                          <div key={el.id} className="pcx-slot" onMouseEnter={() => setHoveredRefId(hovId)} onMouseLeave={() => setHoveredRefId(null)}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={thumb} alt="" className="pcx-slot-midia" />
+                            {hoveredRefId === hovId && (
+                              <div className="pcx-slot-lupa" onClick={() => setRefPreview({ url: thumb, mediaKind: "image" })}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                              </div>
+                            )}
+                            <span className="pcx-slot-rotulo" title={el.name}>{el.name}</span>
+                            <button type="button" className="pcx-slot-remover" aria-label={`Remover o elemento ${el.name}`} onClick={() => setVidElements(prev => prev.filter(e => e.id !== el.id))}>
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      if (slot.kind === "element-add") {
+                        return (
+                          <button type="button" className="pcx-slot-add" key={`element-add-${idx}`} aria-label="Adicionar um elemento" onClick={() => setElementPickerOpen(true)} disabled={submitting}>
+                            <span className="pcx-slot-add-nome">ELEMENTO</span>
+                            <span className="pcx-slot-add-conta">{restantes(slot.countLeft)}</span>
+                          </button>
+                        );
+                      }
+
+                      if (slot.kind === "filled") {
+                        const r = slot.ref; const hovId = `slot-${r.id}`; const dragKey = `vidfilled-${r.id}`;
+                        const isMultiTarget = slot.target === "resource" || slot.target === "referenceVideo" || slot.target === "audioRef";
+                        const listForSlot = slot.target === "resource" ? vidResources : slot.target === "referenceVideo" ? vidRefVideos : vidRefAudios;
+                        const nome = rotuloSlot(slot.label).nome;
+                        return (
+                          <div
+                            key={r.id}
+                            className="pcx-slot"
+                            data-estado={r.error ? "erro" : dragOverSlotKey === dragKey ? "alvo" : taggedImages.some(t => t.refId === r.id) ? "citado" : undefined}
+                            data-arrastando={draggingId === r.id ? "true" : undefined}
+                            style={{
+                              touchAction: (isMultiTarget && listForSlot.length > 1) ? "none" : undefined,
+                              cursor: (isMultiTarget && listForSlot.length > 1 && !r.uploading && !r.error) ? (draggingId === r.id ? "grabbing" : "grab") : undefined,
+                            }}
+                            onMouseDown={e => e.preventDefault()}
+                            onPointerDown={() => { if (!isMultiTarget || listForSlot.length <= 1 || r.uploading || r.error) return; _reorderDragItem = { id: r.id, listTarget: slot.target as "resource" | "referenceVideo" | "audioRef" }; _reorderOverId = null; setDraggingId(r.id); }}
+                            onPointerEnter={() => { if (!_reorderDragItem || _reorderDragItem.id === r.id || _reorderDragItem.listTarget !== slot.target) return; _reorderOverId = r.id; setReorderOverId(r.id); }}
+                            onPointerUp={e => { const info = _reorderDragItem; if (!info || info.listTarget !== slot.target) return; e.stopPropagation(); if (_reorderOverId) e.preventDefault(); const target = _reorderOverId ?? r.id; handleReorderDrop(target, slot.target as "resource" | "referenceVideo" | "audioRef"); }}
+                            onMouseEnter={() => { if (!draggingId) setHoveredRefId(hovId); }}
+                            onMouseLeave={() => setHoveredRefId(null)}
+                            onDragOver={e => { if (slot.mediaKind === "audio" || !e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(dragKey); }}
+                            onDragLeave={() => setDragOverSlotKey(null)}
+                            onDrop={e => { if (slot.mediaKind !== "audio") handleGalleryItemDrop(e, slot.target as "refImage" | "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo", slot.mediaKind as "image" | "video"); }}
+                          >
+                            {slot.mediaKind === "image" ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={thumbSrc(r.objectUrl, snapWidth(64))} alt="" className="pcx-slot-midia" />
+                            ) : slot.mediaKind === "video" ? (
+                              <video src={r.objectUrl} autoPlay muted loop playsInline className="pcx-slot-midia" />
+                            ) : (
+                              <div className="pcx-slot-audio">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                              </div>
+                            )}
+                            {hoveredRefId === hovId && !r.uploading && !r.error && slot.mediaKind !== "audio" && (
+                              <div className="pcx-slot-lupa" onClick={() => { if (_reorderJustDropped || draggingId) { _reorderJustDropped = false; return; } setRefPreview({ url: r.objectUrl, mediaKind: slot.mediaKind }); }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                              </div>
+                            )}
+                            <span className="pcx-slot-rotulo" title={nome}>{nome}</span>
+                            <button type="button" className="pcx-slot-remover" aria-label={`Remover ${nome}`} onClick={() => removeVidRef(r.id, slot.target)}>
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      const vidAddKey = `vidadd-${slot.target}-${idx}`;
+                      const rot = rotuloSlot(slot.label);
+                      return (
+                        <button
+                          type="button"
+                          className="pcx-slot-add"
+                          key={`${slot.target}-add-${idx}`}
+                          data-estado={dragOverSlotKey === vidAddKey ? "alvo" : undefined}
+                          aria-label={`Anexar ${rot.nome}`}
+                          title={rot.nome}
+                          onClick={() => slot.mediaKind === "audio" ? (vidPickTarget.current = slot.target, vidAudioInputRef.current?.click()) : openPicker(slot.target as "refImage" | "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo", slot.mediaKind as "image" | "video")}
+                          disabled={submitting}
+                          onDragOver={e => { if (slot.mediaKind === "audio" || !e.dataTransfer.types.includes("application/x-gallery-item")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setDragOverSlotKey(vidAddKey); }}
+                          onDragLeave={() => setDragOverSlotKey(null)}
+                          onDrop={e => { if (slot.mediaKind !== "audio") handleGalleryItemDrop(e, slot.target as "refImage" | "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo", slot.mediaKind as "image" | "video"); }}
+                        >
+                          <span className="pcx-slot-add-nome">{rot.curto}</span>
+                          <span className="pcx-slot-add-conta">{restantes(slot.countLeft)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+  ), [
+    canAddImgs, displayRefImages, dragOverSlotKey, draggingId, handleGalleryItemDrop,
+    handleReorderDrop, hasRefImgs, hoveredRefId, imgModel?.supportsImages, isVideo,
+    maxImgs, openPicker, refImages.length, removeImage, removeVidRef, removingIds,
+    submitting, taggedImages, vidRefAudios, vidRefHandles.length, vidRefVideos,
+    vidResources, vidSlots,
+  ]);
+
+  /* A barra da seleção em lote está sempre montada — quem a esconde é o
+     `data-aberta`, não uma condição de render. Eram 170 linhas recriadas
+     a cada tecla sem nenhuma relação com o prompt. */
+  const barraDeSelecao = useMemo(() => (
+        <div
+          className="asb"
+          data-aberta={anySelected ? "true" : undefined}
+          style={{
+            left: isMobile ? "50%" : state === "collapsed" ? "calc(var(--sidebar-width-icon) / 2 + 50%)" : "calc(var(--sidebar-width) / 2 + 50%)",
+          }}
+        >
+          <span className="asb-conta">
+            {selectedIds.size} selecionado{selectedIds.size === 1 ? "" : "s"}
+          </span>
+          <div className="asb-sep" />
+
+          <button type="button" className="asb-btn" onClick={handleDownloadSelected}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Baixar
+          </button>
+
+          <button type="button" className="asb-btn asb-btn--perigo" onClick={handleDeleteSelected}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+            </svg>
+            Remover
+          </button>
+
+          {/* Adicionar às pastas — só existe quando há pasta para receber. */}
+          {folders.length > 0 && (() => {
+            const selectedArr = [...selectedIds];
+            return (
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <button
+                  type="button"
+                  ref={folderPickerBtnRef}
+                  className="asb-btn"
+                  data-aberto={folderPickerOpen ? "true" : undefined}
+                  aria-expanded={folderPickerOpen}
+                  onClick={() => setFolderPickerOpen(o => !o)}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  Adicionar à pasta
+                </button>
+
+                {folderPickerOpen && (
+                  <div ref={folderPickerRef} className="asb-pop">
+                    <div className="asb-pop-titulo">Adicionar à pasta</div>
+
+                    <div className="asb-pop-lista">
+                      {(() => {
+                        const getIds = (id: string) => itemFolderMap[id] ?? [];
+
+                        const renderFolder = (folder: typeof folders[0], depth: number): React.ReactNode => {
+                          const checkedCount = selectedArr.filter(id => getIds(id).includes(folder.id)).length;
+                          const allChecked = checkedCount === selectedArr.length && selectedArr.length > 0;
+                          const someChecked = checkedCount > 0 && !allChecked;
+                          const totalInFolder = items.filter(it => (itemFolderMap[it.id] ?? []).includes(folder.id)).length;
+                          const toAddCount = selectedArr.filter(id => !getIds(id).includes(folder.id)).length;
+                          const children = folders.filter(f => f.parentId === folder.id).sort((a, b) => a.orderIndex - b.orderIndex);
+                          const hasChildren = children.length > 0;
+                          const isExpanded = expandedPickerFolders.has(folder.id);
+
+                          const toggleFolder = () => {
+                            if (allChecked) {
+                              removeItemsFromFolder(selectedArr, folder.id);
+                            } else {
+                              assignItemsToFolder(selectedArr, folder.id);
+                            }
+                          };
+
+                          const toggleExpand = (e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            setExpandedPickerFolders(prev => {
+                              const next = new Set(prev);
+                              if (next.has(folder.id)) next.delete(folder.id);
+                              else next.add(folder.id);
+                              return next;
+                            });
+                          };
+
+                          return (
+                            <React.Fragment key={folder.id}>
+                              <div
+                                className="asb-pasta"
+                                onClick={toggleFolder}
+                                style={{ paddingLeft: `${14 + depth * 18}px` }}
+                              >
+                                <div
+                                  className="asb-pasta-seta"
+                                  data-tem-filhos={hasChildren ? "true" : undefined}
+                                  data-aberta={isExpanded ? "true" : undefined}
+                                  onClick={hasChildren ? toggleExpand : undefined}
+                                >
+                                  {hasChildren && (
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                      <path d="M9 18l6-6-6-6"/>
+                                    </svg>
+                                  )}
+                                </div>
+
+                                <svg
+                                  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+                                  className="asb-pasta-icone"
+                                  data-marcada={allChecked ? "todas" : someChecked ? "algumas" : undefined}
+                                  aria-hidden="true"
+                                >
+                                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                </svg>
+
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div className="asb-pasta-nome" data-marcada={(allChecked || someChecked) ? "true" : undefined}>
+                                    {folder.name}
+                                  </div>
+                                  <div className="asb-pasta-conta">
+                                    {!allChecked && toAddCount > 0
+                                      ? `${totalInFolder} → ${totalInFolder + toAddCount} ${totalInFolder + toAddCount === 1 ? "item" : "itens"}`
+                                      : `${totalInFolder} ${totalInFolder === 1 ? "item" : "itens"}`}
+                                  </div>
+                                </div>
+
+                                <div
+                                  className="asb-caixa"
+                                  role="checkbox"
+                                  aria-checked={allChecked ? true : someChecked ? "mixed" : false}
+                                  aria-label={`Manter a seleção em ${folder.name}`}
+                                  data-marcada={allChecked ? "todas" : someChecked ? "algumas" : undefined}
+                                  onClick={e => { e.stopPropagation(); toggleFolder(); }}
+                                >
+                                  {allChecked && (
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                      <path d="M20 6 9 17l-5-5"/>
+                                    </svg>
+                                  )}
+                                  {someChecked && !allChecked && (
+                                    <svg width="10" height="2" viewBox="0 0 10 2" fill="currentColor" aria-hidden="true">
+                                      <rect width="10" height="2" rx="1"/>
+                                    </svg>
+                                  )}
+                                </div>
+                              </div>
+                              {hasChildren && isExpanded && children.map(child => renderFolder(child, depth + 1))}
+                            </React.Fragment>
+                          );
+                        };
+
+                        const rootFolders = folders.filter(f => f.parentId === null).sort((a, b) => a.orderIndex - b.orderIndex);
+                        return rootFolders.map(f => renderFolder(f, 0));
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="asb-sep" style={{ marginLeft: "2px" }} />
+          <button
+            type="button"
+            className="asb-btn asb-btn--icone"
+            onClick={clearSelection}
+            title="Cancelar seleção"
+            aria-label="Cancelar seleção"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+  ), [
+    anySelected, assignItemsToFolder, expandedPickerFolders, folderPickerOpen, folders,
+    handleDeleteSelected, handleDownloadSelected, isMobile, itemFolderMap, items,
+    removeItemsFromFolder, selectedIds, state,
+  ]);
+
+  if (!authLoaded) return <div style={{ flex: 1, background: "var(--app-v2-bg-page)" }} />;
+
+
+  return (
+    <div className={`miora-gallery${showCreationHome ? " is-creation-view" : ""}`} style={{ flex: 1, background: "var(--app-v2-bg-page)", display: "flex", flexDirection: "column", overflow: "hidden", color: "var(--app-v2-text-primary)", position: "relative" }}>
+
+
+      {/* ── Cabeçalho do Acervo ──
+          Substitui a barra escura de 44px por um cabeçalho no chrome do
+          bloco 07 da referência: título no topo do scroller e uma linha
+          de controles de 32px, dentro de um container de 1310px. */}
+      {user && !showCreationHome && (
+        <AcervoHeader
+          title={acervoTitle}
+          count={filteredItems.length}
+          tab={tab}
+          onTabChange={nextTab => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("tab", nextTab);
+            router.replace(`${pathname}?${params.toString()}`);
+          }}
+          source={sourceFilter}
+          onSourceChange={src => {
+            setSourceFilter(src);
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("source", src);
+            router.replace(`${pathname}?${params.toString()}`);
+          }}
+          models={acervoModels}
+          model={acervoModel}
+          onModelChange={setAcervoModel}
+          sort={acervoSort}
+          onSortChange={setAcervoSort}
+          timeWindow={acervoWindow}
+          onTimeWindowChange={setAcervoWindow}
+          query={acervoQuery}
+          onQueryChange={setAcervoQuery}
+          zoom={zoom}
+          onZoomChange={setZoom}
+        />
+      )}
+
+      {/* ── Grid ── */}
+      {grade}
+
+      {/* ── Marquee selection overlay ── */}
+      {marqueeRect && (
+        <div style={{
+          position: "fixed",
+          left: marqueeRect.x,
+          top: marqueeRect.y,
+          width: marqueeRect.w,
+          height: marqueeRect.h,
+          border: "2px solid var(--app-v2-brand-solid)",
+          background: "hsl(var(--ms-brand-9) / .08)",
+          borderRadius: "var(--ms-radius-sm)",
+          pointerEvents: "none",
+          zIndex: 9999,
+        }} />
+      )}
+
+      {/* ── Hidden file input ── */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        style={{ display: "none" }}
+        onChange={e => { if (e.target.files) { handleFilePick(e.target.files); e.target.value = ""; } }}
+      />
+      <input ref={vidImgInputRef}   type="file" accept="image/*" multiple style={{ display: "none" }}
+        onChange={e => { if (e.target.files && vidPickTarget.current) { handleVidFilePick(e.target.files, vidPickTarget.current); e.target.value = ""; } }} />
+      <input ref={vidVideoInputRef} type="file" accept="video/*" multiple style={{ display: "none" }}
+        onChange={e => { if (e.target.files && vidPickTarget.current) { handleVidFilePick(e.target.files, vidPickTarget.current); e.target.value = ""; } }} />
+      <input ref={vidAudioInputRef} type="file" accept="audio/*" multiple style={{ display: "none" }}
+        onChange={e => { if (e.target.files && vidPickTarget.current) { handleVidFilePick(e.target.files, vidPickTarget.current); e.target.value = ""; } }} />
+
+      {/* ── A barra da seleção em lote ──────────────────────────────────
+           A referência não tem essa tela: a conta usada no recon do bloco 07
+           não tinha nenhum asset, então não há captura de card, de grade nem
+           de seleção em lote. O que se faz aqui é traduzir a barra que já
+           existia para o vocabulário do kit — superfície branca, sombra
+           média, os mesmos botões de 34px —, sem inventar nenhuma ação que
+           não estivesse lá. */}
+      {barraDeSelecao}
+
+      {/* ── Prompt bar ── */}
+      <div
+        className={`miora-prompt-wrap${showCreationHome ? " is-home-composer" : ""}${promptExpanded ? " is-expanded" : ""}`}
+        ref={promptBarRef}
+        style={{
+          position: "fixed",
+          bottom: promptExpanded ? "12.5vh" : "32px",
+          left: promptExpanded ? "50%" : (isMobile ? "50%" : state === "collapsed" ? "calc(var(--sidebar-width-icon) / 2 + 50%)" : "calc(var(--sidebar-width) / 2 + 50%)"),
+          transform: `translateX(-50%) translateY(${anySelected && !promptExpanded ? "200px" : "0"})`,
+          opacity: anySelected && !promptExpanded ? 0 : 1,
+          transition: "transform 350ms cubic-bezier(0.4,0,0.2,1), opacity 240ms ease, left 350ms cubic-bezier(0.4,0,0.2,1), width 350ms cubic-bezier(0.4,0,0.2,1), height 350ms cubic-bezier(0.4,0,0.2,1)",
+          pointerEvents: anySelected && !promptExpanded ? "none" : "auto",
+          /* 996px é a largura do shell na referência (`max-width:996px`). */
+          width: promptExpanded ? "min(1100px, calc(100vw - 32px))" : isMobile ? "calc(100vw - 24px)" : `min(996px, calc(100vw - ${state === "collapsed" ? "var(--sidebar-width-icon)" : "var(--sidebar-width)"} - 48px))`,
+          height: promptExpanded ? "75vh" : "auto",
+          zIndex: 200,
+        }}
+      >
+        {/* O herói do bloco 03: as abas de categoria à esquerda e a área do
+            mascote à direita, 20px acima do shell. Só na Home, como lá. */}
+        {isCreationView && (
+          <HeroCriar
+            valor={categoria}
+            onChange={(c) => { setCategoria(c); definirCategoria(c); }}
+          />
+        )}
+
+        {/* Erro da geração. Sinal em texto e tinta baixa — a regra do kit não
+            deixa cor de sinal ocupar área grande. */}
+        {genError && (
+          <div className="pcx-gen-error" role="alert">{genError}</div>
+        )}
+
+        {/* O cartão que o modo "Confirmar" abre antes de gastar a geração. */}
+        {confirmando && (
+          <CartaoConfirmacao
+            modelo={models.find(m => m.id === modelId)?.name ?? modelId}
+            parametros={paramSummary}
+            referencias={refImages.length + vidElements.length + vidResources.length
+              + vidRefVideos.length + vidRefAudios.length
+              + (vidStartFrame ? 1 : 0) + (vidEndFrame ? 1 : 0) + (vidVideoRef ? 1 : 0)}
+            onCancelar={() => setConfirmando(false)}
+            onConfirmar={() => { setConfirmando(false); void generate(); }}
+          />
+        )}
+
+        {/* O shell do bloco 03. É o mesmo componente que o /chat usa: a caixa,
+            o brilho de 4 camadas, o campo, o contador e o botão de envio saem
+            de lá. O que é do Acervo entra pelos slots — e é só isso que muda
+            entre as duas telas. */}
+        <ComposerShell
+          className={
+            "miora-composer composer-criar"
+            + (multiPromptMode ? " composer-criar--multi" : "")
+            + (promptTextMode !== "text" ? " composer-criar--mono" : "")
+          }
+          value={prompt}
+          onChange={(text) => {
+            setPrompt(text);
+            /* O cursor sai do próprio campo: quando o onChange dispara, a
+               posição já é a nova. */
+            if (!isVideo) {
+              const cursor = inputRef.current?.selectionStart ?? text.length;
+              const match = text.slice(0, cursor).match(/@(\w*)$/);
+              setMentionQuery(match ? match[1] : null);
+            }
+          }}
+          onSubmit={pedirGeracao}
+          disabled={!canGenerate}
+          /* Na referência o envio é um círculo de 24×24, sem texto. */
+          submitHint={null}
+          busy={submitting}
+          expanded={promptExpanded}
+          fieldBusy={polishState.polishing}
+          /* A referência liga o typewriter só na Home; no Acervo, com o feed
+             atrás, o texto correndo competiria com as miniaturas. Fora da
+             Home fica o placeholder parado. */
+          placeholder={
+            isCreationView
+              ? (categoria ? FRASES_POR_CATEGORIA[categoria] : FRASES_GERAIS)
+              : isVideo ? "Descreva o vídeo que você imagina…" : "Descreva a cena que você imagina…"
+          }
+          /* O contador é renderizado no `trailing`, antes do "melhorar":
+             no lugar do shell ele ficava entre o ditar e o enviar. */
+          maxLength={null}
+          submitLabel="Gerar"
+          submitOn="mod-enter"
+          textareaRef={fixarCampoPrompt}
+          onKeyDown={e => {
+            /* Com o painel de menções aberto, as setas e o Enter são dele. O
+               `preventDefault` cancela o envio do shell — é o escape que o
+               contrato prevê, não um substituto dele. */
+            if (!atMenuOpen) return;
+            if (e.key === "ArrowDown") { e.preventDefault(); setMentionSelIdx(i => (i + 1) % filteredMentions.length); return; }
+            if (e.key === "ArrowUp") { e.preventDefault(); setMentionSelIdx(i => (i - 1 + filteredMentions.length) % filteredMentions.length); return; }
+            if (e.key === "Enter") { e.preventDefault(); insertMention(filteredMentions[mentionSelIdx]); return; }
+            if (e.key === "Escape") { setMentionQuery(null); }
+          }}
+
+          /* ── Acima do campo ─────────────────────────────────────────── */
+          above={<>
+            {/* Limpar e expandir ficam no canto superior, ancorados na
+                superfície branca do shell. */}
+            {(prompt || refImages.length > 0 || taggedImages.length > 0 || vidElements.length > 0 || vidStartFrame || vidEndFrame || vidVideoRef || vidResources.length > 0 || vidRefVideos.length > 0 || vidRefAudios.length > 0) && (
+              <button
+                type="button"
+                className="pcx-corner pcx-corner--limpar"
+                aria-label="Limpar o prompt e os anexos"
+                title="Limpar"
+                onClick={() => {
+                  refImages.forEach(r => URL.revokeObjectURL(r.objectUrl));
+                  setPrompt("");
+                  setRefImages([]);
+                  setTaggedImages([]);
+                  setVidElements([]);
+                  setVidStartFrame(null);
+                  setVidEndFrame(null);
+                  setVidVideoRef(null);
+                  setVidResources([]);
+                  setVidRefVideos([]);
+                  setVidRefAudios([]);
+                }}
+              >
+                <X size={12} strokeWidth={2.5} />
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="pcx-corner"
+              aria-label={promptExpanded ? "Recolher o campo" : "Expandir o campo"}
+              title={promptExpanded ? "Recolher" : "Expandir"}
+              onClick={() => setPromptExpanded(v => !v)}
+            >
+              {promptExpanded ? <Minimize2 size={12} strokeWidth={2.2} /> : <Maximize2 size={12} strokeWidth={2.2} />}
+            </button>
+
+            {/* ── A trilha de anexos ────────────────────────────────────
+                Continua ladrilho a ladrilho, e isso é deliberado: cada
+                ladrilho é um ALVO DE SOLTURA. Quem arrasta uma imagem da
+                grade para o "Último quadro" precisa acertar aquele slot; um
+                "+" genérico transformaria um gesto preciso num palpite. O
+                que o "+" da barra dobra é a fila de sete BOTÕES, não os
+                alvos. */}
+            {trilhaDeAnexos}
+
+            {/* A tira "Multi ligado · N prompts" saiu. O campo da referência é
+                texto puro, sempre, e ela era uma faixa por cima dele. A
+                contagem não se perde: a pilha numerada abaixo já mostra um
+                bloco por prompt — a mesma leitura, sem cobrir o campo. */}
+
+            {/* A pilha de blocos do modo multi, separados por linha em branco. */}
+            {multiPromptMode && (() => {
+              const blocks = prompt.split(/\n\n+/).reduce<string[]>((acc, b) => {
+                if (!b.trim() && acc.some(x => !x.trim())) return acc; // no máximo um bloco vazio
+                return [...acc, b];
+              }, []);
+              let promptIndex = 0;
+              return (
+                <div data-prompt-stack="" className="pcx-pilha" style={{ maxHeight: promptExpanded ? "calc(75vh - 220px)" : "204px" }}>
+                  {blocks.map((block, blockIdx) => {
+                    const isNonEmpty = !!block.trim();
+                    const displayIdx = isNonEmpty ? ++promptIndex : null;
+                    const isExpanded = expandedPromptIdx === blockIdx;
+                    return (
+                      <div
+                        key={blockIdx}
+                        className="pcx-bloco"
+                        data-aberto={isExpanded ? "true" : undefined}
+                        data-vazio={isNonEmpty ? undefined : "true"}
+                        onClick={(e) => {
+                          const next = isExpanded ? null : blockIdx;
+                          setExpandedPromptIdx(next);
+                          if (next !== null) {
+                            requestAnimationFrame(() => {
+                              const stack = document.querySelector('[data-prompt-stack]');
+                              const ta = stack?.querySelectorAll<HTMLTextAreaElement>('textarea')[blockIdx];
+                              if (ta) ta.focus();
+                            });
+                          } else {
+                            const rowEl = e.currentTarget as HTMLElement;
+                            requestAnimationFrame(() => rowEl.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+                          }
+                        }}
+                      >
+                        <span className="pcx-bloco-num">
+                          {displayIdx !== null ? String(displayIdx).padStart(2, '0') : "—"}
+                        </span>
+                        <div data-block-wrapper="" style={{ flex: 1, position: "relative", minWidth: 0 }}>
+                        <textarea
+                          value={block}
+                          rows={1}
+                          data-prompt-input=""
+                          className="pcx-bloco-campo"
+                          aria-label={`Prompt ${displayIdx ?? blocks.length}`}
+                          placeholder={blockIdx === 0 && !isNonEmpty ? "Descreva a cena que você imagina…" : undefined}
+                          onClick={e => { if (isExpanded) e.stopPropagation(); }}
+                          onFocus={e => {
+                            activeBlockRef.current = e.currentTarget;
+                            activeBlockIdxRef.current = blockIdx;
+                            const ta = e.currentTarget;
+                            const cursor = ta.selectionStart ?? ta.value.length;
+                            const match = ta.value.slice(0, cursor).match(/@(\w*)$/);
+                            setMentionQuery(match ? match[1] : null);
+                          }}
+                          onSelect={e => {
+                            const ta = e.currentTarget;
+                            const cursor = ta.selectionStart ?? ta.value.length;
+                            const match = ta.value.slice(0, cursor).match(/@(\w*)$/);
+                            setMentionQuery(match ? match[1] : null);
+                          }}
+                          onScroll={e => {
+                            const st = e.currentTarget.scrollTop;
+                            const wrapper = (e.target as HTMLElement).closest('[data-block-wrapper]');
+                            if (promptTextMode !== "text") {
+                              const overlay = wrapper?.querySelector('[data-block-overlay]') as HTMLElement | null;
+                              if (overlay) overlay.style.transform = `translateY(-${st}px)`;
+                            } else {
+                              const overlay = wrapper?.querySelector('[data-block-text-overlay]') as HTMLElement | null;
+                              if (overlay) overlay.style.transform = `translateY(-${st}px)`;
+                            }
+                          }}
+                          onChange={e => {
+                            const newVal = e.target.value;
+                            const cursor = e.target.selectionStart ?? newVal.length;
+                            const match = newVal.slice(0, cursor).match(/@(\w*)$/);
+                            setMentionQuery(match ? match[1] : null);
+                            if (newVal.includes('\n\n')) {
+                              // Linha em branco dupla → abre um bloco novo
+                              const splitIdx = newVal.indexOf('\n\n');
+                              const before = newVal.slice(0, splitIdx);
+                              const after = newVal.slice(splitIdx + 2);
+                              const raw = [...blocks.slice(0, blockIdx), before, after, ...blocks.slice(blockIdx + 1)];
+                              const normalized = raw.reduce<string[]>((acc, b) => {
+                                if (!b.trim() && acc.some(x => !x.trim())) return acc;
+                                return [...acc, b];
+                              }, []);
+                              setPrompt(normalized.join('\n\n'));
+                              const focusIdx = blockIdx + 1;
+                              setExpandedPromptIdx(focusIdx);
+                              activeBlockIdxRef.current = focusIdx;
+                              requestAnimationFrame(() => {
+                                const stack = document.querySelector('[data-prompt-stack]');
+                                const rows = stack?.querySelectorAll<HTMLTextAreaElement>('textarea');
+                                const newRow = rows?.[focusIdx];
+                                if (newRow) {
+                                  activeBlockRef.current = newRow;
+                                  newRow.focus();
+                                  newRow.setSelectionRange(0, 0);
+                                }
+                              });
+                            } else {
+                              const updated = [...blocks];
+                              updated[blockIdx] = newVal;
+                              setPrompt(updated.join('\n\n'));
+                            }
+                          }}
+                          onKeyDown={e => {
+                            if (atMenuOpen) {
+                              if (e.key === "ArrowDown") { e.preventDefault(); setMentionSelIdx(i => (i + 1) % filteredMentions.length); return; }
+                              if (e.key === "ArrowUp") { e.preventDefault(); setMentionSelIdx(i => (i - 1 + filteredMentions.length) % filteredMentions.length); return; }
+                              if (e.key === "Enter") { e.preventDefault(); insertMention(filteredMentions[mentionSelIdx]); return; }
+                              if (e.key === "Escape") { setMentionQuery(null); return; }
+                            }
+                            if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !submitting) { e.preventDefault(); generate(); return; }
+                            if (e.key === "Enter" && !isExpanded) {
+                              // Enter abre o bloco recolhido em vez de inserir quebra
+                              e.preventDefault();
+                              setExpandedPromptIdx(blockIdx);
+                              requestAnimationFrame(() => {
+                                const stack = document.querySelector('[data-prompt-stack]');
+                                const ta = stack?.querySelectorAll<HTMLTextAreaElement>('textarea')[blockIdx];
+                                if (ta) {
+                                  ta.focus();
+                                  ta.setSelectionRange(ta.value.length, ta.value.length);
+                                }
+                              });
+                              return;
+                            }
+                            if ((e.key === "Backspace" || e.key === "Delete") && !block.trim() && blocks.length > 1) {
+                              e.preventDefault();
+                              const updated = blocks.filter((_, i) => i !== blockIdx);
+                              setPrompt(updated.join('\n\n'));
+                              const focusIdx = Math.max(0, blockIdx - 1);
+                              setExpandedPromptIdx(focusIdx);
+                              requestAnimationFrame(() => {
+                                const stack = document.querySelector('[data-prompt-stack]');
+                                const rows = stack?.querySelectorAll<HTMLTextAreaElement>('textarea');
+                                const target = rows?.[focusIdx];
+                                if (target) {
+                                  target.focus();
+                                  target.setSelectionRange(target.value.length, target.value.length);
+                                }
+                              });
+                            }
+                          }}
+                          disabled={submitting}
+                          style={(isExpanded
+                            ? { fieldSizing: "content", maxHeight: "330px", overflowY: "auto", scrollbarWidth: "none" }
+                            : { height: "20px", maxHeight: "20px", overflowY: "hidden", whiteSpace: "nowrap" }
+                          ) as React.CSSProperties}
+                        />
+                        {promptTextMode !== "text" ? (
+                          <div aria-hidden className="pcx-bloco-overlay">
+                            <div
+                              data-block-overlay=""
+                              className="pcx-bloco-overlay-inner"
+                              style={{ whiteSpace: isExpanded ? "pre-wrap" : "nowrap" }}
+                            >
+                              {promptTextMode === "yaml"
+                                ? syntaxHighlightYaml(block, taggedImages, (tag, rect) => setChipPreview({ tag, rect }), () => setChipPreview(null), tag => { const stack = document.querySelector('[data-prompt-stack]'); const ta = stack?.querySelectorAll<HTMLTextAreaElement>('textarea')[blockIdx]; if (!ta) return; activeBlockRef.current = ta; activeBlockIdxRef.current = blockIdx; const pos = block.indexOf(`@${tag.label}`); ta.focus(); ta.setSelectionRange(pos >= 0 ? pos + tag.label.length + 1 : block.length, pos >= 0 ? pos + tag.label.length + 1 : block.length); })
+                                : syntaxHighlightJson(block, taggedImages, (tag, rect) => setChipPreview({ tag, rect }), () => setChipPreview(null), tag => { const stack = document.querySelector('[data-prompt-stack]'); const ta = stack?.querySelectorAll<HTMLTextAreaElement>('textarea')[blockIdx]; if (!ta) return; activeBlockRef.current = ta; activeBlockIdxRef.current = blockIdx; const pos = block.indexOf(`@${tag.label}`); ta.focus(); ta.setSelectionRange(pos >= 0 ? pos + tag.label.length + 1 : block.length, pos >= 0 ? pos + tag.label.length + 1 : block.length); })}
+                            </div>
+                          </div>
+                        ) : (
+                          <div aria-hidden className="pcx-bloco-overlay">
+                            <div
+                              data-block-text-overlay=""
+                              className="pcx-bloco-overlay-inner"
+                              style={{ whiteSpace: isExpanded ? "pre-wrap" : "nowrap" }}
+                            >
+                              {renderGalleryMentions(
+                                block,
+                                taggedImages,
+                                (tag, rect) => setChipPreview({ tag, rect }),
+                                () => setChipPreview(null),
+                                tag => {
+                                  const stack = document.querySelector('[data-prompt-stack]');
+                                  const ta = stack?.querySelectorAll<HTMLTextAreaElement>('textarea')[blockIdx];
+                                  if (!ta) return;
+                                  activeBlockRef.current = ta;
+                                  activeBlockIdxRef.current = blockIdx;
+                                  const pos = block.indexOf(`@${tag.label}`);
+                                  ta.focus();
+                                  ta.setSelectionRange(pos >= 0 ? pos + tag.label.length + 1 : block.length, pos >= 0 ? pos + tag.label.length + 1 : block.length);
+                                },
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        </div>
+                        {isNonEmpty && promptMaxLength !== null && (
+                          <span
+                            className="pcx-bloco-conta"
+                            data-over={block.length > promptMaxLength ? "true" : undefined}
+                            data-solto={isExpanded ? "true" : undefined}
+                          >
+                            {block.length}/{promptMaxLength}
+                          </span>
+                        )}
+                        {blocks.length > 1 && (
+                          <button
+                            type="button"
+                            className="pcx-bloco-remover"
+                            aria-label={`Remover o prompt ${displayIdx ?? blockIdx + 1}`}
+                            onClick={e => {
+                              e.stopPropagation();
+                              const updated = blocks.filter((_, i) => i !== blockIdx);
+                              setPrompt(updated.join('\n\n'));
+                              setExpandedPromptIdx(prev => {
+                                if (prev === null) return null;
+                                if (prev === blockIdx) return null;
+                                return prev > blockIdx ? prev - 1 : prev;
+                              });
+                            }}
+                            disabled={submitting}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </>}
+
+          /* ── Sobre o campo: a camada de chips ────────────────────────
+             O texto do `textarea` fica transparente e quem se vê é esta
+             camada, que redesenha o mesmo texto com as menções viradas
+             chip. As duas precisam ter a MESMA métrica, então a fonte
+             das duas sai de `composer.css`, não daqui. */
+          overlay={<>
+            <div aria-hidden className="pcx-overlay">
+              <div ref={overlayInnerRef} className="pcx-overlay-inner">
+                {promptTextMode !== "text" ? (
+                  promptTextMode === "yaml"
+                    ? syntaxHighlightYaml(prompt, taggedImages, (tag, rect) => setChipPreview({ tag, rect }), () => setChipPreview(null), tag => { const idx = prompt.indexOf(`@${tag.label}`); const pos = idx >= 0 ? idx + tag.label.length + 1 : prompt.length; inputRef.current?.focus(); inputRef.current?.setSelectionRange(pos, pos); })
+                    : syntaxHighlightJson(prompt, taggedImages, (tag, rect) => setChipPreview({ tag, rect }), () => setChipPreview(null), tag => { const idx = prompt.indexOf(`@${tag.label}`); const pos = idx >= 0 ? idx + tag.label.length + 1 : prompt.length; inputRef.current?.focus(); inputRef.current?.setSelectionRange(pos, pos); })
+                ) : promptMaxLength !== null && prompt.length > promptMaxLength ? (
+                  <>
+                    {renderGalleryMentions(
+                      prompt.slice(0, promptMaxLength), taggedImages,
+                      (tag, rect) => setChipPreview({ tag, rect }),
+                      () => setChipPreview(null),
+                      tag => {
+                        const idx = prompt.indexOf(`@${tag.label}`);
+                        const pos = idx >= 0 ? idx + tag.label.length + 1 : prompt.length;
+                        inputRef.current?.focus();
+                        inputRef.current?.setSelectionRange(pos, pos);
+                      },
+                    )}
+                    <span className="pcx-excedente">{prompt.slice(promptMaxLength)}</span>
+                  </>
+                ) : renderGalleryMentions(
+                  prompt, taggedImages,
+                  (tag, rect) => setChipPreview({ tag, rect }),
+                  () => setChipPreview(null),
+                  tag => {
+                    const idx = prompt.indexOf(`@${tag.label}`);
+                    const pos = idx >= 0 ? idx + tag.label.length + 1 : prompt.length;
+                    inputRef.current?.focus();
+                    inputRef.current?.setSelectionRange(pos, pos);
+                  },
+                )}
+              </div>
+            </div>
+          </>}
+
+          /* ── A fila esquerda ────────────────────────────────────────
+               A ordem é a da referência, lida da esquerda para a direita:
+               1 anexar, 2 referências, 3 conectores — os três no mesmo
+               grupo de ícones — e a pílula 4, o modo de execução, logo
+               depois. Os números 5 a 8 estão na fila direita. */
+          leading={<>
+            {/* 1 — anexar: a porta única dos 7 slots de referência */}
+            {isVideo && addSlots.length > 1 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="pc-icon-btn" aria-label="Anexar referência" disabled={submitting}>
+                  <IconAttach />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="start" sideOffset={10} className="min-w-[220px]">
+                  {addSlots.map((slot, i) => (
+                    <button
+                      key={`add-${i}`}
+                      type="button"
+                      className="flex h-8 w-full items-center justify-between gap-4 rounded-ms px-2 text-ms-base text-ms-text transition-colors hover:bg-ms-bg-hover"
+                      onClick={() => {
+                        if (slot.kind === "element-add") { setElementPickerOpen(true); return; }
+                        if (slot.mediaKind === "audio") { vidPickTarget.current = slot.target; vidAudioInputRef.current?.click(); return; }
+                        openPicker(slot.target as "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo", slot.mediaKind as "image" | "video");
+                      }}
+                    >
+                      <span className="truncate">{slot.kind === "element-add" ? "Elemento" : rotuloSlot(slot.label).nome}</span>
+                      <span className="shrink-0 tabular-nums text-ms-text-tertiary">{slot.countLeft}</span>
+                    </button>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              /* Um slot só: abre o seletor direto. Menu de um item é
+                 atrito puro. */
+              <ComposerIconButton
+                label={isVideo && addSlots[0] ? `Anexar: ${addSlots[0].kind === "element-add" ? "elemento" : rotuloSlot(addSlots[0].label).nome}` : "Anexar imagem de referência"}
+                disabled={submitting || (isVideo ? addSlots.length === 0 : !imgModel?.supportsImages)}
+                onClick={() => {
+                  const unico = isVideo ? addSlots[0] : null;
+                  if (!unico) { openPicker("refImage", "image"); return; }
+                  if (unico.kind === "element-add") { setElementPickerOpen(true); return; }
+                  if (unico.mediaKind === "audio") { vidPickTarget.current = unico.target; vidAudioInputRef.current?.click(); return; }
+                  openPicker(unico.target as "startFrame" | "endFrame" | "resource" | "videoRef" | "referenceVideo", unico.mediaKind as "image" | "video");
+                }}
+              >
+                <IconAttach />
+              </ComposerIconButton>
+            )}
+
+            {/* 2 — referências: o painel de menções, que já existe */}
+            <ComposerIconButton
+              label="Mencionar uma referência"
+              open={mentionQuery !== null}
+              disabled={submitting || (taggedImages.length === 0 && refImages.length === 0)}
+              onClick={() => {
+                const el = inputRef.current;
+                if (!el) return;
+                const at = el.selectionStart ?? prompt.length;
+                setPrompt(prompt.slice(0, at) + "@" + prompt.slice(at));
+                setMentionQuery("");
+                requestAnimationFrame(() => {
+                  el.focus();
+                  el.setSelectionRange(at + 1, at + 1);
+                });
+              }}
+            >
+              <IconMention />
+            </ComposerIconButton>
+
+            {/* 3 — conectores: os três provedores, com o estado real da chave */}
+            <BotaoConectores aoAbrirAjustes={() => setSettingsOpen(true)} />
+
+            {/* 4 — modo de execução: gerar direto ou confirmar os parâmetros */}
+            <PilulaModoExecucao
+              valor={modoExecucao}
+              disabled={submitting}
+              onChange={(m) => { setModoExecucao(m); gravarModoExecucao(m); }}
+            />
+
+            {/* O contador é nosso, não da referência. Fica na ponta da fila
+                esquerda, onde sobra espaço: entre o ditar e o enviar ele era
+                um buraco de 63px no meio dos três botões que a referência
+                mantém encostados. */}
+            {promptMaxLength !== null && !multiPromptMode && (
+              <div className="pc-counter" data-over={prompt.length > promptMaxLength ? "true" : undefined} aria-hidden>
+                {prompt.length.toLocaleString("pt-BR")}/{promptMaxLength.toLocaleString("pt-BR")}
+              </div>
+            )}
+          </>}
+
+          /* ── A fila direita ─────────────────────────────────────────
+               5 modo agente, 6 melhorar, 7 ditado, 8 gerar — a ordem da
+               referência. Entre a 5 e a 6 entram os três controles que
+               são só nossos (parâmetros, formato do texto e multi), na
+               mesma forma de pílula, porque é onde eles pertencem: são
+               seletores de valor, como a 5. */
+          trailing={<>
+            {/* 5 — modo agente: quem raciocina e quem desenha */}
+            <ModelPill
+              value={modelId}
+              onChange={setModelId}
+              disabled={submitting}
+              padrao={models[0].id}
+              midias={linhasDeMidia}
+              agente={preferredModel}
+              onAgenteChange={setPreferredModel}
+              backend={modelHasProviderChoice(modelId) ? {
+                value: providerId,
+                onChange: (v: string) => setModelProvider(modelId, v as (typeof PROVIDERS)[number]["id"]),
+                options: PROVIDERS.map(p => ({ value: p.id, label: p.label, icon: <ProviderBackendIcon id={p.id} /> })),
+              } : null}
+
+              /* Os três que eram pílula na barra. A referência tem 8
+                 controles e nós tínhamos 11; sob a v2 a fidelidade vence,
+                 e a referência dobra tudo atrás do `Auto`. Continuam
+                 existindo e funcionando, só não ocupam a barra. */
+              parametros={paramFields}
+              formato={{
+                valor: promptTextMode,
+                opcoes: [
+                  { valor: "text", rotulo: "Txt" },
+                  { valor: "json", rotulo: "JSON" },
+                  { valor: "yaml", rotulo: "YAML" },
+                ],
+                onChange: (next: string) => {
+                  if (next === "json" && promptTextMode === "text") {
+                    /* Ao entrar em JSON, formata o que já der para formatar. */
+                    try {
+                      setPrompt(JSON.stringify(JSON.parse(prompt), null, 2));
+                    } catch { /* não era JSON válido — entra assim mesmo */ }
+                  }
+                  setPromptTextMode(next as typeof promptTextMode);
+                },
+              }}
+              multi={{
+                ligado: multiPromptMode,
+                onChange: (v: boolean) => { setMultiPromptMode(v); setExpandedPromptIdx(null); },
+              }}
+            />
+
+            {/* 6 — melhorar: reescreve o prompt, com o texto em streaming */}
+            <ComposerIconButton
+              label={polishState.polishing ? "Interromper a reescrita" : "Melhorar o prompt"}
+              open={polishState.polishing}
+              disabled={submitting || (!polishState.polishing && prompt.trim().length === 0)}
+              onClick={() => (polishState.polishing ? polishState.cancel() : polishState.polish(prompt))}
+            >
+              <IconPolish />
+            </ComposerIconButton>
+
+            {/* Desfazer só existe quando há o que desfazer. */}
+            {polishState.canUndo && !polishState.polishing && (
+              <button
+                type="button"
+                onClick={polishState.undo}
+                className="h-6 rounded-ms-full px-2 text-ms-sm text-ms-text-secondary transition-colors hover:bg-ms-bg-hover"
+              >
+                Desfazer
+              </button>
+            )}
+            {polishState.error && (
+              <span className="truncate text-ms-sm text-ms-text-danger">{polishState.error}</span>
+            )}
+
+            {/* 7 — ditado: a Web Speech API do próprio navegador */}
+            <BotaoDitado
+              disabled={submitting}
+              onTexto={(trecho) => setPrompt(p => (p ? `${p} ${trecho}` : trecho))}
+            />
+          </>}
+        />
+      </div>
+
+      {showCreationHome && <CreationSuggestions />}
+
+      <style>{GALLERY_CSS}</style>
+
+      {/* ── O painel de menções — a afordância 2 da barra ────────────────
+           Ele é ancorado no shell do composer e desenhado num portal, porque
+           o `overflow: clip` do shell (o recorte que segura o brilho de 4
+           camadas) cortaria qualquer painel filho. */}
+      {atMenuOpen && promptBarRef.current && createPortal(
+        <div
+          data-at-menu=""
+          className="pcx-mencoes"
+          style={{
+            left: promptBarRef.current.getBoundingClientRect().left,
+            bottom: Math.max(8, window.innerHeight - promptBarRef.current.getBoundingClientRect().top + 6),
+            width: promptBarRef.current.getBoundingClientRect().width,
+            maxHeight: `${promptBarRef.current.getBoundingClientRect().top - 16}px`,
+          }}
+          onMouseDown={e => e.preventDefault()}
+        >
+          <div className="pcx-mencoes-titulo">
+            {isVideo ? "Referências anexadas" : "Imagens do acervo"}
+          </div>
+          <div className="pcx-mencoes-lista">
+            {filteredMentions.map((ref, idx) => (
+              <button
+                key={ref.id}
+                type="button"
+                className="pcx-mencao"
+                data-ativa={idx === mentionSelIdx ? "true" : undefined}
+                onClick={() => insertMention(ref)}
+                onMouseEnter={() => setMentionSelIdx(idx)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={thumbSrc(ref.objectUrl, snapWidth(128))} alt="" className="pcx-mencao-thumb" />
+                <span className="pcx-mencao-nome">
+                  {ref.role} ({ref.label})
+                </span>
+                {idx === mentionSelIdx && <span className="pcx-mencao-enter" aria-hidden>↵</span>}
+              </button>
+            ))}
+          </div>
+        </div>,
+        document.body,
+      )}
+
+      {/* ── A prévia do chip, no hover ───────────────────────────────── */}
+      {chipPreview && createPortal(
+        /* A camada de fora só posiciona; sem animação, para o `transform`
+           não brigar com o `translateX(-50%)`. */
+        <div
+          className="pcx-chip-previa"
+          style={{
+            left: Math.max(110, Math.min(
+              chipPreview.rect.left + chipPreview.rect.width / 2,
+              window.innerWidth - 110,
+            )),
+            ...(chipPreview.rect.top > 190
+              ? { bottom: window.innerHeight - chipPreview.rect.top + 8 }
+              : { top: chipPreview.rect.bottom + 8 }),
+          }}
+        >
+          <div
+            className="pcx-chip-previa-caixa"
+            style={{
+              maxHeight: chipPreview.rect.top > 190
+                ? `${Math.min(200, chipPreview.rect.top - 16)}px`
+                : `${Math.min(200, window.innerHeight - chipPreview.rect.bottom - 16)}px`,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={thumbSrc(chipPreview.tag.url, snapWidth(256))} alt="" className="pcx-chip-previa-img" />
+          </div>
+        </div>,
+        document.body,
+      )}
+
+      {lightboxItem && (() => {
+        const idx = orderedGalleryItems.findIndex(i => i.id === lightboxItem.id);
+        return (
+          <Lightbox
+            item={lightboxItem}
+            thumbUrl={lightboxThumb}
+            onClose={() => setLightboxItem(null)}
+            onCopyPrompt={handleCopyPrompt}
+            onPrev={idx > 0 ? () => {
+              const prev = orderedGalleryItems[idx - 1];
+              setLightboxItem(prev);
+              setLightboxThumb(thumbSrc(prev.imageUrls?.[0] ?? prev.url, snapWidth(300)));
+            } : undefined}
+            onNext={idx < orderedGalleryItems.length - 1 ? () => {
+              const next = orderedGalleryItems[idx + 1];
+              setLightboxItem(next);
+              setLightboxThumb(thumbSrc(next.imageUrls?.[0] ?? next.url, snapWidth(300)));
+            } : undefined}
+          />
+        );
+      })()}
+
+      {/* Ref media preview modal */}
+      {refPreview && (
+        <div
+          data-prompt-overlay=""
+          onClick={() => setRefPreview(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 99000,
+            background: "var(--ms-blackA-10-hex)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            animation: "fadeIn 150ms ease",
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: "relative",
+              maxWidth: "90vw", maxHeight: "90vh",
+              borderRadius: "var(--ms-radius-lg)", overflow: "hidden",
+              boxShadow: "var(--ms-shadow-lg)",
+              animation: "dropIn 160ms cubic-bezier(0.16,1,0.3,1)",
+            }}
+          >
+            {refPreview.mediaKind === "video" ? (
+              <video
+                src={refPreview.url}
+                controls
+                autoPlay
+                style={{ display: "block", maxWidth: "90vw", maxHeight: "90vh" }}
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={refPreview.url}
+                alt=""
+                style={{ display: "block", maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain" }}
+              />
+            )}
+            <button
+              onClick={() => setRefPreview(null)}
+              style={{
+                position: "absolute", top: "10px", right: "10px",
+                width: "32px", height: "32px", borderRadius: "50%",
+                background: "var(--ms-blackA-7-hex)", border: "none",
+                color: "var(--ms-icon-on-solid)", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                padding: 0,
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M18 6 6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Duration picker popover — portal so it escapes overflow/transform ancestors */}
+
+      <MediaPickerModal
+        open={pickerOpen}
+        mediaKind={pickerUploadKind}
+        onClose={() => setPickerOpen(false)}
+        onPickUrl={handlePickerSelect}
+        onDeselect={handlePickerDeselect}
+        onUpload={handlePickerUpload}
+        anchorRef={promptBarRef}
+        selectedUrls={
+          pickerTarget === "refImage" ? refImages.filter(r => r.cdnUrl).map(r => r.cdnUrl!) :
+          pickerTarget === "resource" ? vidResources.filter(r => r.cdnUrl).map(r => r.cdnUrl!) :
+          pickerTarget === "referenceVideo" ? vidRefVideos.filter(r => r.cdnUrl).map(r => r.cdnUrl!) :
+          undefined
+        }
+        maxCount={
+          pickerTarget === "refImage" ? maxImgs :
+          pickerTarget === "resource" ? (vidModel?.maxResources ?? 3) :
+          pickerTarget === "referenceVideo" ? (vidModel?.maxReferenceVideos ?? 3) :
+          undefined
+        }
+      />
+
+      <ElementPickerModal
+        open={elementPickerOpen}
+        attached={vidElements}
+        onClose={() => setElementPickerOpen(false)}
+        onAttach={el => {
+          setVidElements(prev => prev.some(e => e.id === el.id) ? prev : [...prev, el]);
+          setElementPickerOpen(false);
+        }}
+      />
+
+      <DownloadToast downloads={downloads} onClear={() => setDownloads([])} />
+
+      {refError && (
+        <div style={{
+          position: "fixed",
+          top: "64px",
+          right: "16px",
+          zIndex: 9600,
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "10px 14px",
+          borderRadius: "var(--ms-radius-lg)",
+          background: "var(--ms-bg)",
+          border: "1px solid var(--ms-border-danger)",
+          boxShadow: "var(--ms-shadow-md)",
+          fontSize: "var(--ms-text-md)",
+          color: "var(--ms-text-danger)",
+          fontFamily: "inherit",
+          letterSpacing: "-0.01em",
+          animation: "dropIn 160ms cubic-bezier(0.16,1,0.3,1)",
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
+          </svg>
+          {refError}
+        </div>
+      )}
+
+      <QuickAssist />
+    </div>
+  );
+}
+
+export default function GalleryPage() {
+  return (
+    <Suspense fallback={<div style={{ flex: 1, background: "var(--app-v2-bg-page)" }} />}>
+      <GalleryInner />
+    </Suspense>
+  );
+}
+
+// ── Element picker modal ─────────────────────────────────────────────────────
+
+function ElementPickerModal({
+  open,
+  attached,
+  onClose,
+  onAttach,
+}: {
+  open: boolean;
+  attached: KlingElement[];
+  onClose: () => void;
+  onAttach: (el: KlingElement) => void;
+}) {
+  const [view, setView] = useState<"browse" | "create">("browse");
+  const [elements, setElements] = useState<KlingElement[]>([]);
+
+  // Create form state
+  const [createName, setCreateName] = useState("");
+  const [createDesc, setCreateDesc] = useState("");
+  const [createImages, setCreateImages] = useState<{ id: string; objectUrl: string; cdnUrl: string | null; uploading: boolean; error: boolean }[]>([]);
+  const [creating, setCreating] = useState(false);
+  const createFileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setView("browse");
+    setElements(loadKlingElements());
+    setCreateName("");
+    setCreateDesc("");
+    setCreateImages([]);
+    setCreating(false);
+  }, [open]);
+
+  if (!open) return null;
+
+  const handleDeleteElement = (id: string) => {
+    const updated = elements.filter(e => e.id !== id);
+    setElements(updated);
+    saveKlingElements(updated);
+  };
+
+  const handleCreateImages = async (files: FileList) => {
+    const remaining = 4 - createImages.length;
+    const toAdd = Array.from(files).slice(0, remaining).filter(
+      f => (f.type === "image/jpeg" || f.type === "image/png") && f.size <= 10 * 1024 * 1024
+    );
+    if (!toAdd.length) return;
+    const newEntries = toAdd.map(f => ({
+      id: randomUUID(),
+      objectUrl: URL.createObjectURL(f),
+      cdnUrl: null as string | null,
+      uploading: true,
+      error: false,
+    }));
+    setCreateImages(prev => [...prev, ...newEntries]);
+    const token = await getToken();
+    await Promise.all(toAdd.map(async (file, i) => {
+      const entry = newEntries[i];
+      try {
+        const res = await fetch("/api/upload-asset", {
+          method: "POST",
+          headers: { "Content-Type": file.type, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: file,
+        });
+        const data = await res.json() as { cdnUrl?: string; error?: string };
+        if (!res.ok || !data.cdnUrl) throw new Error(data.error ?? "Upload failed");
+        setCreateImages(prev => prev.map(e => e.id === entry.id ? { ...e, cdnUrl: data.cdnUrl!, uploading: false } : e));
+      } catch {
+        setCreateImages(prev => prev.map(e => e.id === entry.id ? { ...e, uploading: false, error: true } : e));
+      }
+    }));
+  };
+
+  const readyImages = createImages.filter(e => e.cdnUrl && !e.error);
+  const canCreate = createName.trim().length > 0
+    && readyImages.length >= 2
+    && !createImages.some(e => e.uploading)
+    && !creating;
+
+  const handleCreate = () => {
+    if (!canCreate) return;
+    setCreating(true);
+    const newEl: KlingElement = {
+      id: randomUUID(),
+      name: createName.trim(),
+      description: createDesc.trim(),
+      imageUrls: readyImages.map(e => e.cdnUrl!),
+    };
+    const updated = [...loadKlingElements(), newEl];
+    saveKlingElements(updated);
+    createImages.forEach(e => URL.revokeObjectURL(e.objectUrl));
+    onAttach(newEl);
+  };
+
+  return createPortal(
+    <div data-prompt-overlay="" style={{ position: "fixed", inset: 0, zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+      <div onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }} style={{ position: "absolute", inset: 0, pointerEvents: "auto" }} />
+      <div data-element-picker-modal="" style={{
+        position: "relative",
+        width: "min(520px, calc(100vw - 32px))",
+        maxHeight: "80vh",
+        background: "rgba(15, 15, 26,0.98)",
+        border: "1px solid rgba(255,255,255,0.09)",
+        borderRadius: "18px",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        boxShadow: "0 32px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.04)",
+        pointerEvents: "auto",
+      }}>
+        {/* Header */}
+        <div style={{ padding: "16px 18px 14px", display: "flex", alignItems: "center", gap: "10px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
+          {view === "create" && (
+            <button onClick={() => setView("browse")} style={{ width: "28px", height: "28px", borderRadius: "50%", background: "rgba(255,255,255,0.07)", border: "none", color: "rgba(255,255,255,0.6)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 120ms" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.13)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+          )}
+          <span style={{ fontSize: "14px", fontWeight: 600, color: "#fff", letterSpacing: "-0.01em" }}>
+            {view === "browse" ? "Elements" : "New Element"}
+          </span>
+          <button onClick={onClose} style={{ marginLeft: "auto", width: "28px", height: "28px", borderRadius: "50%", background: "rgba(255,255,255,0.07)", border: "none", color: "rgba(255,255,255,0.6)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 120ms" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.13)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        {view === "browse" ? (
+          /* ── Browse view ── */
+          <div className="picker-scroll" style={{ flex: 1, overflowY: "auto", padding: "16px 18px 18px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px" }}>
+              {/* Create new card */}
+              <button onClick={() => setView("create")} style={{
+                aspectRatio: "1", borderRadius: "10px", border: "1.5px dashed rgba(255,255,255,0.16)",
+                background: "rgba(255,255,255,0.025)", cursor: "pointer",
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px",
+                color: "rgba(255,255,255,0.5)", transition: "background 150ms, border-color 150ms, color 150ms", padding: 0,
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.055)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"; e.currentTarget.style.color = "rgba(255,255,255,0.85)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.025)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)"; e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}>
+                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "rgba(255,255,255,0.09)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                </div>
+                <span style={{ fontSize: "11px", fontWeight: 500 }}>New element</span>
+              </button>
+
+              {/* Element cards */}
+              {elements.map(el => {
+                const isAttached = attached.some(a => a.id === el.id);
+                const atMax = attached.length >= 3 && !isAttached;
+                return (
+                  <div key={el.id} style={{ position: "relative", aspectRatio: "1" }}>
+                    <button
+                      onClick={() => { if (!isAttached && !atMax) onAttach(el); }}
+                      disabled={isAttached || atMax}
+                      style={{
+                        width: "100%", height: "100%", borderRadius: "10px", overflow: "hidden",
+                        border: isAttached ? "2px solid #01b574" : "2px solid transparent",
+                        background: "#171728", cursor: isAttached || atMax ? "default" : "pointer",
+                        padding: 0, display: "block", position: "relative",
+                        transition: "border-color 110ms, opacity 110ms",
+                        opacity: atMax ? 0.4 : 1,
+                      }}
+                      onMouseEnter={e => { if (!isAttached && !atMax) e.currentTarget.style.borderColor = "rgba(255,255,255,0.5)"; }}
+                      onMouseLeave={e => { if (!isAttached) e.currentTarget.style.borderColor = "transparent"; }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={el.imageUrls[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      {el.imageUrls.length > 1 && (
+                        <div style={{ position: "absolute", top: "5px", left: "5px", background: "rgba(0,0,0,0.65)", borderRadius: "4px", padding: "1px 5px", fontSize: "9px", fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>
+                          {el.imageUrls.length}
+                        </div>
+                      )}
+                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "14px 6px 5px", background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)" }}>
+                        <span style={{ fontSize: "10px", fontWeight: 600, color: "rgba(255,255,255,0.9)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{el.name}</span>
+                      </div>
+                      {isAttached && (
+                        <div style={{ position: "absolute", top: "5px", right: "5px", width: "18px", height: "18px", borderRadius: "50%", background: "#01b574", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                      )}
+                    </button>
+                    {/* Delete button */}
+                    <button onClick={e => { e.stopPropagation(); handleDeleteElement(el.id); }} style={{
+                      position: "absolute", bottom: "5px", right: "5px", width: "20px", height: "20px",
+                      borderRadius: "50%", background: "rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.15)",
+                      color: "rgba(255,255,255,0.7)", cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", padding: 0, transition: "background 120ms, color 120ms",
+                      zIndex: 2,
+                    }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,40,40,0.85)"; e.currentTarget.style.color = "#fff"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0.7)"; e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}>
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                );
+              })}
+
+              {elements.length === 0 && (
+                <div style={{ gridColumn: "1 / -1", padding: "32px 0", textAlign: "center", color: "rgba(255,255,255,0.22)", fontSize: "13px" }}>
+                  No elements yet — create your first one
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* ── Create view ── */
+          <div className="picker-scroll" style={{ flex: 1, overflowY: "auto", padding: "16px 18px 18px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Images */}
+            <div>
+              <div style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" as const, color: "rgba(255,255,255,0.4)", marginBottom: "8px" }}>Images (2–4 · JPG/PNG · max 10 MB each)</div>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" as const }}>
+                {createImages.map((img, i) => (
+                  <div key={img.id} style={{ position: "relative", width: "72px", height: "72px", borderRadius: "8px", overflow: "hidden", border: img.error ? "1px solid rgba(255, 138, 138,0.4)" : "1px solid rgba(255,255,255,0.12)", background: "#171728", flexShrink: 0 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.objectUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    {img.uploading && (
+                      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ width: "14px", height: "14px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.8)", display: "inline-block", animation: "spin 0.75s linear infinite" }} />
+                      </div>
+                    )}
+                    {img.error && (
+                      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff8a8a" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                      </div>
+                    )}
+                    <button onClick={() => setCreateImages(prev => { URL.revokeObjectURL(img.objectUrl); return prev.filter((_, j) => j !== i); })} style={{
+                      position: "absolute", top: "3px", right: "3px", width: "16px", height: "16px",
+                      borderRadius: "50%", background: "rgba(0,0,0,0.7)", border: "none",
+                      color: "rgba(255,255,255,0.85)", cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
+                    }}>
+                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                ))}
+                {createImages.length < 4 && (
+                  <button onClick={() => { createFileRef.current?.click(); }} style={{
+                    width: "72px", height: "72px", borderRadius: "8px", flexShrink: 0,
+                    border: "1.5px dashed rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.025)",
+                    cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px",
+                    color: "rgba(255,255,255,0.4)", transition: "background 140ms, border-color 140ms, color 140ms",
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.055)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"; e.currentTarget.style.color = "rgba(255,255,255,0.8)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.025)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"; e.currentTarget.style.color = "rgba(255,255,255,0.4)"; }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    <span style={{ fontSize: "9px", fontWeight: 600, letterSpacing: "0.04em" }}>ADD</span>
+                  </button>
+                )}
+              </div>
+              <input ref={createFileRef} type="file" accept="image/jpeg,image/png" multiple style={{ display: "none" }}
+                onChange={e => { if (e.target.files) { handleCreateImages(e.target.files); e.target.value = ""; } }} />
+            </div>
+
+            {/* Name */}
+            <div>
+              <div style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" as const, color: "rgba(255,255,255,0.4)", marginBottom: "8px" }}>Name</div>
+              <input
+                value={createName}
+                onChange={e => setCreateName(e.target.value)}
+                placeholder="Element name"
+                maxLength={50}
+                style={{
+                  width: "100%", padding: "9px 12px", borderRadius: "8px",
+                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                  color: "#fff", fontSize: "13.5px", fontFamily: "inherit", outline: "none",
+                  boxSizing: "border-box" as const,
+                }}
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <div style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" as const, color: "rgba(255,255,255,0.4)", marginBottom: "8px" }}>Description</div>
+              <textarea
+                value={createDesc}
+                onChange={e => setCreateDesc(e.target.value)}
+                placeholder="Describe this element…"
+                rows={3}
+                maxLength={500}
+                style={{
+                  width: "100%", padding: "9px 12px", borderRadius: "8px",
+                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                  color: "#fff", fontSize: "13.5px", fontFamily: "inherit", outline: "none",
+                  resize: "none", boxSizing: "border-box" as const,
+                }}
+              />
+            </div>
+
+            {/* Create button */}
+            <button
+              onClick={handleCreate}
+              disabled={!canCreate}
+              style={{
+                padding: "10px 24px", borderRadius: "10px", border: "none",
+                background: canCreate ? "#01b574" : "rgba(255,255,255,0.08)",
+                color: canCreate ? "#000" : "rgba(255,255,255,0.3)",
+                fontSize: "13.5px", fontWeight: 600, fontFamily: "inherit",
+                cursor: canCreate ? "pointer" : "not-allowed", transition: "background 150ms, color 150ms",
+                alignSelf: "flex-start" as const,
+              }}>
+              {creating ? "Creating…" : "Create element"}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
+
+/** Backend brand mark for the Kie.ai/Azure Foundry/Codex CLI picker — distinct from ProviderIcon's model-brand icons. */
+function ProviderBackendIcon({ id }: { id: (typeof PROVIDERS)[number]["id"] }) {
+  if (id === "kie") {
+    return (
+      <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "14px", height: "14px", fontSize: "11px", fontWeight: 700 }}>
+        K
+      </span>
+    );
+  }
+  if (id === "codex") {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd">
+        <path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z" />
+      </svg>
+    );
+  }
+  if (id === "azure") {
+    return (
+      <svg width="14" height="14" viewBox="0 0 256 199">
+        <path d="M118.432 187.698c32.89-5.81 60.055-10.618 60.367-10.684l.568-.12l-31.052-36.935c-17.078-20.314-31.051-37.014-31.051-37.11c0-.182 32.063-88.477 32.243-88.792c.06-.105 21.88 37.567 52.893 91.32c29.035 50.323 52.973 91.815 53.195 92.203l.405.707l-98.684-.012l-98.684-.013l59.8-10.564zM0 176.435c0-.052 14.631-25.451 32.514-56.442l32.514-56.347l37.891-31.799C123.76 14.358 140.867.027 140.935.001c.069-.026-.205.664-.609 1.534s-18.919 40.582-41.145 88.25l-40.41 86.67l-29.386.037c-16.162.02-29.385-.005-29.385-.057z" fill="#1B84FF" fillRule="nonzero" />
+      </svg>
+    );
+  }
+  return null;
+}
+
+function ProviderIcon({ provider }: { provider: string }) {
+  switch (provider) {
+    case "OpenAI":
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path fillRule="evenodd" clipRule="evenodd" d="M22.408 9.80741C22.9487 8.17778 22.7685 6.37037 21.8974 4.88889C20.5758 2.60741 17.9024 1.45185 15.2891 1.98519C14.1477 0.711111 12.4656 0 10.7234 0C8.0501 0 5.70717 1.68889 4.86612 4.17778C3.15398 4.53333 1.68214 5.57037 0.811051 7.08148C-0.510601 9.36296 -0.210226 12.2074 1.56199 14.163C1.02131 15.8222 1.23158 17.6 2.10267 19.0815C3.42432 21.363 6.09766 22.5481 8.71093 21.9852C9.88239 23.2593 11.5345 24 13.2766 24C15.95 24 18.2929 22.3111 19.134 19.8222C20.8461 19.4667 22.3179 18.4296 23.189 16.9185C24.5107 14.637 24.2103 11.763 22.408 9.80741ZM13.2766 22.4296C12.1953 22.4296 11.174 22.0741 10.363 21.3926C10.393 21.363 10.4831 21.3333 10.5132 21.3037L15.3492 18.5481C15.5895 18.4 15.7397 18.163 15.7397 17.8667V11.1407L17.7823 12.2963C17.8123 12.2963 17.8123 12.3259 17.8123 12.3556V17.9259C17.8423 20.4148 15.7998 22.4296 13.2766 22.4296ZM3.48439 18.3111C2.94372 17.3926 2.76349 16.3259 2.94372 15.2889C2.97375 15.3185 3.03383 15.3481 3.0939 15.3778L7.92995 18.1333C8.17025 18.2815 8.47063 18.2815 8.71093 18.1333L14.6283 14.7556V17.0963C14.6283 17.1259 14.6283 17.1556 14.5983 17.1556L9.70216 19.9407C7.53946 21.1852 4.74597 20.4444 3.48439 18.3111ZM2.22282 7.88148C2.76349 6.96296 3.60454 6.28148 4.59578 5.8963V11.5852C4.59578 11.8519 4.74597 12.1185 4.98627 12.2667L10.9037 15.6444L8.86111 16.8C8.83108 16.8 8.80104 16.8296 8.80104 16.8L3.90492 14.0148C1.68214 12.7704 0.961239 10.0148 2.22282 7.88148ZM19.0438 11.7333L13.1264 8.35556L15.169 7.2C15.199 7.2 15.2291 7.17037 15.2291 7.2L20.1252 9.98519C22.3179 11.2296 23.0388 13.9852 21.7773 16.1185C21.2366 17.037 20.3955 17.7185 19.4043 18.0741V12.4148C19.4343 12.1481 19.2841 11.8815 19.0438 11.7333ZM21.0564 8.71111C21.0263 8.68148 20.9662 8.65185 20.9062 8.62222L16.0701 5.86667C15.8298 5.71852 15.5294 5.71852 15.2891 5.86667L9.37175 9.24444V6.9037C9.37175 6.87407 9.37175 6.84444 9.40179 6.84444L14.2979 4.05926C16.4906 2.81481 19.2541 3.55556 20.5157 5.71852C21.0564 6.60741 21.2366 7.67407 21.0564 8.71111ZM8.26036 12.8593L6.21781 11.7037C6.18777 11.7037 6.18777 11.6741 6.18777 11.6444V6.07407C6.18777 3.58519 8.23032 1.57037 10.7535 1.57037C11.8348 1.57037 12.8561 1.92593 13.6671 2.60741C13.6371 2.63704 13.577 2.66667 13.5169 2.6963L8.68089 5.45185C8.44059 5.6 8.2904 5.83704 8.2904 6.13333V12.8593H8.26036ZM9.37175 10.4889L12.0151 8.97778L14.6584 10.4889V13.4815L12.0151 14.9926L9.37175 13.4815V10.4889Z" />
+        </svg>
+      );
+    case "Google":
+      return (
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M2.55464 6.25768C3.24798 4.87705 4.31161 3.71644 5.62666 2.90557C6.94171 2.0947 8.45636 1.66553 10.0013 1.66602C12.2471 1.66602 14.1338 2.49102 15.5763 3.83685L13.1871 6.22685C12.323 5.40102 11.2246 4.98018 10.0013 4.98018C7.83047 4.98018 5.99297 6.44685 5.3388 8.41602C5.17214 8.91602 5.07714 9.44935 5.07714 9.99935C5.07714 10.5493 5.17214 11.0827 5.3388 11.5827C5.9938 13.5527 7.83047 15.0185 10.0013 15.0185C11.1221 15.0185 12.0763 14.7227 12.823 14.2227C13.2558 13.9377 13.6264 13.5679 13.9123 13.1356C14.1982 12.7033 14.3935 12.2176 14.4863 11.7077H10.0013V8.48435H17.8496C17.948 9.02935 18.0013 9.59768 18.0013 10.1885C18.0013 12.7268 17.093 14.8635 15.5163 16.3135C14.138 17.5868 12.2513 18.3327 10.0013 18.3327C8.90683 18.3331 7.823 18.1179 6.81176 17.6992C5.80051 17.2806 4.88168 16.6668 4.10777 15.8929C3.33386 15.119 2.72005 14.2001 2.30141 13.1889C1.88278 12.1777 1.66753 11.0938 1.66797 9.99935C1.66797 8.65435 1.98964 7.38268 2.55464 6.25768Z" />
+        </svg>
+      );
+    case "Seedream":
+      return (
+        <svg width="16" height="16" viewBox="0 0 14 14" fill="currentColor">
+          <path d="M2.7601 10.635L0.466553 11.2084V1.04883L2.7601 1.62222V10.635Z" />
+          <path d="M13.8448 11.2295L11.5469 11.8029V0.454102L13.8448 1.02324V11.2295Z" />
+          <path d="M6.39853 10.9452L4.10498 11.5186V5.53418L6.39853 6.10752V10.9452Z" />
+          <path d="M7.89722 4.64663L10.1952 4.07324V10.0577L7.89722 9.48433V4.64663Z" />
+        </svg>
+      );
+    case "Z-AI":
+      return (
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M19.9361 12.1411L17.6243 8.09523L17.3525 7.61735L18.5771 5.47657C18.6187 5.4023 18.6411 5.32158 18.6411 5.23763C18.6411 5.15367 18.6187 5.07295 18.5771 4.99868L17.215 2.61896C17.1735 2.5447 17.1127 2.48658 17.0424 2.4446C16.972 2.40262 16.8921 2.38002 16.8058 2.38002H11.6323L10.4077 0.236011C10.3245 0.0874804 10.1679 -0.00292969 9.9984 -0.00292969H7.27738C7.19425 -0.00292969 7.11111 0.0196728 7.04077 0.0616489C6.97042 0.103625 6.90967 0.161746 6.86811 0.236011L4.55316 4.28509L4.28138 4.75974H1.83213C1.749 4.75974 1.66587 4.78235 1.59552 4.82432C1.52518 4.8663 1.46443 4.92442 1.42286 4.99868L0.0639488 7.38164C0.0223821 7.4559 0 7.53663 0 7.62058C0 7.70453 0.0223821 7.78525 0.0639488 7.85952L2.65068 12.3833L1.42606 14.5273C1.38449 14.6015 1.36211 14.6823 1.36211 14.7662C1.36211 14.8502 1.38449 14.9309 1.42606 15.0051L2.78817 17.3849C2.82974 17.4591 2.89049 17.5173 2.96083 17.5592C3.03118 17.6012 3.11111 17.6238 3.19744 17.6238H8.36771L9.59233 19.7678C9.67546 19.9163 9.83214 20.0068 10.0016 20.0068H12.7226C12.8058 20.0068 12.8889 19.9842 12.9592 19.9422C13.0296 19.9002 13.0903 19.8421 13.1319 19.7678L15.7186 15.2441H18.1679C18.251 15.2441 18.3341 15.2215 18.4045 15.1795C18.4748 15.1375 18.5356 15.0794 18.5771 15.0051L19.9393 12.6254C19.9808 12.5512 20.0032 12.4704 20.0032 12.3865C20.0032 12.3025 19.9808 12.2218 19.9393 12.1475L19.9361 12.1411ZM7.27738 0.474952L8.63949 2.8579L7.27738 5.23763H18.1679L16.8058 7.61735H6.45883L4.82494 4.75974L7.27738 0.474952ZM8.09273 17.1395H3.19424L4.55636 14.7565H7.27738L1.83213 5.23763H4.55316L5.91527 7.61735L9.72662 14.2851L8.09273 17.1427V17.1395ZM16.8058 12.3768L15.4468 9.99707L10.0016 19.5224L8.63949 17.1427L10.0016 14.763L13.813 8.09523H17.0807L19.53 12.38H16.8058V12.3768Z" />
+        </svg>
+      );
+    case "X":
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M9.23842 15.4055L17.3051 9.26292C17.7006 8.9618 18.2658 9.07925 18.4543 9.54702C19.446 12.0138 19.0029 14.9784 17.0297 17.0138C15.0566 19.0492 12.3111 19.4955 9.80163 18.4789L7.06027 19.7882C10.9922 22.5604 15.7667 21.8748 18.7504 18.795C21.117 16.3538 21.8499 13.0262 21.1646 10.0254L21.1708 10.0318C20.1769 5.62354 21.4151 3.86151 23.9515 0.258408C23.9702 0.231693 23.9351 0.202703 23.9123 0.226139L20.7939 3.44289V3.43221L9.23842 15.4055Z" />
+          <path d="M7.65167 7.33217C5.24368 9.81392 4.75711 14.1176 7.57924 16.8984L7.57713 16.9005L0.0792788 23.8097C0.0528384 23.834 0.0162235 23.8015 0.0377551 23.7728C0.487937 23.1707 1.01883 22.595 1.54932 22.0198L1.57777 21.9889C3.28214 20.1411 4.97141 18.3097 3.93926 15.7216C2.55615 12.2552 3.36158 8.19287 5.9228 5.55089C8.58547 2.80639 12.507 2.1144 15.7826 3.5048C16.5072 3.78245 17.1388 4.17758 17.6315 4.54493L14.8964 5.84777C12.3497 4.7457 9.43229 5.49537 7.65167 7.33217Z" />
+        </svg>
+      );
+    case "Kling":
+      return (
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" clipRule="evenodd" d="M16.7522 2.86984L16.818 2.93745L16.8199 2.93552C18.087 4.25441 17.7236 6.90443 15.8863 9.90864L19.5 13.6567L19.3447 13.9703C18.7372 15.1986 17.9147 16.2992 16.9193 17.216C15.608 18.43 14.0251 19.2853 12.3143 19.7044L12.2522 19.7198L12.1634 19.7417L12.0994 19.7565L11.9584 19.7887L11.8416 19.8126L11.754 19.8299C11.6609 19.8493 11.5634 19.8673 11.4683 19.884L11.3888 19.8963L11.3286 19.904C11.2429 19.916 11.1576 19.9272 11.0727 19.9375C9.64831 20.1036 8.20616 19.9376 6.8516 19.4517C5.49703 18.9658 4.2643 18.1723 3.24348 17.1291L3.18385 17.0692C1.91429 15.7503 2.27391 13.0983 4.11366 10.0922L0.5 6.34416L0.65528 6.03054C1.26118 4.80131 2.0846 3.70115 3.08261 2.78741C4.10242 1.8473 5.28649 1.11848 6.57081 0.640344C6.86894 0.528933 7.18075 0.431691 7.48696 0.34926C7.73931 0.279139 7.9944 0.220054 8.25155 0.172163C8.33851 0.154131 8.43665 0.135456 8.53168 0.118712C10.0139 -0.12084 11.5297 0.00325476 12.9574 0.481036C14.385 0.958817 15.6847 1.77698 16.7522 2.86984ZM15.5304 3.03083H15.5267L15.5304 3.03276C14.3025 2.63864 12.354 3.27555 10.2944 4.68267C11.8615 4.22994 13.377 4.46435 14.3565 5.48057C15.2845 6.44462 15.5385 7.90777 15.187 9.44497C15.1704 9.52697 15.1497 9.61005 15.1248 9.69419C16.8062 7.05706 17.3441 4.58993 16.2795 3.48807C16.262 3.4682 16.2433 3.44949 16.2236 3.43204L16.2155 3.42431L16.2037 3.41336L16.1683 3.38503C16.153 3.37215 16.1371 3.3597 16.1205 3.34768L16.0944 3.32836C15.9242 3.19657 15.7334 3.09594 15.5304 3.03083ZM14.6876 8.95876C14.4708 10.2995 13.7559 11.6545 12.672 12.777C11.5913 13.9001 10.282 14.642 8.98696 14.8687C7.77516 15.0812 6.72981 14.8043 6.04472 14.0959C5.36149 13.3868 5.09441 12.3069 5.29938 11.044C5.51615 9.7045 6.22919 8.3489 7.30807 7.22771C7.30807 7.22771 7.30994 7.22771 7.31429 7.22127L7.31801 7.21483C8.40062 6.09944 9.70497 5.3595 10.9969 5.13539C12.2087 4.92287 13.2516 5.1985 13.9391 5.90818C14.6224 6.61657 14.8894 7.69847 14.6845 8.9594H14.6882L14.6876 8.95876ZM3.70621 3.51061C2.88113 4.26712 2.1865 5.16395 1.65217 6.16255L1.64596 6.16449L4.78137 9.40762C5.04127 9.02837 5.31475 8.65932 5.60124 8.30124C5.70311 8.17567 5.80807 8.04558 5.91553 7.91614L5.95652 7.86784L6.10559 7.69525C6.10994 7.69139 6.11429 7.68301 6.11429 7.68301L6.14161 7.65082L6.1559 7.63343L6.23292 7.54456C6.27226 7.49819 6.31284 7.45247 6.35466 7.40739C6.35466 7.40288 6.36087 7.39644 6.36087 7.39644L6.42795 7.32045L6.47578 7.26893C6.47785 7.26592 6.4795 7.26507 6.4795 7.26507C6.48385 7.26249 6.48385 7.25863 6.48385 7.25863C6.48675 7.25562 6.48965 7.25176 6.49255 7.24703L6.50124 7.23609C6.50882 7.23006 6.51569 7.22314 6.52174 7.21548L6.53354 7.2026C6.55901 7.17619 6.58944 7.14528 6.61677 7.11437C6.63126 7.09591 6.64783 7.07745 6.66646 7.05899L6.69193 7.03194C6.69627 7.0255 6.70807 7.01326 6.70807 7.01326L6.7559 6.96432L6.84907 6.86901L6.88012 6.83488L6.91491 6.79688C7.5863 6.09838 8.30377 5.44917 9.06211 4.85397L9.16149 4.77862H9.16211V4.77798L9.16335 4.77733L9.26273 4.70134C9.37371 4.61505 9.48551 4.53068 9.59814 4.44825C9.71822 4.36325 9.8383 4.27953 9.95838 4.1971C11.587 3.0714 13.182 2.39586 14.4839 2.26191C12.7422 1.17239 10.6864 0.752921 8.6764 1.07697C8.58944 1.09114 8.50621 1.10595 8.41677 1.12462C8.36025 1.13493 8.31118 1.14523 8.26149 1.15554L8.23168 1.16198C7.77515 1.25942 7.3258 1.39004 6.88696 1.55288C5.71551 1.9877 4.63519 2.65238 3.70621 3.51061ZM3.87888 16.6531C4.05279 16.7905 4.25093 16.8949 4.47329 16.9661H4.46894C5.70497 17.3577 7.64596 16.7188 9.69814 15.3156C8.13292 15.7664 6.6205 15.532 5.64099 14.5157C4.71739 13.5562 4.46335 12.0885 4.81304 10.5513C4.83043 10.4693 4.85093 10.3863 4.87453 10.3021C3.19379 12.9399 2.65714 15.4064 3.7205 16.5089C3.77062 16.56 3.8235 16.6082 3.87888 16.6531ZM18.346 13.8389V13.8402C17.8108 14.8373 17.1168 15.7333 16.2932 16.4902C15.0606 17.625 13.5707 18.4173 11.9627 18.7931L11.9429 18.7983L11.8894 18.8112C11.8291 18.8281 11.7679 18.8418 11.7062 18.8524C11.666 18.8614 11.6251 18.8693 11.5832 18.8762C11.4967 18.8936 11.4097 18.9087 11.3224 18.9213L11.2497 18.9342L11.1671 18.9451C11.1008 18.9545 11.0329 18.9631 10.9634 18.9709C9.06697 19.1922 7.15308 18.7592 5.51801 17.7389C6.77143 17.6108 8.29752 16.9764 9.86273 15.9274L9.95217 15.8668L10.0416 15.8057L10.1634 15.7206H10.164L10.3994 15.5545C10.5128 15.4721 10.6246 15.3877 10.7348 15.3014C10.8035 15.2503 10.871 15.1994 10.9373 15.1488C11.6946 14.5518 12.4122 13.9025 13.0851 13.2052C13.1012 13.1881 13.1164 13.1713 13.1304 13.155L13.1491 13.1331C13.1822 13.1009 13.2133 13.0693 13.2422 13.0384L13.2894 12.9895C13.2894 12.9895 13.3019 12.9766 13.3037 12.9702L13.3217 12.9521L13.3292 12.9438L13.3832 12.8884L13.4248 12.8433C13.4389 12.8296 13.4528 12.815 13.4665 12.7995L13.4776 12.7866C13.4837 12.7792 13.4906 12.7725 13.4981 12.7667L13.5075 12.7551L13.5161 12.7441C13.5161 12.7441 13.5224 12.7377 13.5261 12.7358L13.5429 12.7171L13.5596 12.6984L13.5758 12.6823C13.5584 12.7012 13.5418 12.7209 13.5261 12.7416L13.5646 12.6997L13.5652 12.6984C13.5921 12.6684 13.6188 12.6396 13.6453 12.6121C13.6453 12.6121 13.6453 12.6057 13.6516 12.6057C13.688 12.5653 13.7234 12.5245 13.7578 12.4833L13.828 12.4022C13.8372 12.396 13.8447 12.3873 13.8497 12.3771L13.8894 12.3275L13.8994 12.3152C13.9478 12.2616 13.9952 12.2073 14.0416 12.1523L14.0901 12.0943C14.1679 12.0003 14.2453 11.9057 14.3224 11.8103L14.4155 11.6951L14.4447 11.6577C14.482 11.6092 14.5188 11.562 14.5553 11.516C14.5863 11.4774 14.6168 11.4379 14.6466 11.3975C14.8451 11.1367 15.0377 10.8711 15.2242 10.6009L18.346 13.8389ZM18.346 13.8389C18.346 13.8368 18.3472 13.835 18.3497 13.8338V13.8441L18.346 13.8402H18.3472L18.346 13.8389Z" />
+        </svg>
+      );
+    case "Bytedance":
+      return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <g clipPath="url(#seedance-clip)">
+            <path d="M3.1544 12.1539L0.533203 12.8092V1.19824L3.1544 1.85354V12.1539Z" />
+            <path d="M15.8225 12.8333L13.1963 13.4886V0.518555L15.8225 1.169V12.8333Z" />
+            <path d="M7.31261 12.5083L4.69141 13.1636V6.32422L7.31261 6.97947V12.5083Z" />
+            <path d="M9.02539 5.3096L11.6516 4.6543V11.4937L9.02539 10.8384V5.3096Z" />
+          </g>
+          <defs>
+            <clipPath id="seedance-clip">
+              <rect width="16" height="14" fill="var(--app-v2-text-primary)" />
+            </clipPath>
+          </defs>
+        </svg>
+      );
+    case "Alibaba":
+      return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M9.39589 9.99064C10.2791 8.81304 11.9431 7.16184 11.9943 5.99704C12.0967 4.48664 10.5735 3.98744 8.99909 4.00024C7.89829 4.01304 6.77189 4.33304 6.00389 4.60184C3.32869 5.54904 1.66469 7.04664 0.60229 8.72344C-0.51131 10.3746 -0.14011 11.949 2.21509 12.0002C4.01989 11.9234 5.19749 11.4242 6.42629 10.797C6.43909 10.797 3.03429 11.7698 1.79269 11.053C1.66469 10.9762 1.52389 10.8738 1.48549 10.5922C1.47269 10.0034 2.45829 9.38904 3.00869 9.19704V8.17304C3.41829 8.32664 3.85349 8.41624 4.31429 8.41624C5.19749 8.41624 6.00389 8.09624 6.63109 7.57144C6.65669 7.66104 6.66949 7.76344 6.65669 7.86584H6.89989C6.92549 7.59704 6.78469 7.39224 6.78469 7.39224C6.56709 7.03384 6.17029 7.04664 6.17029 7.04664C6.17029 7.04664 6.37509 7.13624 6.52869 7.35384C5.95269 7.84024 5.21029 8.12184 4.40389 8.12184C4.05829 8.12184 3.72549 8.07064 3.41829 7.96824L4.22469 7.16184L4.00709 6.57304C5.63269 6.00984 6.98949 5.57464 9.21669 5.17784L8.70469 4.80664L8.96069 4.65304C10.3047 5.02424 11.1879 5.29304 11.1367 6.00984C11.1111 6.12504 11.0727 6.26584 11.0087 6.41944C10.6247 7.18744 9.45989 8.48024 8.98629 9.01784C8.67909 9.37624 8.37189 9.72184 8.15429 10.0546C7.93669 10.3874 7.79589 10.7074 7.78309 11.0018C7.80869 13.3442 14.6695 9.91384 16.0007 9.00504C14.0423 9.84984 11.9303 10.6562 9.60069 10.8098C8.94789 10.8482 9.02469 10.5026 9.39589 9.99064Z" />
+        </svg>
+      );
+    case "MiniMax":
+      return (
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" clipRule="evenodd" d="M13.565 1.66699C14.5283 1.66699 15.3092 2.43949 15.3092 3.39199V13.8095C15.3159 13.9691 15.3842 14.1199 15.4999 14.2301C15.6155 14.3403 15.7694 14.4013 15.9292 14.4003C16.0888 14.4011 16.2425 14.34 16.3579 14.2298C16.4734 14.1196 16.5416 13.969 16.5483 13.8095V7.58283C16.5495 7.35739 16.5951 7.1344 16.6825 6.92658C16.7699 6.71876 16.8973 6.53019 17.0576 6.37164C17.2179 6.21308 17.4078 6.08764 17.6165 6.00248C17.8253 5.91733 18.0487 5.87412 18.2742 5.87533C18.4997 5.87412 18.7232 5.91736 18.932 6.00256C19.1408 6.08777 19.3307 6.21329 19.491 6.37193C19.6513 6.53058 19.7787 6.71924 19.8661 6.92716C19.9534 7.13507 19.9989 7.35815 20 7.58366V13.0512C19.9991 13.1945 19.9414 13.3315 19.8395 13.4323C19.7377 13.5331 19.6 13.5893 19.4567 13.5887C19.3856 13.5891 19.3152 13.5755 19.2494 13.5488C19.1837 13.522 19.1238 13.4825 19.0733 13.4326C19.0227 13.3827 18.9825 13.3233 18.9549 13.2579C18.9274 13.1924 18.9129 13.1222 18.9125 13.0512V7.58366C18.9121 7.50027 18.8952 7.41778 18.8629 7.34091C18.8306 7.26403 18.7834 7.19428 18.7242 7.13562C18.6649 7.07696 18.5946 7.03056 18.5174 6.99905C18.4402 6.96754 18.3576 6.95155 18.2742 6.95199C18.1908 6.95155 18.1081 6.96754 18.0309 6.99905C17.9537 7.03056 17.8834 7.07696 17.8242 7.13562C17.7649 7.19428 17.7178 7.26403 17.6854 7.34091C17.6531 7.41778 17.6363 7.50027 17.6358 7.58366V13.8103C17.6346 14.0332 17.5895 14.2537 17.5031 14.4592C17.4167 14.6647 17.2907 14.8512 17.1322 15.008C16.9737 15.1647 16.7859 15.2888 16.5795 15.373C16.3731 15.4572 16.1521 15.4999 15.9292 15.4987C15.7062 15.4999 15.4853 15.4572 15.2789 15.373C15.0724 15.2888 14.8846 15.1647 14.7262 15.008C14.5677 14.8512 14.4416 14.6647 14.3552 14.4592C14.2688 14.2537 14.2237 14.0332 14.2225 13.8103V3.39366C14.2156 3.22439 14.1433 3.06441 14.0208 2.94737C13.8983 2.83033 13.7352 2.76537 13.5658 2.76616C13.3964 2.76515 13.2332 2.8299 13.1106 2.94678C12.988 3.06366 12.9155 3.22356 12.9083 3.39283L12.9075 16.6462C12.9049 17.0962 12.7236 17.5268 12.4035 17.8433C12.0835 18.1597 11.6509 18.3361 11.2008 18.3337C10.9779 18.3349 10.7569 18.2922 10.5505 18.208C10.3441 18.1238 10.1563 17.9997 9.99783 17.843C9.83935 17.6862 9.7133 17.4997 9.62688 17.2942C9.54046 17.0887 9.49537 16.8682 9.49417 16.6453V15.0337C9.49417 14.737 9.7375 14.4962 10.0375 14.4962C10.3375 14.4962 10.5808 14.737 10.5808 15.0337V16.6453C10.5808 16.8645 10.6992 17.067 10.8908 17.177C11.0825 17.2862 11.3192 17.2862 11.5108 17.177C11.6049 17.1237 11.6831 17.0464 11.7376 16.953C11.792 16.8596 11.8208 16.7534 11.8208 16.6453V3.39199C11.8208 2.43949 12.6017 1.66699 13.565 1.66699ZM8.83667 1.66699C9.8 1.66699 10.5808 2.43949 10.5808 3.39199V12.9945C10.5805 13.0655 10.5662 13.1357 10.5387 13.2011C10.5112 13.2666 10.4711 13.326 10.4206 13.3759C10.3701 13.4258 10.3103 13.4653 10.2446 13.4921C10.1789 13.5189 10.1085 13.5324 10.0375 13.532C9.96652 13.5324 9.89614 13.5189 9.8304 13.4921C9.76467 13.4653 9.70485 13.4258 9.65439 13.3759C9.60392 13.326 9.5638 13.2666 9.53631 13.2011C9.50881 13.1357 9.49449 13.0655 9.49417 12.9945V3.39199C9.49306 3.21864 9.4232 3.05281 9.29992 2.93094C9.17664 2.80906 9.01002 2.74111 8.83667 2.74199C8.66331 2.74111 8.4967 2.80906 8.37341 2.93094C8.25013 3.05281 8.18027 3.21864 8.17917 3.39199V15.0695C8.17652 15.5245 7.99335 15.9598 7.66989 16.2798C7.34644 16.5999 6.90917 16.7784 6.45417 16.7762C5.99902 16.7786 5.56153 16.6002 5.2379 16.2801C4.91427 15.9601 4.73098 15.5246 4.72833 15.0695V7.58366C4.7279 7.50027 4.71104 7.41778 4.67872 7.34091C4.64641 7.26403 4.59927 7.19428 4.53999 7.13562C4.48072 7.07696 4.41047 7.03056 4.33326 6.99905C4.25605 6.96754 4.17339 6.95155 4.09 6.95199C4.00661 6.95155 3.92395 6.96754 3.84674 6.99905C3.76953 7.03056 3.69928 7.07696 3.64001 7.13562C3.58073 7.19428 3.53359 7.26403 3.50128 7.34091C3.46896 7.41778 3.4521 7.50027 3.45167 7.58366V10.7503C3.45047 10.9758 3.40487 11.1988 3.31749 11.4066C3.23011 11.6144 3.10265 11.803 2.94239 11.9615C2.78213 12.1201 2.59221 12.2455 2.38347 12.3307C2.17474 12.4158 1.95127 12.459 1.72583 12.4578C1.5004 12.459 1.27693 12.4158 1.06819 12.3307C0.859454 12.2455 0.669534 12.1201 0.509275 11.9615C0.349016 11.803 0.221556 11.6144 0.134175 11.4066C0.0467933 11.1988 0.00120057 10.9758 0 10.7503L0 9.60199C0 9.30449 0.243333 9.06366 0.543333 9.06366C0.843333 9.06366 1.0875 9.30533 1.0875 9.60199V10.7503C1.0875 11.0987 1.37333 11.3812 1.72583 11.3812C2.07833 11.3812 2.36417 11.0987 2.36417 10.7503V7.58283C2.36681 7.12783 2.54999 6.69249 2.87344 6.37247C3.19689 6.05246 3.63416 5.87394 4.08917 5.87616C4.54431 5.87372 4.9818 6.05214 5.30543 6.37218C5.62907 6.69222 5.81236 7.12768 5.815 7.58283V15.0695C5.815 15.4187 6.10083 15.7012 6.45417 15.7012C6.80667 15.7012 7.0925 15.4187 7.0925 15.0695V3.39199C7.0925 2.43949 7.87333 1.66699 8.83667 1.66699Z" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
+// ── Gallery card ──────────────────────────────────────────────────────────────
+
+function GalleryCard({
+  item,
+  displayWidth,
+  onOpen,
+  onAddReference,
+  onCopyPrompt,
+  onDownload,
+  onDelete,
+  videoMuted,
+  onToggleMute,
+  onNaturalRatioDiscovered,
+  selected,
+  anySelected,
+  onSelect,
+  scrollContainer,
+  isTagged,
+  isNew,
+  onMarkSeen,
+}: {
+  item: GalleryItem;
+  displayWidth?: number;
+  onOpen?: (thumbUrl: string) => void;
+  onAddReference?: (url: string) => void;
+  onCopyPrompt?: (prompt: string, refUrls?: string[], meta?: { model?: string; aspectRatio?: string; quality?: string; azureResolution?: string }) => void;
+  onDownload?: (url: string, isVideo: boolean) => Promise<void>;
+  onDelete?: (id: string, source: "generation" | "upload") => Promise<void>;
+  videoMuted?: boolean;
+  onToggleMute?: () => void;
+  onNaturalRatioDiscovered?: () => void;
+  selected?: boolean;
+  anySelected?: boolean;
+  onSelect?: () => void;
+  scrollContainer?: React.RefObject<HTMLDivElement | null>;
+  isTagged?: boolean;
+  isNew?: boolean;
+  onMarkSeen?: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const cancelSlotRef = useRef<(() => void) | null>(null);
+  const slotReleasedRef = useRef(false);
+  const thumbFailedUrls = useRef<Set<string>>(new Set());
+  const [thumbFailRevision, setThumbFailRevision] = useState(0);
+  const lockedWidths = useRef<Map<string, number>>(new Map());
+  const preloaded = loadedImageUrls.has(item.url);
+  const [playing, setPlaying] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(preloaded);
+  const [shouldLoad, setShouldLoad] = useState(preloaded);
+  const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [cardImgIdx, setCardImgIdx] = useState(0);
+  const [naturalRatio, setNaturalRatio] = useState<string | null>(() => naturalRatioCache.get(item.url) ?? null);
+  const [isHovered, setIsHovered] = useState(false);
+  const isVideo = item.mediaType === "video";
+  const allUrls = item.imageUrls ?? [item.url];
+  const displayUrl = allUrls[cardImgIdx] ?? item.url;
+  const isThumbFailed = thumbFailedUrls.current.has(displayUrl);
+  void thumbFailRevision;
+  // Lock the snapped width on first render for each URL; only ratchet up, never reshuffle on resize.
+  const requested = snapWidth(displayWidth ?? 400);
+  const locked = lockedWidths.current.get(displayUrl) ?? 0;
+  if (requested > locked) lockedWidths.current.set(displayUrl, requested);
+  const stableSnap = lockedWidths.current.get(displayUrl)!;
+
+  // Lazy-load observer: request a concurrency slot when the card nears the viewport.
+  useEffect(() => {
+    if (preloaded) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          if (isVideo) {
+            setShouldLoad(true);
+          } else if (!cancelSlotRef.current) {
+            cancelSlotRef.current = requestImageSlot(() => setShouldLoad(true));
+          }
+        }
+      },
+      { root: scrollContainer?.current ?? null, rootMargin: "200px", threshold: 0 },
+    );
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      cancelSlotRef.current?.();
+      cancelSlotRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Play/pause observer: only play videos that are actually visible
+  useEffect(() => {
+    if (!isVideo) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          videoRef.current?.play().then(() => setPlaying(true)).catch(() => {});
+        } else {
+          videoRef.current?.pause();
+          setPlaying(false);
+        }
+      },
+      { root: scrollContainer?.current ?? null, rootMargin: "0px", threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVideo]);
+
+  const storedRatio = (() => {
+    const ar = item.aspect_ratio;
+    if (!ar || ar === "auto") return null;
+    const [w, h] = ar.split(":");
+    return w && h ? `${w} / ${h}` : null;
+  })();
+
+  // Uploads have no stored aspect_ratio — use natural dims once known, 1/1 only while actively loading
+  const cssRatio = storedRatio ?? (() => {
+    if (item.source !== "upload") return null;
+    if (naturalRatio) return naturalRatio;
+    if (shouldLoad && !imgLoaded) return "1 / 1"; // placeholder so shimmer has height
+    return null;
+  })();
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (downloading) return;
+    setDownloading(true);
+    try { await onDownload?.(item.url, isVideo); } finally { setDownloading(false); }
+  };
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!item.prompt) return;
+    onCopyPrompt?.(item.prompt, item.referenceImageUrls, { model: item.model, aspectRatio: item.aspect_ratio, quality: item.quality, azureResolution: item.azure_resolution });
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handleAddRef = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onAddReference?.(item.url);
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (deleting) return;
+    setDeleting(true);
+    try { await onDelete?.(item.id, item.source); } finally { setDeleting(false); }
+  };
+
+  if (failed) {
+    return (
+      <div className="gallery-item" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={cardRef}
+      className={`gallery-item${selected ? " gallery-item--selected" : ""}${anySelected ? " gallery-item--anyselected" : ""}${isTagged ? " gallery-item--tagged" : ""}`}
+      draggable
+      onDragStart={e => {
+        e.stopPropagation();
+        _galleryDragItem = { url: item.url, mediaType: item.mediaType };
+        e.dataTransfer.setData("application/x-gallery-item", "1");
+        e.dataTransfer.setData("text/plain", item.url);
+        e.dataTransfer.effectAllowed = "copy";
+      }}
+      onDragEnd={() => { _galleryDragItem = null; }}
+      onMouseEnter={() => { setIsHovered(true); onMarkSeen?.(); }}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={anySelected ? onSelect : () => onOpen?.(isThumbFailed ? displayUrl : thumbSrc(displayUrl, stableSnap))}
+    >
+      {/* ── NEW badge (top-right) ── */}
+      {isNew && (
+        <div style={{
+          position: "absolute", top: 7, right: 7, zIndex: 10,
+          padding: "2px 6px", borderRadius: 999,
+          background: "linear-gradient(135deg, rgba(30,100,200,0.85) 0%, rgba(20,160,140,0.85) 100%)",
+          backdropFilter: "blur(6px)",
+          border: "1px solid rgba(134, 140, 255,0.35)",
+          fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+          color: "#fff", pointerEvents: "none", lineHeight: 1.4,
+          textTransform: "uppercase",
+        }}>
+          NEW
+        </div>
+      )}
+      {/* ── Checkbox (top-left) ── */}
+      <div className="gallery-checkbox" onClick={e => { e.stopPropagation(); onSelect?.(); }}>
+        {selected && (
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0F0F1A" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        )}
+      </div>
+      {isVideo ? (
+        <>
+          <video
+            ref={videoRef}
+            src={shouldLoad ? item.url : undefined}
+            muted={videoMuted || !isHovered}
+            autoPlay
+            loop
+            playsInline
+            preload="metadata"
+            draggable={false}
+            onLoadedData={() => {
+              setImgLoaded(true);
+              loadedImageUrls.add(item.url);
+            }}
+            onError={() => {
+              setFailed(true);
+              loadedImageUrls.delete(item.url);
+              try { sessionStorage.setItem("hg-loaded", JSON.stringify([...loadedImageUrls])); } catch {}
+            }}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: imgLoaded ? 1 : 0, transition: "opacity 400ms ease" }}
+          />
+          {!playing && (
+            <div className="gallery-play-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {(!shouldLoad || !imgLoaded) && <div className="gallery-shimmer" />}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            key={displayUrl}
+            src={shouldLoad ? (isThumbFailed ? displayUrl : thumbSrc(displayUrl, stableSnap)) : undefined}
+            alt={item.prompt ?? ""}
+            draggable={false}
+            decoding="async"
+            onLoad={(e) => {
+              if (!slotReleasedRef.current) { slotReleasedRef.current = true; releaseImageSlot(); }
+              const img = e.currentTarget;
+              if (!storedRatio && item.source === "upload" && img.naturalWidth && img.naturalHeight) {
+                const r = `${img.naturalWidth} / ${img.naturalHeight}`;
+                if (!naturalRatioCache.has(item.url)) {
+                  naturalRatioCache.set(item.url, r);
+                  onNaturalRatioDiscovered?.();
+                }
+                setNaturalRatio(r);
+              }
+              setImgLoaded(true);
+              loadedImageUrls.add(item.url);
+            }}
+            onError={() => {
+              if (!isThumbFailed) {
+                thumbFailedUrls.current.add(displayUrl);
+                setThumbFailRevision(r => r + 1);
+              } else {
+                if (!slotReleasedRef.current) { slotReleasedRef.current = true; releaseImageSlot(); }
+                setFailed(true);
+                loadedImageUrls.delete(item.url);
+                try { sessionStorage.setItem("hg-loaded", JSON.stringify([...loadedImageUrls])); } catch {}
+              }
+            }}
+            style={{ display: "block", width: "100%", height: "100%", objectFit: "cover", opacity: imgLoaded ? 1 : 0, transition: "opacity 400ms ease" }}
+          />
+          {/* Inner carousel nav — only when multiple images */}
+          {allUrls.length > 1 && (
+            <>
+              <button
+                onClick={e => { e.stopPropagation(); setImgLoaded(false); setCardImgIdx(i => Math.max(0, i - 1)); }}
+                disabled={cardImgIdx === 0}
+                style={{
+                  position: "absolute", left: 6, top: "50%", transform: "translateY(-50%)",
+                  width: 26, height: 26, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.15)",
+                  background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", zIndex: 3, opacity: cardImgIdx === 0 ? 0.25 : 1,
+                }}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); setImgLoaded(false); setCardImgIdx(i => Math.min(allUrls.length - 1, i + 1)); }}
+                disabled={cardImgIdx === allUrls.length - 1}
+                style={{
+                  position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
+                  width: 26, height: 26, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.15)",
+                  background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", zIndex: 3, opacity: cardImgIdx === allUrls.length - 1 ? 0.25 : 1,
+                }}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+              </button>
+              <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4, zIndex: 3 }}>
+                {allUrls.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={e => { e.stopPropagation(); setImgLoaded(false); setCardImgIdx(idx); }}
+                    style={{
+                      width: idx === cardImgIdx ? 12 : 6, height: 6, borderRadius: 3,
+                      background: idx === cardImgIdx ? "#fff" : "rgba(255,255,255,0.4)",
+                      border: "none", cursor: "pointer", padding: 0, transition: "all 150ms",
+                    }}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* ── Gradient overlay + prompt ── */}
+      <div className="gallery-overlay">
+        {item.prompt && (
+          <div style={{ fontSize: "11px", lineHeight: 1.45, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", marginBottom: "4px" }}>
+            {renderLightboxPrompt(item.prompt, item.referenceImageUrls)}
+          </div>
+        )}
+        <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)" }}>
+          {[item.model, item.aspect_ratio].filter(Boolean).join(" · ") || (item.source === "upload" ? "Enviada" : "")}
+        </p>
+      </div>
+
+      {/* ── Top-right icon buttons ── */}
+      <div className="gallery-actions-top">
+        {isVideo && (
+          <button
+            className="gallery-action-btn"
+            onClick={e => { e.stopPropagation(); onToggleMute?.(); }}
+            title={videoMuted ? "Unmute" : "Mute"}
+          >
+            {videoMuted ? (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              </svg>
+            )}
+          </button>
+        )}
+        {item.prompt && onCopyPrompt && (
+          <button className="gallery-action-btn" title={copied ? "Copied!" : "Copy prompt"} onClick={handleCopy}>
+            {copied ? (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#868CFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+            )}
+          </button>
+        )}
+        <button
+          className="gallery-action-btn"
+          title={downloading ? "Downloading…" : "Download"}
+          onClick={handleDownload}
+          disabled={downloading}
+          style={{ opacity: downloading ? 0.65 : undefined }}
+        >
+          {downloading ? (
+            <div style={{ width: "11px", height: "11px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.2)", borderTopColor: "#fff", animation: "spin 0.75s linear infinite", flexShrink: 0 }} />
+          ) : (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          )}
+        </button>
+        {onDelete && (
+          <button
+            className="gallery-action-btn gallery-delete-btn"
+            title="Delete"
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{ opacity: deleting ? 0.65 : undefined }}
+          >
+            {deleting ? (
+              <div style={{ width: "11px", height: "11px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.2)", borderTopColor: "#fff", animation: "spin 0.75s linear infinite", flexShrink: 0 }} />
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+              </svg>
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* ── Bottom-left Reference button (images only) ── */}
+      {!isVideo && onAddReference && (
+        <div className="gallery-actions-bottom">
+          <button className="gallery-ref-btn" onClick={handleAddRef}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" />
+            </svg>
+            Reference
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── DownloadToast ─────────────────────────────────────────────────────────────
+
+function DownloadToast({ downloads, onClear }: { downloads: DownloadTask[]; onClear: () => void }) {
+  const [collapsed, setCollapsed] = useState(false);
+
+  if (downloads.length === 0) return null;
+
+  const allDone = downloads.every(d => d.status !== "preparing");
+  const title = allDone ? "Download complete" : "Preparing download";
+
+  return (
+    <div style={{
+      position: "fixed",
+      top: "64px",
+      right: "16px",
+      width: "300px",
+      background: "rgba(16,18,20,0.97)",
+      backdropFilter: "blur(24px)",
+      WebkitBackdropFilter: "blur(24px)",
+      borderRadius: "18px",
+      border: "1px solid rgba(255,255,255,0.07)",
+      boxShadow: "0 12px 48px rgba(0,0,0,0.7), 0 2px 12px rgba(0,0,0,0.4)",
+      zIndex: 9500,
+      overflow: "hidden",
+      fontFamily: "inherit",
+    }}>
+      {/* Header */}
+      <div
+        onClick={() => setCollapsed(c => !c)}
+        style={{ display: "flex", alignItems: "center", gap: "10px", padding: "14px 14px 14px 14px", cursor: "pointer", userSelect: "none" }}
+      >
+        {/* Animated icon */}
+        <div style={{ position: "relative", width: "28px", height: "28px", flexShrink: 0 }}>
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ position: "absolute", inset: 0 }}>
+            <circle cx="14" cy="14" r="12" stroke="rgba(1, 181, 116,0.2)" strokeWidth="2" />
+            <circle
+              cx="14" cy="14" r="12"
+              stroke="#868CFF" strokeWidth="2"
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 12}`}
+              strokeDashoffset={allDone ? 0 : `${2 * Math.PI * 12 * 0.25}`}
+              style={{ transformOrigin: "center", transform: "rotate(-90deg)", transition: "stroke-dashoffset 0.4s ease" }}
+              className={allDone ? undefined : "dl-ring-spin"}
+            />
+          </svg>
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#868CFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </div>
+        </div>
+        <span style={{ flex: 1, fontSize: "14px", fontWeight: 600, color: "#ffffff", letterSpacing: "-0.01em" }}>{title}</span>
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2.5" strokeLinecap="round"
+          style={{ flexShrink: 0, transition: "transform 200ms", transform: collapsed ? "rotate(180deg)" : "none" }}
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </div>
+
+      {/* Items */}
+      {!collapsed && (
+        <div style={{ padding: "0 8px 8px" }}>
+          {downloads.map(task => (
+            <div key={task.id} style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "9px 10px",
+              background: "rgba(255,255,255,0.035)",
+              borderRadius: "10px",
+              marginBottom: "4px",
+            }}>
+              {/* File icon */}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={task.status === "preparing" ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.45)"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <path d="M3 6h18M3 12h18M3 18h18" />
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+              </svg>
+              {/* Label */}
+              <span style={{ flex: 1, fontSize: "13px", color: task.status === "preparing" ? "rgba(255,255,255,0.35)" : "#ffffff", letterSpacing: "-0.01em" }}>
+                {task.status === "preparing" ? "Preparing…" : task.status === "error" ? "Failed" : "Ready"}
+              </span>
+              {/* Status indicator */}
+              {task.status === "preparing" ? (
+                <div style={{ width: "16px", height: "16px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.12)", borderTopColor: "rgba(255,255,255,0.45)", animation: "spin 0.9s linear infinite", flexShrink: 0 }} />
+              ) : task.status === "error" ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff8a8a" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
+                  <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
+                </svg>
+              ) : (
+                <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#868CFF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#060A06" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Lightbox helpers ──────────────────────────────────────────────────────────
+
+function syntaxHighlightJson(
+  json: string,
+  tagged?: TaggedImage[],
+  onEnter?: (tag: TaggedImage, rect: DOMRect) => void,
+  onLeave?: () => void,
+  onMD?: (tag: TaggedImage) => void,
+): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  let k = 0;
+  const push = (from: number, to: number, color?: string) => {
+    if (from >= to) return;
+    const text = json.slice(from, to);
+    if (tagged?.length && onEnter && onLeave && onMD) {
+      const { nodes, nextKey } = splitByMentions(text, color, tagged, k, onEnter, onLeave, onMD);
+      parts.push(...nodes);
+      k = nextKey;
+    } else {
+      parts.push(<span key={k++} style={color ? { color } : undefined}>{text}</span>);
+    }
+  };
+  const re = /("(?:[^"\\]|\\.)*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(true|false|null)|([{}\[\],])/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(json)) !== null) {
+    push(last, m.index);
+    if (m[1] !== undefined) {
+      if (m[2] !== undefined) {
+        push(m.index, m.index + m[1].length, "#0bc5ea");
+        push(m.index + m[1].length, m.index + m[0].length, "#5a6795");
+      } else {
+        push(m.index, m.index + m[1].length, "#4ade9b");
+      }
+    } else if (m[3] !== undefined) {
+      push(m.index, m.index + m[3].length, "#ffb547");
+    } else if (m[4] !== undefined) {
+      push(m.index, m.index + m[4].length, "#868cff");
+    } else if (m[5] !== undefined) {
+      push(m.index, m.index + m[5].length, "#5a6795");
+    }
+    last = re.lastIndex;
+  }
+  push(last, json.length);
+  return <>{parts}</>;
+}
+
+function syntaxHighlightYaml(
+  yaml: string,
+  tagged?: TaggedImage[],
+  onEnter?: (tag: TaggedImage, rect: DOMRect) => void,
+  onLeave?: () => void,
+  onMD?: (tag: TaggedImage) => void,
+): React.ReactNode {
+  const lines = yaml.split("\n");
+  const parts: React.ReactNode[] = [];
+  let k = 0;
+  lines.forEach((line, i) => {
+    // Directive / document markers
+    if (/^---/.test(line) || /^\.\.\.$/.test(line)) {
+      parts.push(<span key={k++} style={{ color: "#5a6795" }}>{line}</span>);
+    } else {
+      // Key: value  (handles indent + optional list marker)
+      const keyMatch = line.match(/^(\s*(?:-\s+)?)([\w\-./]+)(\s*:)(.*)/);
+      if (keyMatch) {
+        const [, indent, key, colon, rest] = keyMatch;
+        parts.push(<span key={k++}>{indent}</span>);
+        parts.push(<span key={k++} style={{ color: "#0bc5ea" }}>{key}</span>);
+        parts.push(<span key={k++} style={{ color: "#5a6795" }}>{colon}</span>);
+        parts.push(<span key={k++}>{colorYamlValue(rest, k, tagged, onEnter, onLeave, onMD)}</span>);
+        k++;
+      } else {
+        // List item or plain value
+        const listMatch = line.match(/^(\s*-\s+)(.*)/);
+        if (listMatch) {
+          parts.push(<span key={k++} style={{ color: "#5a6795" }}>{listMatch[1]}</span>);
+          parts.push(<span key={k++}>{colorYamlValue(listMatch[2], k, tagged, onEnter, onLeave, onMD)}</span>);
+          k++;
+        } else {
+          if (tagged?.length && onEnter && onLeave && onMD) {
+            const { nodes, nextKey } = splitByMentions(line, undefined, tagged, k, onEnter, onLeave, onMD);
+            parts.push(...nodes);
+            k = nextKey;
+          } else {
+            parts.push(<span key={k++}>{line}</span>);
+          }
+        }
+      }
+    }
+    if (i < lines.length - 1) parts.push(<span key={k++}>{"\n"}</span>);
+  });
+  return <>{parts}</>;
+}
+
+function colorYamlValue(
+  value: string,
+  baseKey: number,
+  tagged?: TaggedImage[],
+  onEnter?: (tag: TaggedImage, rect: DOMRect) => void,
+  onLeave?: () => void,
+  onMD?: (tag: TaggedImage) => void,
+): React.ReactNode {
+  // Inline comment
+  const commentIdx = value.search(/#/);
+  const main = commentIdx >= 0 ? value.slice(0, commentIdx) : value;
+  const comment = commentIdx >= 0 ? value.slice(commentIdx) : "";
+  let k = baseKey * 100;
+  const out: React.ReactNode[] = [];
+  const trimmed = main.trim();
+
+  const pushValue = (text: string, color?: string) => {
+    if (tagged?.length && onEnter && onLeave && onMD) {
+      const { nodes, nextKey } = splitByMentions(text, color, tagged, k, onEnter, onLeave, onMD);
+      out.push(...nodes);
+      k = nextKey;
+    } else {
+      out.push(<span key={k++} style={color ? { color } : undefined}>{text}</span>);
+    }
+  };
+
+  if (/^(true|false|yes|no|on|off)$/i.test(trimmed)) {
+    pushValue(main, "#868cff");
+  } else if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(trimmed) || /^0x[\da-fA-F]+$/.test(trimmed)) {
+    pushValue(main, "#ffb547");
+  } else if (/^(null|~)$/.test(trimmed)) {
+    pushValue(main, "#868cff");
+  } else if (/^['"]/.test(trimmed)) {
+    pushValue(main, "#4ade9b");
+  } else if (trimmed !== "") {
+    pushValue(main, "rgba(255,255,255,0.82)");
+  } else {
+    pushValue(main);
+  }
+  if (comment) out.push(<span key={k++} style={{ color: "#5a6795" }}>{comment}</span>);
+  return <>{out}</>;
+}
+
+function renderLightboxPrompt(
+  text: string,
+  refUrls: string[] | undefined,
+): React.ReactNode {
+  if (!refUrls?.length) {
+    return <span style={{ color: "rgba(255,255,255,0.72)" }}>{text}</span>;
+  }
+  const parts: React.ReactNode[] = [];
+  let lastEnd = 0;
+  let key = 0;
+  const re = /<<<image (\d+)>>>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > lastEnd) {
+      parts.push(<span key={key++} style={{ color: "rgba(255,255,255,0.72)" }}>{text.slice(lastEnd, m.index)}</span>);
+    }
+    const n = parseInt(m[1]);
+    const imgUrl = refUrls[n - 1];
+    parts.push(
+      <span key={key++} style={{
+        display: "inline-flex", alignItems: "center", gap: "4px",
+        background: "rgba(255,255,255,0.1)", borderRadius: "6px",
+        padding: "1px 7px 1px 2px", verticalAlign: "middle",
+        margin: "0 1px", fontSize: "12px", fontWeight: 600,
+        color: "#ffffff", lineHeight: "20px",
+      }}>
+        {imgUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={thumbSrc(imgUrl, snapWidth(20))} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: "cover", flexShrink: 0 }} />
+        )}
+        Image {n}
+      </span>
+    );
+    lastEnd = m.index + m[0].length;
+  }
+  if (lastEnd < text.length) {
+    parts.push(<span key={key++} style={{ color: "rgba(255,255,255,0.72)" }}>{text.slice(lastEnd)}</span>);
+  }
+  return <>{parts}</>;
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+
+function Lightbox({ item, thumbUrl, onClose, onCopyPrompt, onPrev, onNext }: { item: GalleryItem; thumbUrl?: string; onClose: () => void; onCopyPrompt?: (prompt: string, refUrls?: string[], meta?: { model?: string; aspectRatio?: string; quality?: string; azureResolution?: string }) => void; onPrev?: () => void; onNext?: () => void }) {
+  const [visible, setVisible] = useState(false);
+  const [fullLoaded, setFullLoaded] = useState(false);
+  const [imgIdx, setImgIdx] = useState(0);
+  const [placeholderSrc, setPlaceholderSrc] = useState(thumbUrl ?? "");
+  const [zoomed, setZoomed] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [resolution, setResolution] = useState<string | null>(null);
+  const allUrls = item.imageUrls ?? [item.url];
+  const lightboxUrl = allUrls[imgIdx] ?? item.url;
+
+  useEffect(() => { setImgIdx(0); setFullLoaded(false); setResolution(null); setPlaceholderSrc(thumbUrl ?? ""); }, [item.id, thumbUrl]);
+  // When navigating within a multi-image item, compute a fresh placeholder from cache
+  useEffect(() => { if (imgIdx > 0) { setPlaceholderSrc(thumbSrc(lightboxUrl, snapWidth(300))); setFullLoaded(false); setResolution(null); } }, [imgIdx]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const id = requestAnimationFrame(() => setVisible(true)); return () => cancelAnimationFrame(id); }, []);
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { if (zoomed) { setZoomed(false); return; } handleClose(); return; }
+      if (e.key === "ArrowLeft") {
+        if (imgIdx > 0) { setFullLoaded(false); setResolution(null); setImgIdx(i => i - 1); }
+        else onPrev?.();
+      }
+      if (e.key === "ArrowRight") {
+        if (imgIdx < allUrls.length - 1) { setFullLoaded(false); setResolution(null); setImgIdx(i => i + 1); }
+        else onNext?.();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allUrls.length, imgIdx, zoomed, onPrev, onNext]);
+
+  const handleClose = () => { setVisible(false); setTimeout(onClose, 200); };
+
+  const isVideo = item.mediaType === "video";
+
+  const copyPrompt = () => {
+    if (!item.prompt) return;
+    if (onCopyPrompt) {
+      onCopyPrompt(item.prompt, item.referenceImageUrls, { model: item.model, aspectRatio: item.aspect_ratio, quality: item.quality, azureResolution: item.azure_resolution });
+    } else {
+      navigator.clipboard.writeText(item.prompt).catch(() => { });
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  const download = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const urlExt = lightboxUrl.split("?")[0].split(".").pop()?.toLowerCase();
+      const ext = isVideo ? "mp4" : (urlExt && ["png","jpg","jpeg","webp","gif"].includes(urlExt) ? urlExt : "png");
+      const filename = `${isVideo ? "video" : "image"}-${item.id.slice(0, 8)}.${ext}`;
+      const res = await fetch(`/api/download?url=${encodeURIComponent(lightboxUrl)}&filename=${filename}`);
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
+  const infoRows = [
+    item.model && { label: "Model", value: item.model },
+    item.quality && { label: "Quality", value: item.quality.charAt(0).toUpperCase() + item.quality.slice(1) },
+    item.aspect_ratio && { label: "Aspect ratio", value: item.aspect_ratio },
+    resolution && { label: "Resolution", value: resolution },
+    item.source && { label: "Origem", value: item.source === "generation" ? "Gerada" : "Enviada" },
+    { label: "Created", value: formatDate(item.created_at) },
+  ].filter(Boolean) as { label: string; value: string }[];
+
+  const panelStyle: React.CSSProperties = {
+    background: "#0F0F1A",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: "16px",
+    overflow: "hidden",
+  };
+
+  const sectionHeaderStyle: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: "8px",
+    padding: "14px 16px 12px",
+  };
+
+  const sectionLabelStyle: React.CSSProperties = {
+    fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em",
+    color: "rgba(255,255,255,0.4)", textTransform: "uppercase",
+  };
+
+  // When zoomed: media fills the full viewport. When not zoomed: media + right panel side by side.
+  const panelWidth = 300;
+
+  return createPortal(
+    <div onClick={zoomed ? () => setZoomed(false) : handleClose} style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      display: "flex", alignItems: zoomed ? "center" : "flex-start", justifyContent: "center",
+      background: `rgba(0,0,0,${visible ? 0.55 : 0})`,
+      backdropFilter: visible ? "blur(16px)" : "none",
+      WebkitBackdropFilter: visible ? "blur(16px)" : "none",
+      transition: "background 200ms ease, backdrop-filter 200ms ease",
+      padding: zoomed ? "0" : "24px", gap: zoomed ? "0" : "20px",
+      overflowY: zoomed ? "hidden" : "auto",
+    }}>
+
+      {/* ── Media column ── */}
+      <div style={{
+        // When zoomed: break out of flex flow and fill the entire overlay
+        position: zoomed ? "absolute" : "relative",
+        inset: zoomed ? 0 : undefined,
+        flex: zoomed ? undefined : 1,
+        minHeight: zoomed ? undefined : "calc(100vh - 48px)",
+        zIndex: zoomed ? 1 : undefined,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+
+        {/* Prev button — images only */}
+        {!isVideo && allUrls.length > 1 && (
+          <button
+            onClick={e => { e.stopPropagation(); setFullLoaded(false); setImgIdx(i => Math.max(0, i - 1)); }}
+            disabled={imgIdx === 0}
+            style={{
+              position: "absolute", left: 16, zIndex: 10,
+              width: 40, height: 40, borderRadius: "50%",
+              border: "1px solid rgba(255,255,255,0.15)", background: "rgba(0,0,0,0.5)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", opacity: imgIdx === 0 ? 0.2 : 1, transition: "opacity 150ms",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          </button>
+        )}
+
+        {/* Media wrapper — click to toggle zoom */}
+        <div
+          onClick={e => { e.stopPropagation(); if (!isVideo) setZoomed(z => !z); }}
+          style={{
+            position: "relative", flexShrink: 0,
+            // Zoomed: fill the column (which is already inset:0) and center content
+            width: zoomed ? "100%" : undefined,
+            height: zoomed ? "100%" : undefined,
+            maxWidth: zoomed ? "none" : "100%",
+            maxHeight: zoomed ? "none" : "calc(100vh - 48px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transform: visible ? "scale(1)" : "scale(0.96)",
+            transition: "transform 200ms ease, border-radius 280ms ease",
+            borderRadius: isVideo ? "0" : (zoomed ? "0" : "12px"),
+            overflow: isVideo ? "visible" : "hidden",
+            boxShadow: zoomed ? "none" : "0 32px 80px rgba(0,0,0,0.6)",
+            cursor: isVideo ? "default" : (zoomed ? "zoom-out" : "zoom-in"),
+          }}
+        >
+          {isVideo ? (
+            <video
+              key={lightboxUrl}
+              src={lightboxUrl}
+              autoPlay
+              loop
+              playsInline
+              controls
+              onClick={e => e.stopPropagation()}
+              onLoadedData={e => { setFullLoaded(true); const v = e.currentTarget; if (v.videoWidth && v.videoHeight) setResolution(`${v.videoWidth} × ${v.videoHeight}`); }}
+              style={{
+                display: "block",
+                maxHeight: "100vh",
+                maxWidth: "100vw",
+                width: "auto",
+                height: "auto",
+                objectFit: "contain",
+                borderRadius: zoomed ? "0" : "12px",
+                cursor: "default",
+              }}
+            />
+          ) : (
+            <>
+              {/* Thumbnail placeholder — already in browser cache, shows instantly */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img key={`thumb-${lightboxUrl}`} src={placeholderSrc} alt="" aria-hidden style={{
+                display: "block",
+                maxHeight: zoomed ? "100vh" : "calc(100vh - 48px)",
+                maxWidth: zoomed ? "100vw" : "100%",
+                width: "auto", height: "auto",
+                opacity: fullLoaded ? 0 : 1,
+                transition: "opacity 400ms ease",
+              }} />
+              {/* Full-res — opacity:1 immediately so browser paints rows progressively */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img key={`full-${lightboxUrl}`} src={lightboxUrl} alt={item.prompt ?? ""} onLoad={e => { setFullLoaded(true); const img = e.currentTarget; if (img.naturalWidth && img.naturalHeight) setResolution(`${img.naturalWidth} × ${img.naturalHeight}`); }} style={{
+                position: "absolute", inset: 0, display: "block", width: "100%", height: "100%", objectFit: "contain",
+              }} />
+              {/* Dot indicators */}
+              {allUrls.length > 1 && (
+                <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 5, zIndex: 5 }}>
+                  {allUrls.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={e => { e.stopPropagation(); setFullLoaded(false); setResolution(null); setImgIdx(idx); }}
+                      style={{
+                        width: idx === imgIdx ? 16 : 8, height: 8, borderRadius: 4,
+                        background: idx === imgIdx ? "#fff" : "rgba(255,255,255,0.4)",
+                        border: "none", cursor: "pointer", padding: 0, transition: "all 150ms",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Next button — images only */}
+        {!isVideo && allUrls.length > 1 && (
+          <button
+            onClick={e => { e.stopPropagation(); setFullLoaded(false); setImgIdx(i => Math.min(allUrls.length - 1, i + 1)); }}
+            disabled={imgIdx === allUrls.length - 1}
+            style={{
+              position: "absolute", right: zoomed ? "16px" : 0, zIndex: 10,
+              width: 40, height: 40, borderRadius: "50%",
+              border: "1px solid rgba(255,255,255,0.15)", background: "rgba(0,0,0,0.5)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", opacity: imgIdx === allUrls.length - 1 ? 0.2 : 1, transition: "opacity 150ms, right 280ms ease",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+          </button>
+        )}
+      </div>
+
+      {/* ── Right panel ── */}
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: `${panelWidth}px`, flexShrink: 0,
+          display: "flex", flexDirection: "column", gap: "12px",
+          opacity: zoomed ? 0 : visible ? 1 : 0,
+          transform: zoomed ? `translateX(${panelWidth + 20}px)` : visible ? "translateX(0)" : "translateX(14px)",
+          pointerEvents: zoomed ? "none" : "auto",
+          transition: "opacity 260ms ease, transform 280ms ease",
+          background: "rgba(10,12,14,0.85)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderRadius: "20px",
+          border: "1px solid rgba(255,255,255,0.07)",
+          padding: "12px",
+        }}
+      >
+        {/* Prompt section */}
+        {item.prompt && (
+          <div style={panelStyle}>
+            {item.referenceImageUrls && item.referenceImageUrls.length > 0 && (
+              <div style={{ padding: "14px 16px 0", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {item.referenceImageUrls.map((url, i) => (
+                  <div key={i} style={{ position: "relative", width: 76, height: 68, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", flexShrink: 0 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={thumbSrc(url, snapWidth(76))} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <div style={{
+                      position: "absolute", bottom: 4, right: 4,
+                      background: "rgba(0,0,0,0.65)", borderRadius: 4,
+                      padding: "2px 5px", fontSize: 9, fontWeight: 700,
+                      color: "rgba(255,255,255,0.8)", lineHeight: 1,
+                    }}>
+                      {i + 1}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ ...sectionHeaderStyle, justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 3h6l-1 5H3z" /><path d="M3 8h6M7 3v5" /><path d="M14 3h7" /><path d="M14 8h7" /><path d="M14 13h4" /><path d="M3 13h8" /><path d="M3 18h18" />
+                </svg>
+                <span style={sectionLabelStyle}>Prompt</span>
+              </div>
+              <button
+                onClick={copyPrompt}
+                style={{
+                  padding: "4px 12px", borderRadius: "8px",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(255,255,255,0.05)",
+                  color: copied ? "#868CFF" : "rgba(255,255,255,0.65)",
+                  fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                  transition: "background 140ms, color 140ms",
+                  borderColor: copied ? "rgba(1, 181, 116,0.3)" : "rgba(255,255,255,0.1)",
+                }}
+                onMouseEnter={e => { if (!copied) { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "#fff"; } }}
+                onMouseLeave={e => { if (!copied) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "rgba(255,255,255,0.65)"; } }}
+              >
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+            <div style={{ padding: "0 16px 16px", fontSize: "13px", lineHeight: 1.65, maxHeight: "40vh", overflowY: "auto" }}>
+              {renderLightboxPrompt(item.prompt, item.referenceImageUrls)}
+            </div>
+          </div>
+        )}
+
+        {/* Information section */}
+        <div style={panelStyle}>
+          <div style={sectionHeaderStyle}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+            </svg>
+            <span style={sectionLabelStyle}>Information</span>
+          </div>
+          {infoRows.map((row) => (
+            <div key={row.label} style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "13px 16px",
+              borderTop: "1px solid rgba(255,255,255,0.05)",
+            }}>
+              <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)" }}>{row.label}</span>
+              <span style={{ fontSize: "13px", color: "#ffffff", fontWeight: 600 }}>{row.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Download button */}
+        <button
+          onClick={download}
+          disabled={downloading}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+            width: "100%", padding: "13px 16px",
+            borderRadius: "14px", border: "1px solid rgba(255,255,255,0.07)",
+            background: "#0F0F1A",
+            color: downloading ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.75)",
+            fontSize: "13px", fontWeight: 600, cursor: downloading ? "default" : "pointer",
+            fontFamily: "inherit", transition: "background 140ms, color 140ms",
+          }}
+          onMouseEnter={e => { if (!downloading) { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#fff"; } }}
+          onMouseLeave={e => { if (!downloading) { e.currentTarget.style.background = "#0F0F1A"; e.currentTarget.style.color = "rgba(255,255,255,0.75)"; } }}
+        >
+          {downloading ? (
+            <span style={{ width: 13, height: 13, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.5)", display: "inline-block", animation: "spin 0.75s linear infinite" }} />
+          ) : (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3v13M7 13l5 5 5-5" /><path d="M5 21h14" />
+            </svg>
+          )}
+          {downloading ? "Downloading…" : "Download"}
+        </button>
+      </div>
+
+      {/* ── Close button ── */}
+      <button onClick={handleClose} style={{
+        position: "fixed", top: "16px", right: "16px",
+        width: "34px", height: "34px", borderRadius: "50%",
+        border: "1px solid rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.5)",
+        color: "rgba(255,255,255,0.6)", cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        opacity: visible ? 1 : 0, transition: "opacity 200ms ease, background 150ms",
+      }}
+        onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0.5)"; }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+      </button>
+    </div>,
+    document.body,
+  );
+}
+
+
+// ── CSS ───────────────────────────────────────────────────────────────────────
+
+const GALLERY_CSS = `
+  /* O campo do composer agora carrega o atributo data-prompt-input (é por ele
+     que o menu de menções reconhece o campo). Com o branco a 30% que estava
+     aqui, o placeholder ficava branco sobre branco — invisível. */
+  [data-prompt-input]::placeholder { color: var(--ms-text-placeholder); }
+  .picker-scroll { scrollbar-width: none; }
+  .picker-scroll::-webkit-scrollbar { display: none; }
+  .seed-input::-webkit-inner-spin-button, .seed-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pendingGlow {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+  @keyframes dlRingSpin {
+    from { stroke-dashoffset: 75.4; transform: rotate(-90deg); }
+    to   { stroke-dashoffset: 0;    transform: rotate(270deg); }
+  }
+  .dl-ring-spin { animation: dlRingSpin 1.4s linear infinite; transform-origin: center; }
+  @keyframes dropIn {
+    from { opacity: 0; transform: translateY(6px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)   scale(1);    }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -800px 0; }
+    100% { background-position:  800px 0; }
+  }
+  .gallery-skeleton {
+    width: 100%;
+    background: linear-gradient(
+      90deg,
+      #EBEBEB 0px,
+      #EBEBEB 200px,
+      #F7F7F7 350px,
+      #EBEBEB 500px,
+      #EBEBEB 700px
+    );
+    background-size: 800px 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+    border-radius: 2px;
+  }
+  @keyframes refImgIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.91); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  }
+  .gallery-zoom-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 90px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--ms-border-subtle);
+    outline: none;
+    cursor: pointer;
+  }
+  .gallery-zoom-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--brand-violet);
+    cursor: pointer;
+    transition: transform 120ms;
+  }
+  .gallery-zoom-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  .gallery-zoom-slider::-moz-range-thumb {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--brand-violet);
+    cursor: pointer;
+    border: none;
+  }
+  }
+  }
+  .dur-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.18);
+    outline: none;
+    cursor: pointer;
+  }
+  .dur-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    cursor: pointer;
+    transition: transform 100ms;
+  }
+  .dur-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  .dur-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    cursor: pointer;
+    border: none;
+  }
+  @keyframes galleryItemIn {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  }
+  .gallery-item {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    background: #EBEBEB;
+    width: 100%;
+    height: 100%;
+    animation: galleryItemIn 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .gallery-actions-top {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    opacity: 0;
+    transition: opacity 180ms ease;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .gallery-item:hover .gallery-actions-top {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .error-pending-tile .error-tile-actions {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease;
+  }
+  .error-pending-tile:hover .error-tile-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .gallery-action-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.62);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: rgba(255,255,255,0.8);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 120ms, color 120ms;
+    flex-shrink: 0;
+    padding: 0;
+  }
+  .gallery-action-btn:hover {
+    background: rgba(255,255,255,0.16);
+    color: #ffffff;
+  }
+  .gallery-delete-btn:hover {
+    background: rgba(255,255,255,0.16);
+    color: #e31a1a !important;
+  }
+  .gallery-actions-bottom {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    opacity: 0;
+    transition: opacity 180ms ease;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .gallery-item:hover .gallery-actions-bottom {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .gallery-ref-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px 5px 9px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.62);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 120ms;
+    font-family: inherit;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    padding: 5px 11px 5px 9px;
+  }
+  .gallery-ref-btn:hover {
+    background: rgba(255,255,255,0.16);
+  }
+  .gallery-shimmer {
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, #EBEBEB 25%, #F7F7F7 50%, #EBEBEB 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.6s infinite linear;
+  }
+  .gallery-item img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .gallery-item video { display: block; width: 100%; height: 100%; object-fit: cover; }
+  [data-at-menu] { font-family: inherit; }
+  .gallery-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 55%);
+    opacity: 0; transition: opacity 180ms ease;
+    display: flex; flex-direction: column; justify-content: flex-end; padding: 10px;
+  }
+  .gallery-item:hover .gallery-overlay { opacity: 1; }
+  .gallery-play-icon {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 180ms ease; pointer-events: none;
+  }
+  .gallery-item:hover .gallery-play-icon { opacity: 1; }
+  .gallery-checkbox {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid rgba(255,255,255,0.55);
+    background: transparent;
+    z-index: 6;
+    opacity: 0;
+    transition: opacity 150ms ease, border-color 120ms ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .gallery-item:hover .gallery-checkbox { opacity: 1; }
+  .gallery-item--selected .gallery-checkbox {
+    opacity: 1;
+    border-color: #ffffff;
+    background: #ffffff;
+  }
+  .gallery-item--anyselected .gallery-actions-top { display: none; }
+  .gallery-item--anyselected .gallery-actions-bottom { display: none; }
+  .gallery-item--anyselected .gallery-mute-btn { opacity: 0 !important; pointer-events: none !important; }
+  .gallery-item--anyselected .gallery-overlay { opacity: 0 !important; }
+  .gallery-item--anyselected { cursor: pointer; }
+  .gallery-item--tagged { box-shadow: inset 0 0 0 2.5px #01b574; }
+`;

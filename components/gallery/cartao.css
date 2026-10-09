@@ -1,0 +1,541 @@
+/* ============================================================
+   ACERVO — cartão, modais e vazio
+
+   CSS próprio da frente dos cartões. Só o que não cabe em
+   utilitário do Tailwind: keyframes, os estados de hover que
+   descem do pai para o filho, e as camadas que ficam POR CIMA
+   de mídia arbitrária.
+
+   ── Sobre o branco ─────────────────────────────────────────
+   O cartão é o único lugar desta migração onde tinta clara
+   continua certa: os controles flutuam sobre a foto ou o vídeo
+   do usuário, não sobre a superfície do app. Onde a base é
+   mídia, a escala é `--ms-whiteA-*` / `--ms-blackA-*` do kit —
+   nunca `rgba` de branco cravado. Os dois trechos existem no
+   `ms.css` justamente para isto.
+
+   ── Sobre movimento ────────────────────────────────────────
+   O `INFO.md` do bloco 07 é explícito: "esta é a tela mais
+   parada do app — não há keyframe nenhum. O movimento é todo
+   transition-colors de 150 ms". A `galleryItemIn` que o
+   HeliosGen tinha (450 ms, translateY(12px) scale(.98) em cada
+   ladrilho) FOI REMOVIDA. Sobram dois keyframes de estado — o
+   esqueleto enquanto a mídia carrega e o giro do "preparando" —
+   e a entrada de superfície flutuante do bloco 03.
+   ============================================================ */
+
+/* ── O ladrilho ─────────────────────────────────────────────
+   O invólucro da grade (em page.tsx) já dá o raio de 12 e o
+   overflow; `inherit` faz o anel do estado "citado" acompanhar
+   o canto em vez de cortar quadrado. */
+.gallery-item {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ms-bg-component);
+}
+
+/* ── Esqueleto ──────────────────────────────────────────────
+   Mesma receita do `.ms-esqueleto` das superfícies: duas paradas
+   do eixo de componente. No escuro o sweep ia para o claro; aqui
+   ele vai para o mais escuro, senão some no branco. */
+@keyframes acervo-esqueleto {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.gallery-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    var(--ms-bg-component) 25%,
+    var(--ms-bg-component-active) 50%,
+    var(--ms-bg-component) 75%
+  );
+  background-size: 200% 100%;
+  animation: acervo-esqueleto 1.4s ease-in-out infinite;
+}
+
+.gallery-item img,
+.gallery-item video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Véu do prompt ──────────────────────────────────────────
+   `--ms-bg-overlay` é o preto a 70% do kit — o mesmo token que o
+   Miora usa para escurecer o fundo atrás de superfície modal.
+   Aqui ele é a base do degradê que devolve contraste ao texto. */
+.gallery-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 10px;
+  background: linear-gradient(to top, var(--ms-bg-overlay) 0%, transparent 55%);
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.gallery-item:hover .gallery-overlay { opacity: 1; }
+
+/* ── Botões de ação ─────────────────────────────────────────
+   Sobre mídia, o hover não pode CLAREAR: o ícone é branco e
+   sumiria. Então o gatilho escurece de blackA-8 para blackA-10
+   e o ícone sobe para o branco cheio. */
+.gallery-actions-top {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.gallery-item:hover .gallery-actions-top {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.gallery-action-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: var(--ms-radius-full);
+  border: 1px solid var(--ms-whiteA-2-hex);
+  background: var(--ms-blackA-8-hex);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--ms-whiteA-10-hex);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 150ms, color 150ms;
+}
+
+.gallery-action-btn:hover:not(:disabled) {
+  background: var(--ms-blackA-10-hex);
+  color: var(--ms-whiteA-12-hex);
+}
+
+.gallery-action-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ms-ring);
+}
+
+.gallery-delete-btn:hover:not(:disabled) {
+  background: var(--ms-blackA-10-hex);
+  color: var(--signal-critical-soft);
+}
+
+.gallery-actions-bottom {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.gallery-item:hover .gallery-actions-bottom {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.gallery-ref-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px 5px 9px;
+  border-radius: var(--ms-radius-2xl);
+  border: 1px solid var(--ms-whiteA-2-hex);
+  background: var(--ms-blackA-8-hex);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--ms-whiteA-12-hex);
+  font-family: inherit;
+  font-size: var(--ms-text-base);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 150ms;
+}
+
+.gallery-ref-btn:hover { background: var(--ms-blackA-10-hex); }
+
+.gallery-ref-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ms-ring);
+}
+
+/* ── Play ───────────────────────────────────────────────────
+   Só aparece quando o vídeo está parado; o disco escuro garante
+   o triângulo branco sobre quadro claro. */
+.gallery-play-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ms-radius-full);
+  background: var(--ms-blackA-8-hex);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.gallery-item:hover .gallery-play-icon { opacity: 1; }
+
+/* ── Marca de seleção ───────────────────────────────────────
+   Antes era um quadrado só de contorno branco: sobre foto clara
+   ele desaparecia. Ganhou o mesmo véu escuro dos botões, e o
+   estado marcado é o Violeta da marca — não mais branco chapado,
+   que era indistinguível de uma mídia branca por baixo.
+
+   O véu é `blackA-8`, o mesmo dos botões de ação, e não um degrau
+   mais claro: medido na bancada contra o pior caso (mídia branca),
+   `blackA-6` dava 2,85:1 — abaixo dos 3:1 de um controle — e a
+   borda clara em cima dele caía para 1,96:1. Com `blackA-8` a caixa
+   mede 5,74:1 e a borda 3,22:1. */
+.gallery-checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 6;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--ms-radius);
+  border: 1.5px solid var(--ms-whiteA-8-hex);
+  background: var(--ms-blackA-8-hex);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.gallery-item:hover .gallery-checkbox { opacity: 1; }
+
+.gallery-item--selected .gallery-checkbox {
+  opacity: 1;
+  border-color: var(--ms-solid-brand);
+  background: var(--ms-solid-brand);
+}
+
+/* Em modo de seleção o ladrilho inteiro vira alvo de clique, então
+   tudo que competiria pelo cursor sai de cena. */
+.gallery-item--anyselected { cursor: pointer; }
+.gallery-item--anyselected .gallery-actions-top,
+.gallery-item--anyselected .gallery-actions-bottom { display: none; }
+.gallery-item--anyselected .gallery-overlay { opacity: 0 !important; }
+
+/* Citado por `@` no prompt. Verde de sinal, em anel fino — a regra
+   do kit permite sinal em tinta fina, não em área.
+
+   Vai num pseudo-elemento, não num `box-shadow: inset` no próprio
+   ladrilho: sombra interna é pintada ANTES dos filhos, e a mídia
+   ocupa 100% da caixa, então o anel ficava invisível. Medido na
+   bancada — no HeliosGen o defeito já existia e passava despercebido
+   porque o verde sobre o fundo escuro quase não se via mesmo. */
+.gallery-item--tagged::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2.5px var(--signal-success);
+  pointer-events: none;
+}
+
+/* ── Selo de novidade ───────────────────────────────────────
+   Era um degradê azul-esverdeado herdado; agora é o gradiente da
+   marca, que é a única tinta grande autorizada fora do neutro. */
+.acervo-selo-novo {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 10;
+  padding: 2px 6px;
+  border-radius: var(--ms-radius-full);
+  background: var(--brand-gradient);
+  color: var(--ms-text-on-brand);
+  font-size: var(--ms-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+/* ── Carrossel interno ──────────────────────────────────────
+   Só existe quando o item tem mais de uma imagem. Mesmos véus dos
+   botões de ação, por coerência sobre mídia. */
+.acervo-carrossel-seta {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: var(--ms-radius-full);
+  border: 1px solid var(--ms-whiteA-3-hex);
+  background: var(--ms-blackA-7-hex);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--ms-whiteA-12-hex);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 150ms;
+}
+
+.acervo-carrossel-seta:hover:not(:disabled) { background: var(--ms-blackA-10-hex); }
+.acervo-carrossel-seta:disabled { opacity: .25; cursor: default; }
+.acervo-carrossel-seta--anterior { left: 6px; }
+.acervo-carrossel-seta--proxima  { right: 6px; }
+
+.acervo-carrossel-pontos {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  gap: 4px;
+}
+
+.acervo-carrossel-ponto {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: var(--ms-whiteA-6-hex);
+  cursor: pointer;
+  transition: width 150ms, background 150ms;
+}
+
+.acervo-carrossel-ponto[aria-current="true"] {
+  width: 12px;
+  background: var(--ms-whiteA-12-hex);
+}
+
+/* ── Menção dentro do prompt ────────────────────────────────
+   O chip fica dentro do véu, sobre mídia: tinta clara de novo. */
+.acervo-mencao {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 1px;
+  padding: 1px 7px 1px 2px;
+  border-radius: var(--ms-radius);
+  background: var(--ms-whiteA-2-hex);
+  color: var(--ms-whiteA-12-hex);
+  font-size: var(--ms-text-base);
+  font-weight: 600;
+  line-height: 20px;
+  vertical-align: middle;
+}
+
+.acervo-mencao img {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: var(--ms-radius-sm);
+  object-fit: cover;
+}
+
+/* ── Giro ───────────────────────────────────────────────────
+   Duas variantes: `--claro` para os indicadores que ficam sobre
+   mídia (dentro do cartão e do seletor), `--marca` para os que
+   ficam sobre superfície branca (a torradeira). */
+@keyframes acervo-giro {
+  to { transform: rotate(360deg); }
+}
+
+.acervo-giro {
+  flex-shrink: 0;
+  display: inline-block;
+  border-radius: var(--ms-radius-full);
+  border-style: solid;
+  animation: acervo-giro .75s linear infinite;
+}
+
+.acervo-giro--claro {
+  border-color: var(--ms-whiteA-4-hex);
+  border-top-color: var(--ms-whiteA-12-hex);
+}
+
+.acervo-giro--marca {
+  border-color: var(--ms-border-subtle);
+  border-top-color: var(--ms-solid-brand);
+}
+
+/* ── Aro da torradeira ──────────────────────────────────────
+   Um único giro de 1,4 s, como no original. É indicador de
+   progresso indeterminado, não decoração. */
+@keyframes acervo-aro {
+  from { stroke-dashoffset: 75.4; transform: rotate(-90deg); }
+  to   { stroke-dashoffset: 0;    transform: rotate(270deg); }
+}
+
+.acervo-aro-girando {
+  animation: acervo-aro 1.4s linear infinite;
+  transform-origin: center;
+}
+
+/* ── Superfícies flutuantes da frente ───────────────────────
+   Entrada do bloco 03 (a mesma que os menus do bloco 07 usam):
+   opacity + scale(.96) translateY(-4px) em 150 ms. */
+@keyframes acervo-entrada {
+  from { opacity: 0; transform: translateY(-4px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);   }
+}
+
+.acervo-entrada {
+  animation: acervo-entrada 150ms cubic-bezier(.4, 0, .2, 1) both;
+}
+
+/* Rolagem sem barra visível dentro do seletor de elementos. */
+.acervo-rolagem-limpa { scrollbar-width: none; }
+.acervo-rolagem-limpa::-webkit-scrollbar { display: none; }
+
+/* ── Campos do seletor ──────────────────────────────────────
+   O anel de foco é o mesmo `--ms-input-shadow-focus` do kit,
+   reescrito aqui porque `theme.css` não expõe utilitário para
+   ele e cravar o valor no className seria pior. */
+.acervo-campo {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--ms-radius-md);
+  border: 1px solid var(--ms-border-subtle);
+  background: var(--ms-bg-component);
+  color: var(--ms-text);
+  font-family: inherit;
+  font-size: var(--ms-text-md);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+
+.acervo-campo::placeholder { color: var(--ms-text-placeholder); }
+
+.acervo-campo:focus {
+  border-color: var(--ms-border-brand);
+  box-shadow: 0 0 0 3px hsl(var(--ms-brand-9) / .18);
+}
+
+/* ── Alvo tracejado (novo elemento, adicionar imagem) ───────── */
+.acervo-alvo {
+  border: 1.5px dashed var(--ms-border);
+  background: var(--ms-bg-subtle);
+  color: var(--ms-text-secondary);
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms, color 150ms;
+}
+
+.acervo-alvo:hover {
+  border-color: var(--ms-border-strong);
+  background: var(--ms-bg-component);
+  color: var(--ms-text);
+}
+
+/* ── Ladrilho de elemento (seletor do Kling) ────────────────
+   A borda de 2px é sempre desenhada, transparente em repouso, para
+   que o hover não empurre a imagem 2px. Anexado = verde de sinal,
+   o mesmo do `.gallery-item--tagged`: nos dois casos a leitura é
+   "esta mídia já está citada no prompt". */
+.acervo-elemento {
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 150ms, opacity 150ms;
+}
+
+.acervo-elemento:hover:not(:disabled) { border-color: var(--ms-border-strong); }
+
+.acervo-elemento:disabled { cursor: default; }
+
+/* No limite de 3 anexados os não-anexados apagam; o anexado continua
+   cheio, senão o estado que interessa é o que some. */
+.acervo-elemento:disabled:not(.acervo-elemento--anexado) { opacity: .4; }
+
+.acervo-elemento--anexado { border-color: var(--signal-success); }
+
+.acervo-elemento-excluir {
+  background: var(--ms-blackA-8-hex);
+  border: 1px solid var(--ms-whiteA-3-hex);
+  color: var(--ms-whiteA-9-hex);
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+
+.acervo-elemento-excluir:hover {
+  background: var(--signal-critical);
+  color: var(--ms-whiteA-12-hex);
+}
+
+/* ── Botão sólido na marca ──────────────────────────────────
+   Existe como classe porque `app/theme.css` expõe
+   `--color-ms-solid-brand` mas não o par `-hover`: escrever
+   `hover:bg-ms-solid-brand-hover` não geraria CSS nenhum. */
+.acervo-botao-marca {
+  background: var(--ms-solid-brand);
+  color: var(--ms-text-on-solid);
+  transition: background 150ms, color 150ms;
+}
+
+.acervo-botao-marca:hover:not(:disabled) { background: var(--ms-solid-brand-hover); }
+
+.acervo-botao-marca:disabled {
+  background: var(--ms-bg-component);
+  color: var(--ms-text-disabled);
+  cursor: not-allowed;
+}
+
+/* ── Leque de vídeos do estado vazio ────────────────────────
+   No escuro o aro era `#868CFF` a 75% com um halo violeta. Sobre
+   o `#F9F9F9` da página isso mede 2,10:1 — abaixo dos 3:1 que um
+   objeto gráfico precisa. O Violeta cheio da marca mede 7,09:1.
+   O halo virou a sombra do kit: no claro, brilho não separa,
+   sombra separa. */
+.acervo-leque-tile {
+  position: relative;
+  overflow: hidden;
+  width: clamp(64px, min(12vw, 16vh), 172px);
+  height: clamp(64px, min(12vw, 16vh), 172px);
+  border: 3px solid var(--brand-violet);
+  box-shadow: var(--ms-shadow-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-shimmer,
+  .acervo-giro,
+  .acervo-aro-girando,
+  .acervo-entrada {
+    animation: none;
+  }
+}

@@ -1,0 +1,495 @@
+/* ============================================================
+   CICLO DE GERAÇÃO — bloco 09, §1 (o que acontece entre apertar
+   enviar e a imagem aparecer)
+
+   Todo valor daqui saiu do `<style>` do `preview.html` do bloco 09 e da tabela
+   de §2/§6.1 do `INFO.md` — nunca do `className` do bundle.
+
+   Duas famílias convivem neste arquivo, e a diferença importa para quem for
+   auditar:
+
+   • `.wf-*` e `.chat-input-loading-*` são LITERAIS do bundle da referência
+     (`css-common-fFd9Z1qJ.css` e `css-chat-DMGarjTu.css`). Nome e valor
+     copiados.
+   • `.ciclo-*` são a reconstrução por medida das peças de chat, que na
+     referência vêm de um pacote vendor (`cb-chat`) cujo CSS não está no
+     `_fonte/`. O `preview.html` as chama de `.mio-*`; aqui elas ganham o
+     prefixo da frente. Geometria idêntica.
+
+   O laranja da referência não aparece em lugar nenhum: onde ela usa
+   `--color-design-primary`, o token já resolve para o violeta em
+   `app/tokens/pitch.css`.
+   ============================================================ */
+
+/* Os literais moram nas três raízes que os consomem, porque o placeholder é
+   montado tanto dentro da thread quanto no canvas — que é outra árvore. */
+.ciclo-raiz,
+.ciclo-caixa-artefato,
+.chat-input-loading-bar {
+  /* ── Os valores literais que a rampa não tem ──────────────
+     `css-common-fFd9Z1qJ.css` define o placeholder com #ededed/#e4e4e4 e
+     `css-chat-DMGarjTu.css` define a onda do texto com #000/#999. Nenhum dos
+     quatro é degrau de `--ms-gray-*` (a rampa tem 94,11 / 90,98 / 87,84 e
+     55,29). Ficam declarados aqui, uma vez, em vez de cravados em cada regra —
+     e estão na lista de perguntas do relatório.
+
+     §8.6 do INFO já registra que no pixel a miniatura mede #f0f0f0 e o nó do
+     canvas #e8e8e8: a AMPLITUDE da varredura bate, o nível é que tem uma
+     camada por cima que os quadros não revelam. */
+  --ciclo-placeholder-base: #ededed;
+  --ciclo-placeholder-realce: #e4e4e4;
+  --ciclo-onda-escura: #000;
+  --ciclo-onda-clara: #999;
+  /* A calha da thread: literal `scrollbar-color:#E4E4E6 transparent`. Tem um
+     toque de azul que nenhum degrau da rampa cinza (neutra) reproduz. */
+  --ciclo-calha: #E4E4E6;
+  /* A bolha do usuário: literal `#f5f5f5`. Cai entre os degraus 2 (97,64) e
+     3 (94,11) da rampa; usar `--app-v2-bg-component` a escureceria 2 níveis. */
+  --ciclo-bolha: #f5f5f5;
+}
+
+.ciclo-raiz {
+  /* A coluna de mensagens: o painel dá 344 de área útil (368 − 24) e o thread
+     reserva 12 de calha para a barra de rolagem. */
+  --ciclo-coluna: 332px;
+}
+
+/* ============================================================
+   1) PLACEHOLDER DE MÍDIA — LITERAL de css-common-fFd9Z1qJ.css
+
+   Aparece nos DOIS lugares ao mesmo tempo (miniatura do chat e canvas), já no
+   tamanho final do artefato. É por isso que o layout não pula quando a imagem
+   chega: o espaço já estava reservado, e a troca é instantânea — não há
+   transição de placeholder para imagem.
+   ============================================================ */
+
+.wf-media-load-placeholder {
+  background-color: var(--ciclo-placeholder-base);
+}
+
+.wf-placeholder-motion .wf-media-load-placeholder,
+.wf-media-load-placeholder--fresh {
+  background-image: linear-gradient(
+    90deg,
+    var(--ciclo-placeholder-base) 25%,
+    var(--ciclo-placeholder-realce),
+    var(--ciclo-placeholder-base) 75%
+  );
+  background-size: 200% 100%;
+  animation: wf-media-load-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes wf-media-load-shimmer {
+  0% { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* A pílula: 85×28, branca, centrada. Medida em estados/gen-03/04/05 e img-01. */
+.ciclo-pilula-gerando {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--ms-radius-full);
+  background: var(--app-v2-bg-surface);
+  color: var(--app-v2-text-primary);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+/* A caixa que segura os dois: nasce com a geometria que o backend já informou. */
+.ciclo-caixa-artefato {
+  position: relative;
+  overflow: hidden;
+}
+
+/* ============================================================
+   2) BARRA DE STATUS — LITERAL de css-chat-DMGarjTu.css
+
+   A onda de luz de 3s percorre o texto por `background-clip:text`. É a única
+   animação da tela além do shimmer do placeholder.
+   ============================================================ */
+
+.sidebar-input-status-slot:not(:empty) {
+  z-index: -3;
+  transform: translateY(-5px);
+}
+
+.chat-input-loading-bar {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 28px;
+  align-items: center;
+  box-sizing: border-box;
+  padding-left: 28px;
+}
+
+/* Literal: `width:52px;height:43px;position:absolute;object-fit:contain;
+   align-self:flex-end;margin-bottom:-16px;margin-left:-10px`. O asset original é
+   um mascote largo de 52×43 que transborda para baixo da barra; o nosso é a
+   marca quadrada, então a caixa cai para 20px e fica centrada — é o mesmo x
+   medido em estados/gen-05 (x=27). */
+.chat-input-loading-bar .chat-input-loading-mascot {
+  position: absolute;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-v2-icon-secondary);
+}
+
+.chat-input-loading-bar .chat-input-loading-text {
+  font-size: 13px;
+  line-height: 20px;
+  background: linear-gradient(
+    90deg,
+    var(--ciclo-onda-escura),
+    var(--ciclo-onda-clara),
+    var(--ciclo-onda-escura)
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  to { background-position: 0% 0; }
+}
+
+/* ============================================================
+   3) A THREAD — reconstrução por medida (§6 do INFO)
+
+   As sobrescritas que a Miora aplica por cima do pacote vendor são literais e
+   estão respeitadas: `userMessageWrapper{align-items:flex-end}`,
+   `userMessageText{font-size:13px}`, `assistantMessage{margin-top:25px}`,
+   `assistantMessageContent{font-size:12px}`,
+   `chatMessage{scrollbar-color:#E4E4E6 transparent}`.
+   ============================================================ */
+
+.ciclo-thread {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* virtuoso-scroller: margin-inline -12 + padding-inline 12 */
+  margin-left: -12px;
+  margin-right: -12px;
+  padding-left: 12px;
+  padding-right: 12px;
+  scrollbar-color: var(--ciclo-calha) transparent;
+  scrollbar-width: thin;
+}
+
+.ciclo-thread-inner {
+  width: var(--ciclo-coluna);
+}
+
+/* ── Bolha do usuário ─────────────────────────────────────────
+   Medida no pixel: ocupa 113…181 com três linhas de 13/21 — portanto padding
+   vertical de ~2px, e não os 8–12 que a intuição pediria. */
+.ciclo-usuario-linha {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 0;
+}
+
+.ciclo-usuario-bolha {
+  max-width: 303px;
+  padding: 1px 13px 4px;
+  border-radius: var(--ms-radius-lg);
+  background: var(--ciclo-bolha);
+  color: var(--app-v2-text-primary);
+  font-size: 13px;
+  line-height: 21px;
+  overflow-x: hidden;
+  overflow-y: visible;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ciclo-data {
+  margin-top: 25px;
+  color: var(--app-v2-text-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.ciclo-assistente {
+  margin-top: 8px;
+  padding: 0;
+}
+
+/* ── Bloco "Pensando a fundo" ─────────────────────────────────
+   Na referência ele é dobrável; o transcript do raciocínio nunca foi capturado
+   e aqui também não existe, então mostra só o rótulo e a duração real. */
+.ciclo-pensando {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  margin-top: 12px;
+  color: var(--app-v2-text-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+  cursor: default;
+}
+
+/* ── Linha de rastro do agente ────────────────────────────────
+   É interface, não log: uma linha por marco do ciclo de vida. */
+.ciclo-rastro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 20px;
+  margin-top: 9px;
+  color: var(--app-v2-text-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.ciclo-rastro svg {
+  flex-shrink: 0;
+  color: var(--app-v2-icon-disabled);
+}
+
+.ciclo-resposta {
+  margin-top: 14px;
+  color: var(--app-v2-text-primary);
+  font-size: 12px;
+  line-height: 21px;
+}
+
+.ciclo-resposta p {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+/* ── Régua de ações da resposta ───────────────────────────────
+   Copiar · 👍 · 👎 (exclusivos entre si) · Mais. */
+.ciclo-regua {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ciclo-regua button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--ms-radius);
+  background: transparent;
+  color: var(--app-v2-text-primary);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+/* O fundo continua o cinza da referência; o que acende é o ícone. */
+.ciclo-regua button:hover {
+  background: var(--app-v2-bg-surface-hover);
+  color: var(--hover-brand);
+}
+
+.ciclo-regua button[aria-pressed="true"] {
+  color: var(--color-design-primary);
+}
+
+/* O menu de "Mais": os dois verbos que o dicionário `mediaResult` do bloco
+   define e que a captura não tem onde mostrar. */
+.ciclo-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 4px);
+  z-index: 5;
+  min-width: 168px;
+  padding: 4px;
+  margin: 0;
+  list-style: none;
+  border-radius: var(--ms-radius-md);
+  border: 1px solid var(--app-v2-border-hairline);
+  background: var(--app-v2-bg-surface);
+  box-shadow: var(--app-v2-shadow-floating);
+}
+
+.ciclo-menu button {
+  display: flex;
+  width: 100%;
+  height: 30px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--ms-radius-sm);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--app-v2-text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s ease, color .15s ease;
+}
+
+.ciclo-menu button:hover {
+  background: var(--app-v2-bg-surface-hover);
+  color: var(--hover-brand);
+}
+
+/* ── Sugestões de continuação ─────────────────────────────────
+   A seta desliza 2px na diagonal no hover e o texto vai para o link. */
+.ciclo-sugestoes {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ciclo-sugestao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--app-v2-text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  transition: color .15s ease;
+}
+
+.ciclo-sugestao span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ciclo-sugestao svg {
+  flex-shrink: 0;
+  color: var(--app-v2-text-tertiary);
+  transition: transform .15s ease, color .15s ease;
+}
+
+.ciclo-sugestao:hover {
+  color: var(--ms-text-link);
+}
+
+.ciclo-sugestao:hover svg {
+  transform: translate(2px, -2px);
+  color: var(--hover-brand);
+}
+
+/* ── Bloco de mídia do chat (miniatura de 332 × altura do artefato) ── */
+.ciclo-midia {
+  position: relative;
+  margin-top: 9px;
+  width: var(--ciclo-coluna);
+  border-radius: var(--ms-radius-md);
+  overflow: hidden;
+}
+
+.ciclo-midia img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ciclo-midia-acoes {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  opacity: 0;
+  transition: opacity .15s ease;
+  background: linear-gradient(180deg, transparent, hsl(var(--ms-blackA-6) / .28));
+}
+
+.ciclo-midia:hover .ciclo-midia-acoes,
+.ciclo-midia:focus-within .ciclo-midia-acoes {
+  opacity: 1;
+}
+
+.ciclo-midia-acoes button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--ms-radius-full);
+  /* o branco a 92% da referência, escrito pelo token da rampa em vez do literal */
+  background: hsl(var(--ms-whiteA-11) / .92);
+  color: var(--app-v2-text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+.ciclo-midia-acoes button:hover {
+  background: hsl(var(--ms-gray-1));
+  color: var(--hover-brand);
+}
+
+/* ── Falha ────────────────────────────────────────────────────
+   `subagent.lifecycle.failed` é uma linha de rastro como as outras; o motivo
+   real da falha entra abaixo dela, porque esconder o erro num `title` obrigaria
+   o usuário a caçar com o mouse o que a geração custou. */
+.ciclo-falha {
+  margin-top: 9px;
+  padding: 8px 10px;
+  border-radius: var(--ms-radius-md);
+  background: var(--app-v2-bg-danger);
+  color: var(--app-v2-danger-text);
+  font-size: 12px;
+  line-height: 18px;
+  word-break: break-word;
+}
+
+/* ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-placeholder-motion .wf-media-load-placeholder,
+  .wf-media-load-placeholder--fresh {
+    animation: none;
+    background-image: none;
+    background-color: var(--ciclo-placeholder-base);
+  }
+  .chat-input-loading-bar .chat-input-loading-text {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: var(--app-v2-text-primary);
+    color: var(--app-v2-text-primary);
+  }
+  .ciclo-regua button,
+  .ciclo-menu button,
+  .ciclo-sugestao,
+  .ciclo-sugestao svg,
+  .ciclo-midia-acoes,
+  .ciclo-midia-acoes button {
+    transition: none;
+  }
+}

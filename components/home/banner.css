@@ -1,0 +1,188 @@
+/* ============================================================
+   02 — CARROSSEL DE BANNERS EM PERSPECTIVA
+
+   Porta as 17 regras `.home-v2-banner*` de `css-index-DiirFdIa.css`
+   mais os dois `@keyframes`. Todo número saiu do `<style>` do
+   `miora/sections/02-home-hero-carrossel/preview.html` e da tabela de
+   geometria do `INFO.md` — nunca do `className`.
+
+   A geometria inteira é em `cqw`, e só cai nos px de projeto se a
+   cadeia de containers fechar. Por isso ela vem junto: o componente
+   traz o próprio `.pb-page` (o `container-type: inline-size` da
+   referência) e a própria coluna de 1000px. Numa área de 1622px:
+
+       1622  .pb-page          container, centro em x = 1085
+       1000  .pb-content       max-width
+     −136,5  --pb-wide-overflow = clamp(0, (1622−1000)/2, 136,5)
+       1273  .pb-banner        1000 + 2×136,5
+    1249,85  .pb-viewport      container ⇒ 1cqw = 12,4985px
+
+   `--pb-wide-overflow` é declarado no `.pb-page` mas só é resolvido no
+   `.pb-banner`, que é onde `100%` vale a coluna de 1000 e `100cqi` vale
+   os 1622 do container. Declarar em outro lugar dá zero.
+   ============================================================ */
+
+.pb-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  container-type: inline-size;
+  --pb-wide-overflow: clamp(0px, calc((100cqi - 100%) / 2), 136.5px);
+}
+
+.pb-content {
+  width: 100%;
+  max-width: 1000px;
+  display: flex;
+  flex-direction: column;
+}
+
+.pb-banner {
+  width: auto;
+  margin-inline: calc(var(--pb-wide-overflow) * -1);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+.pb-viewport {
+  container-type: inline-size;
+  width: 100%;
+  max-width: 1249.85px;
+  margin: 0 auto;
+}
+
+/* `perspective` mora AQUI, no palco, e chega inline em cqw. Um
+   `perspective()` no transform de cada card daria um ponto de fuga por
+   card — três cartas soltas em vez de uma cena. */
+.pb-stage {
+  position: relative;
+  width: 100%;
+  height: 22.4027cqw;   /* 280 / 1249,85 */
+  max-height: 280px;
+  transform-style: preserve-3d;
+}
+
+/* Os três cards têm a MESMA caixa de 750×280. O que encolhe os laterais
+   é a projeção, não o `scale` — ver `transformFor` no componente. */
+.pb-card {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 60.0072cqw;    /* 750 / 1249,85 */
+  max-width: 750px;
+  height: 22.4027cqw;
+  max-height: 280px;
+  border-radius: 1.6002cqw;  /* 20 / 1249,85 */
+  overflow: hidden;
+  cursor: pointer;
+  --pb-card-hairline: 0 0 0 1px rgba(0, 0, 0, .08);
+  box-shadow:
+    var(--pb-card-hairline),
+    0 .2395cqw .4257cqw #00000008,
+    0 .8042cqw 1.4295cqw #0000000a,
+    0 3.6005cqw 6.4008cqw #00000012;
+  /* A referência escreve `--app-v2-bg-secondary`, um token que não existe
+     em lugar nenhum: cai sempre no fallback. Copiado com o erro porque é
+     o que o site serve, e porque o card é 100% coberto pela mídia — só
+     aparece no meio segundo entre montar a <div> e a imagem decodificar. */
+  background: var(--app-v2-bg-secondary, rgba(0, 0, 0, .04));
+  transition: transform .5s cubic-bezier(.4, 0, .2, 1);
+  animation: pb-card-in .45s ease-out;
+  backface-visibility: hidden;
+}
+
+.pb-card:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 .5px #fffc;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* As duas direções são opostas de propósito: em ambos os laterais quem
+   escurece é a borda INTERNA, a que encosta no card do meio. É ela que
+   vende a dobra para dentro. */
+.pb-card:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(272.21deg, #0003, #0000);
+  pointer-events: none;
+}
+
+.pb-card[data-slot="1"]:after { background: linear-gradient(92.21deg, #0003, #0000); }
+
+.pb-card--main:after { content: none; }
+
+/* A sombra do meio desce 100px; a dos laterais, 45px. Sem transição: ela
+   pula no instante da troca e ninguém vê, porque a geometria está se
+   movendo junto. */
+.pb-card--main {
+  box-shadow:
+    var(--pb-card-hairline),
+    0 8.001cqw 6.4008cqw #00000012,
+    0 2.4121cqw 1.9297cqw #0000000d,
+    0 1.0019cqw .8015cqw #0000000a,
+    0 .3624cqw .2899cqw #00000005;
+  z-index: 2;
+}
+
+@keyframes pb-card-in { 0% { opacity: 0 } to { opacity: 1 } }
+
+.pb-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* O skeleton do estado vazio. */
+.pb-placeholder {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%);
+  width: 60.0072cqw;
+  max-width: 750px;
+  height: 100%;
+  border-radius: 1.6002cqw;
+  background: var(--app-v2-bg-component, rgba(0, 0, 0, .04));
+  animation: pb-skeleton-pulse 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.pb-banner:not(.pb-banner--empty) .pb-placeholder { content: none; display: none }
+
+@keyframes pb-skeleton-pulse { 0%, to { opacity: 1 } 50% { opacity: .55 } }
+
+/* O slot dos pontos tem altura fixa e existe mesmo com um banner só — é
+   ele que impede o layout de pular quando a lista chega. */
+.pb-dots-slot { display: flex; align-items: center; height: 4px }
+.pb-dots { display: flex; align-items: center; gap: 4px }
+
+.pb-dot {
+  width: 32px;
+  height: 4px;
+  padding: 0;
+  border: none;
+  border-radius: 100px;
+  cursor: pointer;
+  background: var(--ms-grayA-6-hex);   /* #00000026, o mesmo alfa da referência */
+  transition: background .2s ease;
+}
+
+.pb-dot--active { background: var(--ms-solid); }  /* hsl(--ms-gray-12) = #202020 */
+
+/* A única regra de reduced-motion do bloco. Mata a transição de .5s do
+   giro E a entrada de .45s; a troca de card continua, só instantânea.
+   O intervalo de 10s do autoplay o site NÃO desliga — nós também não. */
+@media (prefers-reduced-motion: reduce) {
+  .pb-card { transition: none; animation: none }
+}

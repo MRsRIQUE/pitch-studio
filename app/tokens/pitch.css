@@ -1,0 +1,124 @@
+/* ============================================================
+   IDENTIDADE PITCH AI
+
+   Este arquivo é onde toda decisão NOSSA vive. Os dois anteriores
+   (ms.css e app-v2.css) são transcrições auditáveis da referência;
+   aqui é o que a Pitch decidiu por cima delas.
+
+   Fonte: "Pitch AI Brand Kit". Uma marca (violeta), uma base
+   (noite) e cinco sinais semânticos.
+   ============================================================ */
+
+:root {
+  /* ── Marca ─────────────────────────────────────────────────
+     O Violeta é o degrau 9 da escala em ms.css. Repetido aqui em
+     hex porque o gradiente e o logo precisam do valor literal. */
+  --brand-violet: #4318FF;
+  --brand-gradient: linear-gradient(135deg, #868CFF, #4318FF);
+  --brand-ink: #2F0FA8;             /* violeta escurecido, para texto sobre tintas claras */
+
+  /* O Lilás do kit fica FORA da rampa de propósito.
+     Ele é hsl(237 100% 76.3%) — 14° mais azul que o degrau 8, e a
+     2,91:1 sobre branco reprova o mínimo de 3:1 para indicador de
+     foco. Serve a exatamente dois papéis que o kit define: o ponto
+     claro do gradiente 135° e o acento sobre superfície escura
+     (canvas e .pitch-night), onde o Violeta não tem contraste. */
+  --brand-lilac: #868CFF;
+  --brand-lilac-soft: #A9ADFF;
+
+  /* ── O violeta do ponteiro ─────────────────────────────────
+     A referência acende o hover em cinza; aqui alguns elementos
+     acendem na marca. Um token só, para que a decisão de "o que
+     fica roxo ao passar o mouse" seja uma lista de seletores e não
+     um hex repetido em oito arquivos.
+
+     `--hover-brand`      → ícone e texto (o violeta cheio)
+     `--hover-brand-soft` → borda, quando a peça já tem contorno
+     `--hover-brand-wash` → fundo, a 6% (o mesmo alfa do item ativo
+                            de marca da barra, um degrau abaixo)
+
+     Sobre superfície escura o violeta some; ali o token vira lilás,
+     no bloco :is(.pitch-night, .canvas-noite) mais abaixo. */
+  --hover-brand: var(--brand-violet);
+  --hover-brand-soft: #4318FF5c;
+  --hover-brand-wash: #4318FF0f;
+
+  /* ── Superfície noturna ────────────────────────────────────
+     O kit define uma base "Noite" para as superfícies de criação.
+     É onde o canvas e o Assistente vivem. */
+  --surface-night: #0F0F1A;
+
+  /* ── Tipografia ────────────────────────────────────────────
+     DM Sans na interface, JetBrains Mono só para números que mudam
+     ao vivo (tabular, não "dança").
+
+     Mantemos DM Sans em vez de adotar a Inter do Miora: tipografia
+     é marca, não layout, e o PitchLogo desenha o "P" e o wordmark
+     como TEXTO herdando esta variável — trocar a família reescreve
+     silenciosamente o glifo da marca. A geometria do Miora não
+     depende da fonte; o que faz a UI parecer Miora é a escala de
+     tamanhos (--ms-text-*), que adotamos. */
+  --font-ui: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-metric: var(--font-jetbrains-mono), ui-monospace, "SF Mono", monospace;
+
+  /* Componentes portados da referência pedem a família pelo nome do
+     Miora; redireciona para a nossa. */
+  --ms-font-sans: var(--font-ui);
+  --ms-font-mono: var(--font-metric);
+
+  /* ── Sinais semânticos do kit ──────────────────────────────
+     Regra do kit: cor de sinal só aparece em texto, ícone e tinta
+     a 14–18% — nunca em área grande. */
+  --signal-success: #01B574;        /* no ar, conversões, IA respondeu */
+  --signal-warning: #FFB547;        /* moderação, limite de plano, atraso */
+  --signal-critical: #E31A1A;       /* bloqueio, erro */
+  --signal-critical-soft: #FF8A8A;
+  --signal-voice: #0BC5EA;          /* áudio em tempo real */
+  --signal-info: #1B84FF;           /* dicas, avisos neutros, links */
+}
+
+/* ── Overrides da camada semântica ──────────────────────────
+   É exatamente para isto que a arquitetura de três camadas existe:
+   a escala crua fica limpa e canônica, a semântica fica de marca.
+
+   O degrau 11 (#2C04D7) é o correto pela regra do Radix para texto
+   de marca, mas lê como quase-marinho — link e ícone de marca
+   deixariam de parecer Pitch. O degrau 9 (#4318FF) dá 7,46:1 sobre
+   branco, o que passa AAA com folga, então não há motivo para
+   escurecer. Redirecionamos a semântica, não a escala. */
+:root {
+  --ms-text-link: hsl(var(--ms-brand-9));
+  --ms-text-brand: hsl(var(--ms-brand-9));
+  --ms-icon-brand: hsl(var(--ms-brand-9));
+  --ms-icon-link: hsl(var(--ms-brand-9));
+  --ms-ring: hsl(var(--ms-brand-9));
+  --ms-border-brand-strong: hsl(var(--ms-brand-9));
+}
+
+/* ── Órfãos do bundle do Miora ──────────────────────────────
+   Duas cores de marca ficaram fora do design system do Miora e
+   vivem soltas no bundle dele. Componentes portados as referenciam,
+   então precisam existir — apontando para a nossa marca. */
+:root {
+  /* Consumido como cor completa. */
+  --color-design-primary: var(--ms-solid-brand);
+
+  /* Consumido DENTRO de hsl(var(--brand-400)/…) — precisa ser tripla
+     HSL crua, sem a função. Com o valor completo, a expressão vira
+     inválida e a cor some sem erro. É o degrau 9 clareado em ~13pt,
+     a mesma relação que o original tinha com o laranja-9. */
+  --brand-400: 251.2 100% 68%;
+}
+
+/* Sobre superfície noturna o violeta reprova o contraste; o kit manda usar o
+   lilás — a mesma regra que a Memória já segue.
+
+   `.canvas-noite` saiu: era um nome que eu inventei aqui e que nenhuma tela usa
+   (o canvas do bloco 09 é claro, como na referência). A única superfície escura
+   do app é a Memória, e a classe dela é `.ms-memoria-dark`; sem ela nesta lista
+   o override não alcançava a tela para a qual foi escrito. */
+:is(.pitch-night, .ms-memoria-dark) {
+  --hover-brand: var(--brand-lilac);
+  --hover-brand-soft: #868CFF66;
+  --hover-brand-wash: #868CFF14;
+}

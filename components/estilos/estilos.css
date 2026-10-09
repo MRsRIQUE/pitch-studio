@@ -1,0 +1,797 @@
+/* ============================================================
+   ESTILOS — bloco 06 (`miora/sections/06-skills`)
+
+   Cada regra abaixo traz, no comentário, o seletor da referência de onde o
+   valor veio. Os valores saíram do `<style>` do `preview.html` e da tabela de
+   geometria do `INFO.md` — nunca do `className`, que no bundle do Miora perde
+   modificador de opacidade sem erro.
+
+   A única coisa que muda em relação à referência é a tinta de marca: onde ela
+   usa `--color-design-primary` e `hsl(--brand-400)` — o laranja dela —, os
+   tokens já apontam para o violeta e o violeta claro. Cinza, alfa, raio, peso e
+   medida são copiados como estão.
+
+   Os nomes de classe são nossos (`est-*`) porque a rota é `/estilos`; a
+   estrutura é um-para-um com `.skills-v2-*`.
+   ============================================================ */
+
+/* .skills-v2-page */
+.est-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1310px;
+  margin: 0 auto;
+}
+
+/* ── Cabeçalho ──────────────────────────────────────────────
+   .skills-v2-header — `align-items:flex-end` é o que alinha a linha dos chips
+   com a dos botões, mesmo o lado esquerdo tendo duas linhas e o direito uma. */
+.est-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+}
+
+/* .skills-v2-header__left */
+.est-header__left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* .skills-v2-header__title-row */
+.est-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* .skills-v2-header__title — 16px/500/24px */
+.est-header__title {
+  margin: 0;
+  font-size: var(--ms-text-xl);
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--ms-text);
+  text-transform: capitalize;
+}
+
+/* .skills-v2-header__search — 246×32, radius 100px, fundo transparente */
+.est-header__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 246px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 100px;
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.est-header__search-icon {
+  color: var(--app-v2-icon-disabled);
+  flex-shrink: 0;
+  display: inline-flex;
+}
+
+/* input 13px/22px */
+.est-header__search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: var(--ms-text-md);
+  line-height: 22px;
+  color: var(--ms-text);
+}
+
+.est-header__search input::placeholder {
+  color: var(--app-v2-icon-disabled);
+}
+
+.est-header__search input::-webkit-search-cancel-button,
+.est-header__search input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+/* .skills-v2-header__search-clear — 16×16, só visível no :focus-within */
+.est-header__search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--app-v2-icon-disabled);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity .15s ease, color .15s ease;
+}
+
+.est-header__search:focus-within .est-header__search-clear {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.est-header__search-clear:hover {
+  color: var(--ms-text);
+}
+
+/* .skills-v2-header__filters */
+.est-header__filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* .skills-v2-header__filter — h36, pad 0 12, radius 12, 12px/400/24px */
+.est-header__filter {
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--ms-radius-lg);
+  background: var(--app-v2-bg-component);
+  font: inherit;
+  font-size: var(--ms-text-base);
+  font-weight: 400;
+  line-height: 24px;
+  color: var(--app-v2-text-secondary);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+.est-header__filter:hover {
+  color: var(--ms-text);
+}
+
+/* Chip ativo: `--color-design-primary`. Na referência é o laranja; aqui o token
+   aponta para o violeta da marca — a licença nº 1, e a única cor que muda. */
+.est-header__filter.is-active {
+  background: var(--color-design-primary);
+  color: var(--app-v2-text-on-solid);
+  font-weight: 500;
+}
+
+/* .skills-v2-header__actions */
+.est-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* .skills-v2-header__action — h32, pad 0 12, radius 12, 12px/500/20px */
+.est-header__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--ms-radius-lg);
+  border: 1px solid var(--app-v2-border-subtle);
+  background: var(--app-v2-bg-surface);
+  font: inherit;
+  font-size: var(--ms-text-base);
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--ms-text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s ease;
+}
+
+.est-header__action:hover {
+  background: var(--app-v2-bg-surface-hover);
+}
+
+/* .skills-v2-header__action--primary — `--app-v2-button-bg` = #202020.
+   O botão primário do bloco NÃO é violeta na referência, e não vira. */
+.est-header__action--primary {
+  border-color: transparent;
+  background: var(--app-v2-button-bg);
+  color: var(--app-v2-button-fg);
+  box-shadow: var(--app-v2-button-shadow);
+}
+
+.est-header__action--primary:hover {
+  background: var(--app-v2-button-bg-hover);
+  box-shadow: var(--app-v2-button-shadow-hover);
+}
+
+/* ── Seções e grade ─────────────────────────────────────────
+   .skills-v2-section / .skills-v2-grid — 3 colunas com gap 12; a 1310 isso dá
+   a coluna de 428,66px da captura. */
+.est-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+/* .skills-v2-section__heading */
+.est-section__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* .skills-v2-section__title, .skills-v2-section__heading h2 — 13px/500/20px */
+.est-section__title,
+.est-section__heading h2 {
+  margin: 0;
+  font-size: var(--ms-text-md);
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--ms-text);
+}
+
+/* .skills-v2-section__upgrade-all — h32, radius 80px, 11px/16px.
+   Declarada e sem instância, como no site: a regra existe no CSS do Miora mas
+   nenhuma skill da conta capturada tinha `hasUpdate`. Aqui é o mesmo caso —
+   um estilo local nunca fica defasado, porque não há origem para atualizar. */
+.est-section__upgrade-all {
+  height: 32px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 80px;
+  background: var(--app-v2-bg-component);
+  font: inherit;
+  font-size: var(--ms-text-sm);
+  line-height: 16px;
+  color: var(--app-v2-text-primary);
+  cursor: pointer;
+}
+
+.est-section__upgrade-all:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* .skills-v2-empty — 13px/20px */
+.est-empty {
+  margin: 0;
+  font-size: var(--ms-text-md);
+  line-height: 20px;
+  color: var(--app-v2-text-tertiary);
+}
+
+/* .skills-v2-grid.skills-v2-grid--installed */
+.est-grid {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 1200px) {
+  .est-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  .est-header { flex-direction: column; align-items: stretch; }
+  .est-header__actions { flex-wrap: wrap; justify-content: flex-start; }
+  .est-grid { grid-template-columns: 1fr; }
+}
+
+/* .skills-v2-skeleton / @keyframes skills-v2-pulse — a ÚNICA animação própria
+   do bloco. Aqui ela cobre a hidratação do store persistido, que é o nosso
+   carregamento real. */
+.est-skeleton {
+  border-radius: 18px;
+  background: var(--app-v2-bg-component);
+  animation: est-pulse 1.5s ease-in-out infinite;
+}
+
+.est-skeleton--card {
+  height: 90px;
+}
+
+@keyframes est-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .55; }
+}
+
+/* ── Cartão de estilo (.skills-v2-installed-card) ───────────
+   min-height 90, padding 16, radius 16, gap 8. A altura real fica em 99px
+   porque a title-row é esticada pelo botão More (24px). */
+.est-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 90px;
+  padding: 16px;
+  border-radius: var(--ms-radius-xl);
+  background: var(--ms-bg-component);
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.est-card:hover {
+  background: var(--app-v2-bg-component-hover);
+}
+
+/* .skills-v2-installed-card__icon — 64×64, radius 8. A capa da referência vem
+   de CDN assinada; um estilo não tem capa, então fica o monograma sobre a mesma
+   tinta de fundo que o site usa no tile. */
+.est-card__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: var(--ms-radius-md);
+  background: var(--app-v2-bg-surface-active);
+  color: var(--ms-text-secondary);
+  font-size: var(--ms-text-2xl);
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+/* .skills-v2-installed-card__info — `width:1px` + `flex:1` é o truque da
+   referência para o texto truncar em vez de esticar o cartão. */
+.est-card__info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  width: 1px;
+}
+
+/* .skills-v2-installed-card__title-row */
+.est-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* .skills-v2-installed-card__title-group — `align-items:baseline` é o que põe a
+   versão na mesma linha de base do nome. */
+.est-card__title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* .skills-v2-installed-card__name — 14px/500/1.4 */
+.est-card__name {
+  margin: 0;
+  font-size: var(--ms-text-lg);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ms-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* .skills-v2-installed-card__version — 12px/normal, texto terciário */
+.est-card__version {
+  font-size: var(--ms-text-base);
+  line-height: normal;
+  color: var(--app-v2-text-tertiary);
+  flex-shrink: 0;
+}
+
+/* .skills-v2-installed-card__status-row — a referência reserva a caixa (layout
+   só) e nunca a preenche: nenhuma skill da conta capturada estava editada.
+   O tamanho do texto, portanto, é INFERÊNCIA: usamos o mesmo par da descrição
+   (12px/20px, texto secundário), que é o que a caixa vizinha usa. */
+.est-card__status-row {
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+  min-width: 0;
+  font-size: var(--ms-text-base);
+  line-height: 20px;
+  color: var(--app-v2-text-secondary);
+}
+
+/* .skills-v2-installed-card__desc — 12px/21px, line-clamp 2 */
+.est-card__fragment {
+  margin: 0;
+  font-size: var(--ms-text-base);
+  line-height: 21px;
+  color: var(--app-v2-text-secondary);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+/* .skills-v2-installed-card__actions */
+.est-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* .skills-v2-installed-card__menu — 24×24; só existe no hover ou com o foco
+   dentro do cartão, e continua no DOM para o teclado alcançar. */
+.est-card__menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  width: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--ms-radius-lg);
+  background: transparent;
+  color: var(--ms-text);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease, background-color .15s ease;
+}
+
+.est-card:hover .est-card__menu,
+.est-card:focus-within .est-card__menu,
+.est-card__menu[data-state="open"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.est-card__menu:hover { background: var(--ms-bg-hover); }
+.est-card__menu:active { background: var(--ms-bg-active); }
+
+/* ── Toggle (.rcui-switch) ──────────────────────────────────
+   Utilitárias do bundle resolvidas: h-[14px] w-[28px] border rounded-full,
+   polegar h-3 w-3 branco em translateX(14px), 150ms cubic-bezier(.4,0,.2,1).
+   Trilho ligado: `hsl(var(--brand-400))` — na referência o laranja claro, aqui o
+   violeta claro, porque o token já é o nosso. Trilho desligado: alfa preto
+   de 6%, que é exatamente `--ms-grayA-3-hex`. */
+.est-switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  height: 14px;
+  width: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  cursor: pointer;
+  background-color: hsl(var(--brand-400));
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+  transition-duration: .15s;
+}
+
+.est-switch[data-state="unchecked"] {
+  background-color: var(--ms-grayA-3-hex);
+}
+
+.est-switch[data-state="unchecked"]:hover {
+  background-color: var(--ms-grayA-4-hex);
+}
+
+.est-switch__thumb {
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 12px;
+  width: 12px;
+  border-radius: 9999px;
+  background-color: var(--ms-bg);
+  transform: translateX(14px);
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+  transition-duration: .15s;
+}
+
+.est-switch[data-state="unchecked"] .est-switch__thumb {
+  transform: translateX(0);
+}
+
+/* Um estilo desligado não entra nas sugestões do composer. O cartão diz isso
+   esmaecendo o conteúdo — não o toggle, que é o que religa. */
+.est-card[data-enabled="false"] .est-card__mark,
+.est-card[data-enabled="false"] .est-card__info > :not(.est-card__title-row) {
+  opacity: .55;
+}
+
+/* ── Cartão de sugerido (.skills-v2-not-installed-card) ─────
+   Mesma caixa, `space-between`, e o `+` de 28px no canto. */
+.est-suggestion {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 90px;
+  padding: 16px;
+  border-radius: var(--ms-radius-xl);
+  background: var(--ms-bg-component);
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+
+.est-suggestion:hover {
+  background: var(--app-v2-bg-component-hover);
+}
+
+/* .skills-v2-not-installed-card__main — `align-items:center` aqui, não
+   flex-start: é o que centra o ícone de 64 com o bloco de três linhas. */
+.est-suggestion__main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.est-suggestion__info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+/* .skills-v2-not-installed-card__title-row */
+.est-suggestion__title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.est-suggestion__name {
+  margin: 0;
+  font-size: var(--ms-text-lg);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ms-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.est-suggestion__version {
+  font-size: var(--ms-text-base);
+  line-height: normal;
+  color: var(--app-v2-text-tertiary);
+  flex-shrink: 0;
+}
+
+/* .skills-v2-not-installed-card__downloads — 12px/20px, gap 4.
+   Lá é quantas vezes a skill foi baixada; aqui, quantas vezes o fragmento foi
+   aplicado no composer. Número contado no store, não estimado. */
+.est-suggestion__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--ms-text-base);
+  line-height: 20px;
+  color: var(--app-v2-text-secondary);
+}
+
+/* .skills-v2-not-installed-card__desc — uma linha, com reticências (contra o
+   line-clamp de 2 do cartão instalado). */
+.est-suggestion__fragment {
+  margin: 0;
+  font-size: var(--ms-text-base);
+  line-height: 21px;
+  color: var(--app-v2-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* .skills-v2-not-installed-card__add — 28×28, radius 6,5px (medida da
+   referência; fica fora da escala --ms-radius-*, que só tem 6 e 8). */
+.est-suggestion__add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6.5px;
+  background: var(--app-v2-bg-surface-active);
+  color: var(--app-v2-icon-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s ease, color .15s ease;
+}
+
+.est-suggestion__add:hover {
+  background: var(--ms-bg-active);
+  color: var(--ms-text);
+}
+
+.est-header__filter:focus-visible,
+.est-header__action:focus-visible,
+.est-header__search-clear:focus-visible,
+.est-card:focus-visible,
+.est-card__menu:focus-visible,
+.est-switch:focus-visible,
+.est-suggestion:focus-visible,
+.est-suggestion__add:focus-visible {
+  outline: 2px solid var(--ms-ring);
+  outline-offset: 2px;
+}
+
+/* ── Editor ─────────────────────────────────────────────────
+   Fora do bloco: a referência abre o editor de skill numa tela própria, que
+   nunca foi capturada. Este é o nosso, com os dois campos que um estilo tem. */
+.est-editor {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: var(--ms-bg-overlay);
+  animation: est-fade .15s ease-out;
+}
+
+.est-editor__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(560px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: var(--ms-radius-xl);
+  background: var(--ms-bg);
+  box-shadow: var(--ms-shadow-lg);
+}
+
+.est-editor__panel h2 {
+  margin: 0;
+  font-size: var(--ms-text-xl);
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--ms-text);
+}
+
+.est-editor__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.est-editor__field label {
+  font-size: var(--ms-text-base);
+  font-weight: 500;
+  color: var(--ms-text-secondary);
+}
+
+.est-editor__field input,
+.est-editor__field textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: var(--ms-radius-md);
+  background: var(--ms-bg);
+  font: inherit;
+  font-size: var(--ms-text-md);
+  line-height: 20px;
+  color: var(--ms-text);
+  resize: vertical;
+}
+
+.est-editor__field textarea {
+  min-height: 132px;
+}
+
+.est-editor__field input:focus-visible,
+.est-editor__field textarea:focus-visible {
+  outline: 2px solid var(--ms-ring);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+.est-editor__field input::placeholder,
+.est-editor__field textarea::placeholder {
+  color: var(--ms-text-placeholder);
+}
+
+.est-editor__hint {
+  margin: 0;
+  font-size: var(--ms-text-sm);
+  line-height: 16px;
+  color: var(--ms-text-tertiary);
+}
+
+.est-editor__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.est-editor__actions button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+@keyframes est-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Último bloco do arquivo, como no preview da referência. */
+@media (prefers-reduced-motion: reduce) {
+  .est-skeleton { animation: none; opacity: .78; }
+  .est-editor,
+  .est-card,
+  .est-suggestion,
+  .est-card__menu,
+  .est-switch,
+  .est-switch__thumb {
+    animation: none;
+    transition: none;
+  }
+}
+
+
+/* ============================================================
+   HOVER DE MARCA — acréscimo da frente do Orvalho (leva 3)
+
+   Pedido do usuário: em quatro áreas do app o ponteiro acende a
+   marca. A regra do Maestro vale inteira: o FUNDO continua o
+   cinza da referência; o que acende é ícone, texto e borda.
+
+   Este bloco só ACRESCENTA regra de `:hover`. Nenhum valor que já
+   estava no arquivo foi alterado, e nenhuma regra de repouso foi
+   tocada — a geometria da tabela do INFO.md fica onde estava.
+
+   O anel vai em `outline` com `outline-offset: -1px`, e não em
+   `box-shadow: inset`: neste cartão a mídia preenche a caixa, e
+   sombra interna é pintada ANTES dos filhos — o defeito que o
+   `cartao.css` já documenta no anel de "citado". `outline` é
+   pintado depois de todo o conteúdo, acompanha o `border-radius`
+   e não ocupa espaço, então a caixa não anda 1px.
+
+   O `:not(:focus-visible)` está lá para o anel de foco continuar
+   vencendo quando o cartão está focado E sob o ponteiro.
+   ============================================================ */
+
+/* Os dois cartões da tela — "Meus estilos" e "Sugeridos" — têm a
+   mesma caixa de 90 de altura mínima e o mesmo raio; o hover de
+   fundo deles continua o cinza de `--app-v2-bg-component-hover`. */
+.est-card:hover:not(:focus-visible),
+.est-suggestion:hover:not(:focus-visible) {
+  outline: 1px solid var(--hover-brand-soft);
+  outline-offset: -1px;
+}
+.est-card:hover .est-card__name { color: var(--hover-brand); }
+.est-suggestion:hover .est-suggestion__name { color: var(--hover-brand); }

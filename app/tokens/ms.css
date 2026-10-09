@@ -1,0 +1,337 @@
+/* ============================================================
+   MIORA — DESIGN SYSTEM (--ms-*)
+   Transcrição de miora/design-system/tokens-ms.css.
+
+   ALTERADO EM RELAÇÃO À ORIGEM: apenas a escala --ms-brand-1..12,
+   trocada do laranja do Miora para o Violeta da Pitch AI. Todo o
+   resto é literal — o diff contra a origem deve ser inspecionável.
+
+   --ms-solid-brand, --ms-ring, --ms-text-link, --ms-bg-brand*,
+   --ms-border-brand e --ms-icon-brand derivam de --ms-brand-N,
+   então a troca acima converte o sistema inteiro.
+   ============================================================ */
+:root{
+  --ms-tabs-trigger-active-bg: hsl(var(--ms-brand-9)/.9);
+  --ms-bg: hsl(var(--ms-gray-1));
+  --ms-bg-subtle: hsl(var(--ms-gray-2));
+  --ms-bg-component: hsl(var(--ms-gray-3));
+  --ms-bg-component-hover: hsl(var(--ms-gray-4));
+  --ms-bg-component-active: hsl(var(--ms-gray-5));
+  --ms-bg-hover: var(--ms-grayA-3-hex);
+  --ms-bg-active: var(--ms-grayA-4-hex);
+  --ms-bg-disabled: hsl(var(--ms-gray-3));
+  --ms-bg-brand: hsl(var(--ms-brand-3));
+  --ms-bg-brand-subtle: hsl(var(--ms-brand-2));
+  --ms-bg-brand-hover: hsl(var(--ms-brand-4));
+  --ms-bg-brand-active: hsl(var(--ms-brand-5));
+  --ms-bg-danger: hsl(var(--ms-red-3));
+  --ms-bg-danger-subtle: hsl(var(--ms-red-2));
+  --ms-bg-danger-hover: hsl(var(--ms-red-4));
+  --ms-bg-danger-active: hsl(var(--ms-red-5));
+  --ms-bg-success: hsl(var(--ms-green-3));
+  --ms-bg-success-subtle: hsl(var(--ms-green-2));
+  --ms-bg-success-hover: hsl(var(--ms-green-4));
+  --ms-bg-success-active: hsl(var(--ms-green-5));
+  --ms-bg-warning: hsl(var(--ms-yellow-3));
+  --ms-bg-warning-hover: hsl(var(--ms-yellow-4));
+  --ms-bg-warning-active: hsl(var(--ms-yellow-5));
+  --ms-bg-info: hsl(var(--ms-blue-3));
+  --ms-bg-info-hover: hsl(var(--ms-blue-4));
+  --ms-bg-info-active: hsl(var(--ms-blue-5));
+  --ms-bg-overlay: var(--ms-blackA-9-hex);
+  --ms-solid: hsl(var(--ms-gray-12));
+  --ms-solid-hover: hsl(var(--ms-gray-12) / .88);
+  --ms-solid-active: hsl(var(--ms-gray-12));
+  --ms-solid-brand: hsl(var(--ms-brand-9));
+  --ms-solid-brand-hover: hsl(var(--ms-brand-10));
+  --ms-solid-danger: hsl(var(--ms-red-9));
+  --ms-solid-danger-hover: hsl(var(--ms-red-10));
+  --ms-solid-success: hsl(var(--ms-green-9));
+  --ms-solid-success-hover: hsl(var(--ms-green-10));
+  --ms-solid-warning: hsl(var(--ms-yellow-9));
+  --ms-solid-warning-hover: hsl(var(--ms-yellow-10));
+  --ms-border-subtle: hsl(var(--ms-gray-6));
+  --ms-border: hsl(var(--ms-gray-7));
+  --ms-border-strong: hsl(var(--ms-gray-8));
+  --ms-border-brand: hsl(var(--ms-brand-7));
+  --ms-border-danger: hsl(var(--ms-red-7));
+  --ms-border-success: hsl(var(--ms-green-7));
+  --ms-border-warning: hsl(var(--ms-yellow-7));
+  --ms-ring: hsl(var(--ms-brand-8));
+  --ms-text: var(--ms-grayA-12-hex);
+  --ms-text-secondary: var(--ms-grayA-11-hex);
+  --ms-text-tertiary: var(--ms-grayA-10-hex);
+  --ms-text-quaternary: var(--ms-grayA-9-hex);
+  --ms-text-disabled: var(--ms-grayA-8-hex);
+  --ms-text-placeholder: var(--ms-grayA-9-hex);
+  --ms-text-on-brand: var(--ms-whiteA-12-hex);
+  --ms-text-on-brand-secondary: var(--ms-whiteA-10-hex);
+  --ms-text-on-danger: var(--ms-whiteA-12-hex);
+  --ms-text-on-warning: var(--ms-blackA-12-hex);
+  --ms-text-link: hsl(var(--ms-brand-11));
+  --ms-text-danger: hsl(var(--ms-red-11));
+  --ms-text-success: hsl(var(--ms-green-11));
+  --ms-icon: var(--ms-grayA-12-hex);
+  --ms-icon-secondary: var(--ms-grayA-11-hex);
+  --ms-icon-tertiary: var(--ms-grayA-10-hex);
+  --ms-icon-disabled: var(--ms-grayA-8-hex);
+  --ms-icon-on-brand: var(--ms-whiteA-12-hex);
+  --ms-icon-brand: hsl(var(--ms-brand-11));
+  --ms-icon-link: hsl(var(--ms-brand-11));
+  --ms-icon-danger: hsl(var(--ms-red-11));
+  --ms-icon-success: hsl(var(--ms-green-11));
+  --ms-gray-1: 0 0% 100%;
+  --ms-gray-2: 0 0% 97.64%;
+  --ms-gray-3: 0 0% 94.11%;
+  --ms-gray-4: 0 0% 90.98%;
+  --ms-gray-5: 0 0% 87.84%;
+  --ms-gray-6: 0 0% 85.1%;
+  --ms-gray-7: 0 0% 80.78%;
+  --ms-gray-8: 0 0% 73.34%;
+  --ms-gray-9: 0 0% 55.29%;
+  --ms-gray-10: 0 0% 51.37%;
+  --ms-gray-11: 0 0% 39.21%;
+  --ms-gray-12: 0 0% 12.55%;
+  /* ─────────────────────────────────────────────────────────────────────
+     ESCALA DE MARCA — VIOLETA PITCH AI (substitui o laranja do Miora)
+
+     O Violeta do kit cai quase exatamente no degrau 9 da escala original:
+       #4318FF        = hsl(251.17  100.00%  54.71%)
+       --ms-brand-9   = hsl( 27.24   98.37%  53.69%)   (o laranja #fd7a12)
+     Mesma saturação, mesma luminosidade — 224° de matiz de diferença.
+
+     A curva de luminosidade NÃO foi copiada. A laranja mergulha para L 39/33
+     nos degraus 10–12 porque #fd7a12 tem só 2,3:1 sobre branco e precisa
+     escurecer muito para virar texto. O #4318FF já dá 7,46:1 — copiar a curva
+     laranja daria degraus quase pretos e mataria a identidade. A topologia
+     aqui é a do violeta do Radix, que é onde o degrau 9 naturalmente cai.
+
+     Deriva de matiz 260 → 251,2 → 253: no setor HSL [240,300) o matiz mais
+     alto injeta mais vermelho, entao os tints claros ficam roxos em vez de
+     azul-lavados. É a mesma deriva que o Miora faz no laranja (23 → 27 → 31).
+
+     Saturação ≤ 100% em todos os degraus. A escala original tem valores fora
+     de spec (145%, 160%) que o navegador clampa silenciosamente.
+
+     Contraste sobre branco, monotônico e conferido:
+       1,02 · 1,08 · 1,15 · 1,27 · 1,43 · 1,69 · 2,21 · 3,68 · 7,46 · 8,63 · 9,97 · 13,62
+     O degrau 8 (anel de foco) em 3,68 passa o mínimo de 3:1 da SC 1.4.11.
+     ───────────────────────────────────────────────────────────────────── */
+  --ms-brand-1: 260 100% 99.4%;      /* #FDFCFF */
+  --ms-brand-2: 258 100% 98%;        /* #F8F5FF */
+  --ms-brand-3: 257 100% 96.3%;      /* #F1ECFF  bg-brand */
+  --ms-brand-4: 256 100% 93.9%;      /* #E8E0FF  bg-brand-hover */
+  --ms-brand-5: 255 100% 91%;        /* #DDD1FF  bg-brand-active */
+  --ms-brand-6: 254 100% 87.3%;      /* #CDBEFF */
+  --ms-brand-7: 253 100% 81.6%;      /* #B5A1FF  border-brand */
+  --ms-brand-8: 252 100% 71.4%;      /* #8A6DFF  ring */
+  --ms-brand-9: 251.17 100% 54.71%;  /* #4318FF  A MARCA — solid-brand */
+  --ms-brand-10: 251.2 100% 48%;     /* #2E00F5  solid-brand-hover */
+  --ms-brand-11: 251.2 96% 43%;      /* #2C04D7 */
+  --ms-brand-12: 253 50% 26.5%;      /* #302265 */
+  --ms-blue-1: 211.82 98.57% 99.24%;
+  --ms-blue-2: 212.14 79.18% 96.87%;
+  --ms-blue-3: 209.78 100.18% 95.32%;
+  --ms-blue-4: 210.38 99.81% 92.9%;
+  --ms-blue-5: 211.44 100.17% 89.39%;
+  --ms-blue-6: 211.87 95.56% 84.72%;
+  --ms-blue-7: 210.28 100.01% 77.64%;
+  --ms-blue-8: 210.84 100% 68.69%;
+  --ms-blue-9: 206.13 99.98% 50.03%;
+  --ms-blue-10: 206.55 96.46% 47.94%;
+  --ms-blue-11: 209.79 99.92% 43.81%;
+  --ms-blue-12: 210.86 100.04% 38.52%;
+  --ms-red-1: 4.61 101.73% 99.38%;
+  --ms-red-2: 4.52 71.66% 97.19%;
+  --ms-red-3: 4.57 100.28% 95.68%;
+  --ms-red-4: 4.23 95.97% 92.43%;
+  --ms-red-5: 4.03 94.79% 89.48%;
+  --ms-red-6: 3.74 92.35% 85.91%;
+  --ms-red-7: 3.03 97.54% 81.02%;
+  --ms-red-8: 2.14 85.35% 73.92%;
+  --ms-red-9: 358.1 75.11% 59.03%;
+  --ms-red-10: 357.23 69.43% 55.13%;
+  --ms-red-11: 354.2 73.1% 50.95%;
+  --ms-red-12: 348.29 98.7% 38.57%;
+  --ms-green-1: 140.7 60.17% 99.02%;
+  --ms-green-2: 140.93 39.13% 95.65%;
+  --ms-green-3: 141.36 52.69% 93.1%;
+  --ms-green-4: 141.74 48.18% 89.23%;
+  --ms-green-5: 142.19 42.34% 84.05%;
+  --ms-green-6: 142.95 40.34% 77.42%;
+  --ms-green-7: 145.17 45.7% 66.81%;
+  --ms-green-8: 149.04 45.71% 51.68%;
+  --ms-green-9: 151.04 54.74% 41.56%;
+  --ms-green-10: 151.06 55.33% 38.84%;
+  --ms-green-11: 155.22 100.13% 25.96%;
+  --ms-green-12: 153.54 99.86% 22.1%;
+  --ms-yellow-1: 59.99 50.05% 98.42%;
+  --ms-yellow-2: 54.29 91.38% 95.5%;
+  --ms-yellow-3: 55.78 99.98% 86.07%;
+  --ms-yellow-4: 53.28 99.98% 79.02%;
+  --ms-yellow-5: 49.93 100.03% 71.96%;
+  --ms-yellow-6: 47.92 85.29% 68.04%;
+  --ms-yellow-7: 46.08 69.84% 64.91%;
+  --ms-yellow-8: 45 65.03% 52.94%;
+  --ms-yellow-9: 52.99 100% 58.03%;
+  --ms-yellow-10: 51.77 100.29% 49.93%;
+  --ms-yellow-11: 41.03 100.22% 30.95%;
+  --ms-yellow-12: 42 39.27% 19.99%;
+  --ms-purple-1: 300 51.09% 99.22%;
+  --ms-purple-2: 274.29 77.52% 98.23%;
+  --ms-purple-3: 275.3 89.45% 96.27%;
+  --ms-purple-4: 276.92 81.29% 93.73%;
+  --ms-purple-5: 275 75.12% 90.6%;
+  --ms-purple-6: 275 68.54% 86.28%;
+  --ms-purple-7: 273.44 61.66% 80.59%;
+  --ms-purple-8: 271.85 60% 73.53%;
+  --ms-purple-9: 272 51.28% 54.11%;
+  --ms-purple-10: 271.58 44.88% 50.19%;
+  --ms-purple-11: 272.15 44.8% 49.01%;
+  --ms-purple-12: 270 50% 25.1%;
+  --ms-grayA-1: 0 0% 0%;
+  --ms-grayA-1-hex: #00000003;
+  --ms-grayA-2: 0 0% 0%;
+  --ms-grayA-2-hex: #00000006;
+  --ms-grayA-3: 0 0% 0%;
+  --ms-grayA-3-hex: #0000000f;
+  --ms-grayA-4: 0 0% 0%;
+  --ms-grayA-4-hex: #00000017;
+  --ms-grayA-5: 0 0% 0%;
+  --ms-grayA-5-hex: #0000001f;
+  --ms-grayA-6: 0 0% 0%;
+  --ms-grayA-6-hex: #00000026;
+  --ms-grayA-7: 0 0% 0%;
+  --ms-grayA-7-hex: #00000031;
+  --ms-grayA-8: 0 0% 0%;
+  --ms-grayA-8-hex: #00000044;
+  --ms-grayA-9: 0 0% 0%;
+  --ms-grayA-9-hex: #00000072;
+  --ms-grayA-10: 0 0% 0%;
+  --ms-grayA-10-hex: #0000007c;
+  --ms-grayA-11: 0 0% 0%;
+  --ms-grayA-11-hex: #0000009b;
+  --ms-grayA-12: 0 0% 0%;
+  --ms-grayA-12-hex: #000000df;
+  --ms-blackA-1: 0 0% 0%;
+  --ms-blackA-1-hex: #0000000d;
+  --ms-blackA-2: 0 0% 0%;
+  --ms-blackA-2-hex: #0000001a;
+  --ms-blackA-3: 0 0% 0%;
+  --ms-blackA-3-hex: #00000026;
+  --ms-blackA-4: 0 0% 0%;
+  --ms-blackA-4-hex: #00000033;
+  --ms-blackA-5: 0 0% 0%;
+  --ms-blackA-5-hex: #0000004d;
+  --ms-blackA-6: 0 0% 0%;
+  --ms-blackA-6-hex: #00000066;
+  --ms-blackA-7: 0 0% 0%;
+  --ms-blackA-7-hex: #00000080;
+  --ms-blackA-8: 0 0% 0%;
+  --ms-blackA-8-hex: #00000099;
+  --ms-blackA-9: 0 0% 0%;
+  --ms-blackA-9-hex: #000000b3;
+  --ms-blackA-10: 0 0% 0%;
+  --ms-blackA-10-hex: #000000cc;
+  --ms-blackA-11: 0 0% 0%;
+  --ms-blackA-11-hex: #000000e6;
+  --ms-blackA-12: 0 0% 0%;
+  --ms-blackA-12-hex: #000000f2;
+  --ms-whiteA-1: 0 0% 100%;
+  --ms-whiteA-1-hex: #ffffff0d;
+  --ms-whiteA-2: 0 0% 100%;
+  --ms-whiteA-2-hex: #ffffff1a;
+  --ms-whiteA-3: 0 0% 100%;
+  --ms-whiteA-3-hex: #ffffff26;
+  --ms-whiteA-4: 0 0% 100%;
+  --ms-whiteA-4-hex: #ffffff33;
+  --ms-whiteA-5: 0 0% 100%;
+  --ms-whiteA-5-hex: #ffffff4d;
+  --ms-whiteA-6: 0 0% 100%;
+  --ms-whiteA-6-hex: #ffffff66;
+  --ms-whiteA-7: 0 0% 100%;
+  --ms-whiteA-7-hex: #ffffff80;
+  --ms-whiteA-8: 0 0% 100%;
+  --ms-whiteA-8-hex: #ffffff99;
+  --ms-whiteA-9: 0 0% 100%;
+  --ms-whiteA-9-hex: #ffffffb3;
+  --ms-whiteA-10: 0 0% 100%;
+  --ms-whiteA-10-hex: #ffffffcc;
+  --ms-whiteA-11: 0 0% 100%;
+  --ms-whiteA-11-hex: #ffffffe6;
+  --ms-whiteA-12: 0 0% 100%;
+  --ms-whiteA-12-hex: #fffffff2;
+  --ms-border-brand-strong: hsl(var(--ms-brand-11));
+  --ms-text-on-solid: var(--ms-whiteA-12-hex);
+  --ms-text-brand: hsl(var(--ms-brand-11));
+  --ms-icon-on-solid: var(--ms-whiteA-12-hex);
+  --ms-radius-sm: 4px;
+  --ms-radius: 6px;
+  --ms-radius-md: 8px;
+  --ms-radius-lg: 12px;
+  --ms-radius-xl: 16px;
+  --ms-radius-2xl: 20px;
+  --ms-radius-3xl: 24px;
+  --ms-radius-full: 9999px;
+  --ms-shadow-sm: 0px 1px 2px rgba(0, 0, 0, .04), 0px 3px 12px rgba(0, 0, 0, .08);
+  --ms-shadow-md: 0px 6px 16px rgba(0, 0, 0, .08), 0px 3px 6px rgba(0, 0, 0, .04);
+  --ms-shadow-lg: 0px 8px 16px rgba(0, 0, 0, .12);
+  --ms-text-xs: 10px;
+  --ms-text-sm: 11px;
+  --ms-text-base: 12px;
+  --ms-text-md: 13px;
+  --ms-text-lg: 14px;
+  --ms-text-xl: 16px;
+  --ms-text-2xl: 20px;
+  --ms-text-3xl: 24px;
+  --ms-leading-tight: 1.25;
+  --ms-leading-normal: 1.5;
+  --ms-leading-relaxed: 1.7;
+  --ms-button-bg: var(--ms-solid);
+  --ms-button-bg-hover: var(--ms-solid-hover);
+  --ms-button-bg-active: var(--ms-solid-active);
+  --ms-button-bg-disabled: hsl(var(--ms-gray-3));
+  --ms-button-fg: var(--ms-text-on-solid);
+  --ms-button-shadow: 0 0 0 rgba(0,0,0,0), 0 0 0 rgba(0,0,0,0), inset 0 4px 8px rgba(255,255,255,.25);
+  --ms-button-shadow-hover: 0 8px 8px rgba(0,0,0,.12), 0 2px 4px rgba(0,0,0,.2), inset 0 4px 8px rgba(255,255,255,.25);
+  --ms-button-shadow-active: 0 0 0 rgba(0,0,0,0), 0 0 0 rgba(0,0,0,0), inset 0 -2px 4px rgba(255,255,255,.5);
+  --ms-button-danger-bg: var(--ms-solid-danger);
+  --ms-button-danger-bg-hover: var(--ms-solid-danger-hover);
+  --ms-button-danger-fg: var(--ms-text-on-danger);
+  --ms-button-danger-shadow: 0 0 0 rgba(0,0,0,0), 0 0 0 rgba(0,0,0,0), inset 0 4px 8px rgba(255,255,255,.25);
+  --ms-button-danger-shadow-hover: 0 8px 8px rgba(255,77,79,.25), 0 2px 4px rgba(255,77,79,.3), inset 0 4px 8px rgba(255,255,255,.25);
+  --ms-button-danger-shadow-active: 0 0 0 rgba(0,0,0,0), 0 0 0 rgba(0,0,0,0), inset 0 -2px 4px rgba(255,255,255,.5);
+  --ms-button-secondary-bg: var(--ms-bg);
+  --ms-button-secondary-bg-active: var(--ms-bg-component);
+  --ms-button-secondary-fg: var(--ms-text);
+  --ms-button-secondary-shadow: 0 0 0 rgba(0,0,0,0), inset 0 0 0 1px rgba(0,0,0,.06), inset 0 -2px 4px rgba(0,0,0,.04);
+  --ms-button-secondary-shadow-hover: 0 2px 4px rgba(0,0,0,.06), inset 0 0 0 1px rgba(0,0,0,.06), inset 0 -2px 4px rgba(0,0,0,.08);
+  --ms-button-secondary-shadow-active: 0 0 0 rgba(0,0,0,0), inset 0 0 0 1px rgba(0,0,0,.04), inset 0 1px 2px rgba(0,0,0,.16);
+  --ms-input-bg: transparent;
+  --ms-input-bg-hover: var(--ms-grayA-3-hex);
+  --ms-input-bg-disabled: hsl(var(--ms-gray-3));
+  --ms-input-border: hsl(var(--ms-gray-6));
+  --ms-input-border-hover: hsl(var(--ms-gray-8));
+  --ms-input-border-focus: var(--ms-ring);
+  --ms-input-border-danger: var(--ms-border-danger);
+  --ms-input-shadow: inset 0 1px 2px rgba(0,0,0,.04), 0 0 0 rgba(0,0,0,0);
+  --ms-input-shadow-hover: inset 0 1px 2px rgba(0,0,0,.06), 0 0 0 rgba(0,0,0,0);
+  --ms-input-shadow-focus: inset 0 1px 2px rgba(0,0,0,.06), 0 0 0 3px hsl(var(--ms-brand-9) / .18);
+  --ms-input-shadow-danger: inset 0 1px 2px rgba(0,0,0,.06), 0 0 0 3px hsl(var(--ms-red-9) / .18);
+  --ms-tabs-list-bg: hsl(var(--ms-gray-3));
+  --ms-tabs-list-shadow: inset 0 0 2px 0 rgba(0, 0, 0, .08);
+  --ms-tabs-trigger-active-shadow: 0 0 1px 1px rgba(0, 0, 0, .04), inset 0 0 0 1px #fff, 0 3px 12px 0 rgba(0, 0, 0, .08), 0 1px 2px 0 rgba(0, 0, 0, .04);
+}
+
+/* ------------------------------------------------------------
+   NOTA SOBRE TEMA
+   O site define as escalas duas vezes em css-index-CFAj46Uo.css:
+   uma em `:root` (claro) e outra em `.dark` (escuro).
+   O arquivo acima traz a versão de `:root` — primeira ocorrência vence.
+   A escala de marca deste arquivo foi TROCADA para o Violeta Pitch AI.
+   Os valores originais do Miora eram:
+     Laranja da marca (claro):  --ms-brand-9: 27.24 98.37% 53.69%   = #fd7a12
+     Laranja da marca (escuro): --ms-brand-9: 25.99 97.77% 57.98%
+   Para o bloco 08-memory-graph (a única tela escura do app), pegue os
+   valores do seletor `.dark` no CSS original, não os daqui.
+   ------------------------------------------------------------ */

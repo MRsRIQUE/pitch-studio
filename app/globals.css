@@ -1,0 +1,1653 @@
+@import "tailwindcss";
+
+/* A camada de tokens e a camada de tema. A ordem entre os arquivos de token é
+   irrelevante para correção (custom properties resolvem em computed-value time);
+   esta é a ordem de leitura: escala crua → aplicação → nossas decisões →
+   utilitários do Tailwind. */
+@import "./tokens/ms.css";
+@import "./tokens/app-v2.css";
+@import "./tokens/pitch.css";
+@import "./theme.css";
+
+
+/* ── Base ─────────────────────────────────────────────── */
+html,
+body,
+#__next {
+  height: 100%;
+}
+
+body {
+  background: var(--app-v2-bg-page);
+  color: var(--app-v2-text-primary);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── A barra de rolagem, no app inteiro ──────────────────────────────────── */
+/* Antes disto o app tratava duas barras à mão — a da grade do Acervo, com
+   `#ccc` cravado, e a do `promptNode`, com branco a 15% escrito na unha — e todo o
+   resto era a do sistema, que muda de desenho entre Windows, macOS e Linux.
+   As duas viraram esta regra; as declarações antigas saíram.
+
+   O seletor é `*` DE PROPÓSITO: especificidade 0 é o que deixa cada opt-out já
+   existente continuar vencendo sem precisar de `!important`. Os sete lugares
+   que pedem rolagem sem barra (`.acervo-chips`, `.pc-textarea`, `.pcx-abas`,
+   `.pcx-bloco-campo`, `.picker-scroll`, `.acervo-rolagem-limpa` e o textarea
+   com `scrollbarWidth` inline do composer) declaram `scrollbar-width: none`, e
+   um seletor de classe ganha de `*` em qualquer ordem.
+
+   As duas famílias convivem por desenho, não por redundância:
+   `scrollbar-width`/`scrollbar-color` é o padrão — Firefox desde sempre, Chrome
+   desde a 121 — e `::-webkit-scrollbar*` atende o Safari, que não implementa as
+   propriedades padrão. Onde o padrão existe, o próprio motor manda ignorar os
+   pseudo-elementos, então os dois blocos podem descrever o mesmo desenho sem
+   brigar.
+
+   Cor por token, nunca hex: sobre superfície clara o polegar é o degrau 7 da
+   rampa alfa preta; sobre a noturna — o canvas de `/workflow`, que carrega
+   `.pitch-night`, e a Memória, que carrega `.ms-memoria-dark` — ele inverte
+   para branco. Trilho transparente e sem seta nos dois casos. */
+:root {
+  --scroll-polegar: var(--ms-grayA-7-hex);
+  --scroll-polegar-hover: var(--ms-grayA-9-hex);
+  --scroll-trilho: transparent;
+}
+
+/* A mesma lista que `pitch.css` usa para virar o hover de marca em lilás: são
+   as duas superfícies escuras do app. */
+:is(.pitch-night, .ms-memoria-dark) {
+  --scroll-polegar: var(--ms-whiteA-3-hex);
+  --scroll-polegar-hover: var(--ms-whiteA-5-hex);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-polegar) var(--scroll-trilho);
+}
+
+/* Safari. O `-thumb:hover` não tem equivalente padrão — `scrollbar-color` não
+   aceita estado —, então o realce do polegar sob o ponteiro existe só aqui. */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: var(--scroll-trilho);
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--scroll-polegar);
+  border-radius: var(--ms-radius-full);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-polegar-hover);
+}
+*::-webkit-scrollbar-button {
+  display: none;
+}
+*::-webkit-scrollbar-corner {
+  background: var(--scroll-trilho);
+}
+
+/* ── Miora-inspired application shell ───────────────────────────────────── */
+/* As vars --sidebar* que ficavam aqui eram código morto: sem --color-sidebar no
+   @theme, o utilitário bg-sidebar não existia para lê-las. Agora o mapeamento
+   vive em app/theme.css e o shadcn resolve sozinho. */
+.miora-shell {
+  background: var(--app-v2-bg-page);
+}
+
+
+[data-slot="sidebar"] button:focus-visible,
+[data-slot="sidebar"] a:focus-visible,
+.miora-mobile-bar button:focus-visible {
+  outline: 2px solid var(--app-v2-accent);
+  outline-offset: 2px;
+}
+
+/* `.app-v2-navi-group-title`: `min-height:30px; padding:4px 12px; 12px/22px`.
+   Não é caixa alta e não tem letter-spacing — a versão anterior inventou os dois.
+   Sem `display` aqui de propósito: com `display:flex` a classe vencia o utilitário
+   `hidden` do Tailwind e o rótulo aparecia cortado na barra colapsada. */
+.miora-group-title {
+  min-height: 30px;
+  padding: 4px 12px;
+  color: var(--app-v2-text-tertiary);
+  font-size: 12px;
+  line-height: 22px;
+}
+
+/* O cabeçalho de `Projects` tem os mesmos 30px do rótulo de grupo, mas leva dois
+   botões de 24 — com o padding de 4px a linha crescia para 32 e empurrava a
+   lista 8px para baixo do 410 da referência. */
+.miora-group-title.is-projetos {
+  height: 30px;
+  padding-block: 3px;
+}
+
+.miora-nav-item {
+  color: var(--app-v2-text-secondary) !important;
+  font-size: 13px;
+}
+
+.miora-nav-item:hover {
+  color: var(--app-v2-text-primary) !important;
+  background: var(--app-v2-bg-surface-hover) !important;
+}
+
+/* O ícone acende na marca; o fundo continua o cinza da referência. É a
+   única coisa que a barra faz de diferente do Miora, e é pedido. */
+.miora-nav-item:hover svg,
+.miora-projeto:hover svg {
+  color: var(--hover-brand);
+}
+
+.miora-nav-item.is-active {
+  color: var(--app-v2-text-primary) !important;
+  background: var(--app-v2-bg-component-active) !important;
+}
+
+.miora-nav-item.is-active svg {
+  color: var(--app-v2-accent);
+}
+
+/* `.app-v2-navi-item.is-assets-brand.is-active` — o único item cujo estado ativo
+   sai do cinza e usa a cor da marca. No Miora é `#fd7e1414` sobre `#fd7e14`;
+   aqui, o violeta Pitch no mesmo alfa (14 hex = 8%). */
+.miora-nav-item.is-marca.is-active {
+  background: #4318FF14 !important;
+  color: var(--brand-violet) !important;
+}
+
+.miora-nav-item.is-marca.is-active svg {
+  color: var(--brand-violet);
+}
+
+/* `app-v2-navi-project-enter .3s cubic-bezier(.4,0,.2,1) both`, com a escada de
+   40ms por linha aplicada no `style` de cada uma. */
+@keyframes miora-projeto-entra {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.miora-projeto {
+  animation: miora-projeto-entra .3s cubic-bezier(.4, 0, .2, 1) both;
+}
+
+/* `.app-v2-navi-rail-entry::before` — traço de 24×1px, 5px acima da entrada. */
+.miora-rail-entry {
+  position: relative;
+}
+
+.miora-rail-entry::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 1px;
+  background: var(--app-v2-border-subtle);
+}
+
+.miora-divider {
+  height: 1px;
+  margin-inline: 8px;
+  background: var(--app-v2-border-subtle);
+}
+
+/* `226×96`: `padding:16; gap:12; border-radius:18px`. A borda de 1px e a sombra
+   eram invenção nossa — e a borda somava 2px, jogando o card para 778/98. */
+.miora-credit-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--app-v2-bg-surface);
+}
+
+/* Miora: 226×96 = padding 16×2 + copy 20 + gap 12 + botao 32. A linha da copy
+   precisa de altura fixa, senao o `strong` de 15px estica o card. */
+.miora-credit-copy {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  height: 20px;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: var(--app-v2-text-tertiary);
+  font-size: 11px;
+}
+
+.miora-credit-copy strong {
+  color: var(--app-v2-text-primary);
+  font-size: 15px;
+}
+
+/* `Upgrade plan`: `100%×32`, `border-radius:12px`, `--ms-solid` (#202020) sobre
+   `--ms-text-on-solid`. Era violeta com um `translateY` no hover — o violeta
+   roubava o destaque do item ativo, e o salto não existe na referência. */
+.miora-upgrade {
+  width: 100%;
+  min-height: 32px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--ms-solid);
+  color: var(--ms-text-on-solid);
+  font: 600 11px/1 var(--font-ui);
+  cursor: pointer;
+  transition: background .15s ease;
+}
+
+.miora-upgrade:hover { background: var(--ms-solid-hover); }
+
+.miora-credit-rail {
+  min-height: 38px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--app-v2-text-secondary);
+}
+
+.miora-credit-rail strong { font-size: 9px; }
+
+.miora-account:hover { background: var(--app-v2-bg-surface-hover); }
+
+.miora-mobile-bar {
+  color: var(--app-v2-text-secondary);
+  background: var(--app-v2-bg-component);
+  border-bottom: 1px solid var(--app-v2-border-subtle);
+}
+
+/* ── Creation home / gallery ─────────────────────────────────────────────── */
+.miora-gallery { isolation: isolate; min-width: 0; }
+.miora-gallery.is-creation-view { overflow-y: auto !important; }
+/* A `scrollbar-color: #ccc transparent` que estava aqui saiu: a barra agora é a
+   da fundação, e o `#ccc` era o único hex de rolagem cravado no arquivo. */
+.miora-gallery-scroll { min-width: 0; min-height: 0; padding: 20px 24px; }
+.is-creation-view .miora-gallery-scroll { flex: none !important; overflow: visible !important; padding: 0; }
+.miora-gallery-subnav { background: var(--app-v2-bg-page) !important; border-bottom-color: #e6e6e6 !important; height: 64px !important; padding-inline: 24px !important; }
+.miora-gallery-subnav button { color: #666 !important; border-radius: 999px !important; }
+.miora-gallery-subnav button[aria-pressed="true"] { color: #202020 !important; background: #eaeaea !important; }
+.miora-gallery-subnav svg { stroke: currentColor; color: #777; }
+.miora-gallery-subnav .gallery-zoom-slider { background: #ddd; }
+.miora-gallery-subnav .gallery-zoom-slider::-webkit-slider-thumb { background: #555; }
+/* Mesmo container do cabeçalho do Acervo: 1310px centrados dentro do
+   padding de 24px. Sem isto a grade encosta nas bordas enquanto o
+   cabeçalho recua, e as duas deixam de alinhar acima de ~1360px. */
+.miora-media-grid { min-width: 0; width: 100%; max-width: 1310px; margin-inline: auto; }
+.miora-empty { padding: 0 24px; color: #202020; }
+
+/* A coluna da Home. O `.pb-content` do carrossel usa 1000px; a linha de
+   especialistas e a grade de destaque medem 996 e 1000 na referência, e as duas
+   declaram `max-width` sem `margin: auto` — quem centraliza é a coluna, e ela
+   precisava existir na montagem. */
+.pitch-home-col {
+  width: 100%;
+  max-width: 1000px;
+  margin-inline: auto;
+  padding-inline: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: content-box;
+}
+.miora-prompt-wrap { max-width: calc(100vw - 24px); }
+.miora-prompt-wrap.is-home-composer:not(.is-expanded) { position: relative !important; left: auto !important; bottom: auto !important; transform: none !important; flex-shrink: 0; margin: 0 auto; }
+.miora-prompt-placeholder { color: #818181 !important; }
+.miora-account-menu [class*="text-white"] { color: #575757 !important; }
+.miora-account-menu [role="menuitem"]:hover { background: #f0f0f0 !important; }
+[data-slot="sidebar"][data-collapsible="icon"] .miora-credit-copy,
+[data-slot="sidebar"][data-collapsible="icon"] .miora-upgrade { display: none; }
+[data-slot="sidebar"][data-collapsible="icon"] .miora-credit-card { padding: 2px; border-radius: 12px; }
+[data-slot="sidebar"][data-collapsible="icon"] [data-slot="sidebar-header"] { padding-inline: 0; }
+.miora-gallery :is(a,button):focus-visible,
+.miora-account-menu button:focus-visible { outline: 2px solid var(--app-v2-accent); outline-offset: 3px; }
+@media (max-width: 767px) {
+  .miora-empty { padding-inline: 16px; }
+  .miora-prompt-wrap.is-home-composer:not(.is-expanded) { width: calc(100% - 24px) !important; }
+  .miora-prompt-wrap:not(.is-home-composer):not(.is-expanded) { bottom: 14px !important; }
+  .miora-composer [data-prompt-input] { min-height: 66px; }
+  .miora-composer-controls { flex-wrap: wrap; }
+  .miora-composer-controls > div:first-child { flex-basis: 100% !important; }
+  .miora-composer-controls > div:last-child { margin-left: auto; }
+  .miora-gallery-scroll { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No bundle do Miora o motion do rail só é zerado aqui — a origem do
+     tokens-app.css o zerava no :root, desligando o colapso para todo mundo. */
+  :root { --app-v2-nav-rail-motion: 0s; }
+  .miora-prompt-wrap { transition: none !important; }
+}
+
+.miora-workflows { color: #202020; }
+.miora-workflow-hero { display: flex; align-items: center; justify-content: space-between; gap: 40px; margin: 32px; padding: 42px; border: 1px solid #e2ddf6; border-radius: 22px; background: linear-gradient(120deg,#efedfa,#e3dff8); }
+.miora-workflow-hero > div:first-child { max-width: 460px; }
+.miora-workflow-hero span { font-size: 11px; color: var(--brand-ink); }
+.miora-workflow-hero h2 { font-size: 38px; line-height: 1.1; letter-spacing: -.045em; margin: 14px 0; font-weight: 500; color: #292929; }
+.miora-workflow-hero p { font-size: 13px; line-height: 1.7; color: #696660; }
+.miora-workflow-preview { display: flex; align-items: center; gap: 18px; color: #a5a0c2; }
+.miora-workflow-preview > div { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 14px; width: 120px; height: 130px; border-radius: 18px; border: 1px solid #fff; box-shadow: 0 10px 24px rgba(43, 26, 92, .09); background: #ffffffab; color: #8b84c4; transform: rotate(-4deg); }
+.miora-workflow-preview > div:nth-of-type(2) { transform: translateY(-18px); color: var(--brand-violet); }
+.miora-workflow-preview > div:nth-of-type(3) { transform: rotate(4deg); }
+.miora-workflows .wsd-card,.miora-workflows .wsd-new,.miora-workflows .wsd-tmpl { background: #fff; border-color: #e2e2e2; box-shadow: none; color: #202020; }
+.miora-workflows .wsd-card:hover,.miora-workflows .wsd-new:hover,.miora-workflows .wsd-tmpl:hover { background: #fff; border-color: #ccc; box-shadow: 0 12px 30px #0000000d; }
+.miora-workflows .wsd-foot { background: #fff; border-color: #ececec; }
+.miora-workflows .wsd-thumb-cell-empty { background: #f0f0f0; }
+.miora-workflows .wsd-thumbs { background: #eee; }
+.miora-workflows .wsd-act { background: #fff; color: #555; border-color: #ddd; }
+.miora-workflows .wsd-act:hover { color: #202020; background: #f0f0f0; }
+.miora-workflows .wsd-card:focus-within .wsd-actions { opacity: 1; transform: none; }
+.miora-workflows .wsd-import-btn:hover:not(:disabled) { color: #202020; }
+.miora-workflows .wsd-plus-orb { box-shadow: none !important; }
+@media (max-width: 1199px) {
+  .miora-workflow-preview { gap: 8px; }
+  .miora-workflow-preview > div { width: 80px; height: 100px; }
+  .miora-workflow-grid { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
+}
+@media (max-width: 900px) {
+  .miora-workflow-hero { margin: 24px; padding: 28px; }
+  .miora-workflow-preview { display: none; }
+  .miora-workflow-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; padding-inline: 24px !important; }
+}
+@media (max-width: 480px) {
+  .miora-workflow-hero { margin: 16px; padding: 24px; }
+  .miora-workflow-hero h2 { font-size: 31px; }
+  .miora-workflow-grid { grid-template-columns: minmax(0,1fr) !important; padding-inline: 16px !important; }
+}
+
+/* ── Painel noturno da marca ─────────────────────────────
+   O kit define uma base "Noite" para as superfícies de criação — é onde o
+   canvas e o Assistente vivem. Nelas o acento é o Lilás #868CFF, porque o
+   Violeta não tem contraste suficiente sobre fundo escuro.
+
+   O chrome do app é claro; esta classe reabre a ilha escura para a rota que
+   já foi desenhada nela, em vez de reescrever suas cores uma a uma. */
+.pitch-night {
+  background: var(--surface-night);
+  color: var(--text);
+}
+
+/* Números que mudam ao vivo — créditos, contadores, tempo.
+   Tabular para a largura não oscilar a cada atualização. */
+.metric,
+.tabular-nums {
+  font-family: var(--font-metric);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Prevent iOS Safari zoom on input focus ─────────── */
+@media (max-width: 767px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* ── Node design system ──────────────────────────────── */
+
+/* O ciano de voz e vídeo de referência. É SINAL, e a escala não tem rampa
+   ciano — por isso ele fica cravado, num lugar só, como a paleta do seletor
+   de grupo em `components/nodes/paletaFixa.ts`. Se um dia existir
+   `--ms-cyan-*`, é trocar esta linha.
+   AVISO AO MAESTRO: falta a rampa ciano em `app/tokens/ms.css`. */
+:root { --sinal-voz: #0bc5ea; }
+.node-card {
+  background: var(--ms-bg);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  overflow: visible;
+  position: relative;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
+  transition: border-color 120ms, box-shadow 120ms;
+}
+
+.node-card:hover {
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.6);
+}
+
+.node-card:hover .node-above-label {
+  color: var(--ms-text-secondary);
+}
+
+.node-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--ms-border-subtle);
+}
+
+.node-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ms-text-secondary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.node-field-label {
+  display: block;
+  font-size: 11px;
+  color: var(--ms-text-secondary);
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+
+.node-textarea {
+  width: 100%;
+  background: var(--ms-bg);
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: 5px;
+  color: var(--ms-text);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 7px 8px;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 100ms;
+}
+
+.node-textarea::placeholder {
+  color: var(--ms-text-tertiary);
+}
+
+.node-textarea:focus {
+  border-color: var(--ms-border);
+}
+
+.node-input {
+  width: 100%;
+  background: var(--ms-bg);
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: 5px;
+  color: var(--ms-text);
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 100ms;
+}
+
+.node-input::placeholder {
+  color: var(--ms-text-tertiary);
+}
+
+.node-input:focus {
+  border-color: var(--ms-border);
+}
+
+.node-select {
+  width: 100%;
+  background: var(--ms-bg);
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: 5px;
+  color: var(--ms-text-secondary);
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+  font-family: inherit;
+  appearance: none;
+  cursor: pointer;
+  transition: border-color 100ms;
+}
+
+.node-select:focus {
+  border-color: var(--ms-border-subtle);
+}
+
+/* ── Floating node label (above frame) ───────────────── */
+.node-above-label {
+  position: absolute;
+  top: -20px;
+  left: 2px;
+  font-size: 11px;
+  /* Secundário, não terciário: a 11px o terciário mede 3,75:1 contra o
+     canvas claro e reprova o AA. Ver a leitura no relatório da leva 9. */
+  color: var(--ms-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+  user-select: none;
+  pointer-events: none;
+  transition: color 120ms;
+}
+
+/* ── Handles ─────────────────────────────────────────── */
+
+/* ── Dot handles ─────────────────────────────────────────────────────────── */
+.node-handle.react-flow__handle {
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  border: 2px solid var(--ms-border-subtle) !important;
+  background: var(--ms-bg-component) !important;
+  /* neutral — role color when connected or selected */
+  z-index: 10;
+  opacity: 0.7;
+  pointer-events: auto;
+  transition: transform 180ms ease 280ms, opacity 180ms ease 280ms, background-color 180ms ease 280ms;
+}
+
+/* Keep endpoints stationary so the visible connector matches the drop target. */
+.react-flow__handle-left.node-handle {
+  transform: translate(-100%, -50%) !important;
+}
+
+.react-flow__handle-right.node-handle {
+  transform: translate(100%, -50%) !important;
+}
+
+/* Visible: normal position (node hover or selected) — delay reset so hover-in is instant */
+/* Left (input) handles: suppress hover during connection dragging (only show compatible inputs) */
+.react-flow:not([data-connecting-type]) .react-flow__node:hover .react-flow__handle-left.node-handle,
+.react-flow__node.selected .react-flow__handle-left.node-handle {
+  transform: translate(-100%, -50%) !important;
+  opacity: 1;
+  pointer-events: auto;
+  transition-delay: 0ms;
+}
+
+.react-flow__node:hover .react-flow__handle-right.node-handle,
+.react-flow__node.selected .react-flow__handle-right.node-handle {
+  transform: translate(100%, -50%) !important;
+  opacity: 1;
+  pointer-events: auto;
+  transition-delay: 0ms;
+}
+
+/* Handle hover scale — must come after visible rules (same specificity, source order wins) */
+.react-flow__handle-left.node-handle:hover {
+  transform: translate(-100%, -50%) scale(1.35) !important;
+}
+
+.react-flow__handle-right.node-handle:hover {
+  transform: translate(100%, -50%) scale(1.35) !important;
+}
+
+/* Connected: always visible at normal position, role color */
+.react-flow__handle-left.node-handle.node-handle-connected {
+  transform: translate(-100%, -50%) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.react-flow__handle-right.node-handle.node-handle-connected {
+  transform: translate(100%, -50%) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.node-handle-prompt.react-flow__handle.node-handle-connected,
+.react-flow__node.selected .node-handle-prompt.react-flow__handle {
+  background: var(--ms-solid-brand) !important;
+}
+
+.node-handle-source.react-flow__handle.node-handle-connected,
+.react-flow__node.selected .node-handle-source.react-flow__handle {
+  background: var(--ms-solid-success) !important;
+}
+
+.node-handle-video.react-flow__handle.node-handle-connected,
+.react-flow__node.selected .node-handle-video.react-flow__handle {
+  background: var(--sinal-voz) !important;
+}
+
+/* ── Icon handles ────────────────────────────────────────────────────────── */
+.node-handle-icon.react-flow__handle {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  background: var(--ms-bg) !important;
+  border: 1.5px solid var(--ms-border) !important;
+  /* neutral — role color only when connected */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 10;
+  opacity: 0.7;
+  pointer-events: auto;
+  color: var(--handle-color, var(--ms-text-secondary));
+  transition: transform 180ms ease 280ms, box-shadow 120ms, opacity 180ms ease 280ms, border-color 180ms ease 280ms;
+  cursor: crosshair;
+}
+
+/* Icons must not intercept the handle hit test, and need contrast on light cards. */
+.node-handle-icon.react-flow__handle svg,
+.node-handle-icon.react-flow__handle svg * {
+  pointer-events: none;
+}
+.node-handle-icon.react-flow__handle [fill="white"] { fill: currentColor; }
+.node-handle-icon.react-flow__handle [stroke="white"] { stroke: currentColor; }
+
+/* Keep icon endpoints stationary, including before hover. */
+.react-flow__handle-left.node-handle-icon {
+  transform: translate(-100%, -50%) !important;
+}
+
+.react-flow__handle-right.node-handle-icon {
+  transform: translate(100%, -50%) !important;
+}
+
+/* Visible: normal position — delay reset so hover-in is instant */
+/* Left (input) icon handles: suppress hover during connection dragging */
+.react-flow:not([data-connecting-type]) .react-flow__node:hover .react-flow__handle-left.node-handle-icon,
+.react-flow__node.selected .react-flow__handle-left.node-handle-icon {
+  transform: translate(-100%, -50%) !important;
+  opacity: 1;
+  pointer-events: auto;
+  transition-delay: 0ms;
+}
+
+/* Right (output) icon handles: always show on hover/selected */
+.react-flow__node:hover .react-flow__handle-right.node-handle-icon,
+.react-flow__node.selected .react-flow__handle-right.node-handle-icon {
+  transform: translate(100%, -50%) !important;
+  opacity: 1;
+  pointer-events: auto;
+  transition-delay: 0ms;
+}
+
+/* Handle hover scale */
+.react-flow__handle-left.node-handle-icon:hover {
+  transform: translate(-100%, -50%) scale(1.15) !important;
+}
+
+.react-flow__handle-right.node-handle-icon:hover {
+  transform: translate(100%, -50%) scale(1.15) !important;
+}
+
+/* Connected: always visible at normal position, role border color */
+.react-flow__handle-left.node-handle-icon.node-handle-connected {
+  transform: translate(-100%, -50%) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.react-flow__handle-right.node-handle-icon.node-handle-connected {
+  transform: translate(100%, -50%) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Connected or selected: full role color — input handles */
+.node-handle-icon-prompt.react-flow__handle.node-handle-connected,
+.react-flow__node.selected .node-handle-icon-prompt.react-flow__handle {
+  border-color: var(--ms-solid-brand) !important;
+  --handle-color: var(--ms-solid-brand);
+}
+
+.node-handle-icon-image.react-flow__handle.node-handle-connected,
+.react-flow__node.selected .node-handle-icon-image.react-flow__handle {
+  border-color: var(--ms-solid-brand) !important;
+  --handle-color: var(--ms-solid-brand);
+}
+
+.node-handle-icon-resource.react-flow__handle.node-handle-connected,
+.react-flow__node.selected .node-handle-icon-resource.react-flow__handle {
+  border-color: var(--ms-border-warning) !important;
+  --handle-color: var(--ms-solid-warning);
+}
+
+.node-handle-icon-videoref.react-flow__handle.node-handle-connected,
+.react-flow__node.selected .node-handle-icon-videoref.react-flow__handle {
+  border-color: var(--sinal-voz) !important;
+  --handle-color: var(--sinal-voz);
+}
+
+.node-handle-icon-refvideo.react-flow__handle.node-handle-connected,
+.react-flow__node.selected .node-handle-icon-refvideo.react-flow__handle {
+  border-color: var(--ms-border) !important;
+  --handle-color: var(--ms-bg-info);
+}
+
+.node-handle-icon-audioref.react-flow__handle.node-handle-connected,
+.react-flow__node.selected .node-handle-icon-audioref.react-flow__handle {
+  border-color: var(--ms-solid-brand-hover) !important;
+  --handle-color: var(--ms-solid-brand-hover);
+}
+
+.node-handle-icon-character.react-flow__handle.node-handle-connected,
+.react-flow__node.selected .node-handle-icon-character.react-flow__handle {
+  border-color: var(--ms-border-success) !important;
+  --handle-color: var(--ms-solid-success);
+}
+
+/* Output handle colors — always visible when the handle is shown (hover/selected/connected) */
+.react-flow__node:hover .node-handle-icon-out-text.react-flow__handle,
+.react-flow__node.selected .node-handle-icon-out-text.react-flow__handle,
+.node-handle-icon-out-text.react-flow__handle.node-handle-connected {
+  border-color: var(--ms-solid-brand) !important;
+}
+
+.react-flow__node:hover .node-handle-icon-out-image.react-flow__handle,
+.react-flow__node.selected .node-handle-icon-out-image.react-flow__handle,
+.node-handle-icon-out-image.react-flow__handle.node-handle-connected {
+  border-color: var(--ms-solid-brand) !important;
+}
+
+.react-flow__node:hover .node-handle-icon-out-video.react-flow__handle,
+.react-flow__node.selected .node-handle-icon-out-video.react-flow__handle,
+.node-handle-icon-out-video.react-flow__handle.node-handle-connected {
+  border-color: var(--sinal-voz) !important;
+}
+
+.react-flow__node:hover .node-handle-icon-out-audio.react-flow__handle,
+.react-flow__node.selected .node-handle-icon-out-audio.react-flow__handle,
+.node-handle-icon-out-audio.react-flow__handle.node-handle-connected {
+  border-color: var(--ms-solid-brand-hover) !important;
+}
+
+/* Assistant output — yellow, overrides the inherited out-text blue */
+.react-flow__node:hover .node-handle-icon-out-assistant.react-flow__handle,
+.react-flow__node.selected .node-handle-icon-out-assistant.react-flow__handle,
+.node-handle-icon-out-assistant.react-flow__handle.node-handle-connected {
+  border-color: var(--ms-border-warning) !important;
+}
+
+/* Selected + unconnected: dim input (left) handles only; output handles keep full opacity */
+.react-flow__node.selected .react-flow__handle-left.node-handle-icon.react-flow__handle:not(.node-handle-connected) {
+  opacity: 0.35 !important;
+}
+
+/* ── Keep the dragged handle visible while a connection is in progress ───── */
+.react-flow__handle-left.node-handle-icon.node-handle-connecting {
+  transform: translate(-100%, -50%) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.react-flow__handle-right.node-handle-icon.node-handle-connecting {
+  transform: translate(100%, -50%) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.react-flow__handle-left.node-handle.node-handle-connecting {
+  transform: translate(-100%, -50%) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.react-flow__handle-right.node-handle.node-handle-connecting {
+  transform: translate(100%, -50%) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Connecting handle: show its type color */
+.node-handle-icon-prompt.react-flow__handle.node-handle-connecting {
+  border-color: var(--ms-solid-brand) !important;
+}
+
+.node-handle-icon-image.react-flow__handle.node-handle-connecting {
+  border-color: var(--ms-solid-brand) !important;
+}
+
+.node-handle-icon-resource.react-flow__handle.node-handle-connecting {
+  border-color: var(--ms-border-warning) !important;
+}
+
+.node-handle-icon-videoref.react-flow__handle.node-handle-connecting {
+  border-color: var(--sinal-voz) !important;
+}
+
+.node-handle-icon-refvideo.react-flow__handle.node-handle-connecting {
+  border-color: var(--ms-border) !important;
+}
+
+.node-handle-icon-audioref.react-flow__handle.node-handle-connecting {
+  border-color: var(--ms-solid-brand-hover) !important;
+}
+
+.node-handle-icon-character.react-flow__handle.node-handle-connecting {
+  border-color: var(--ms-border-success) !important;
+}
+
+.node-handle-icon-out-text.react-flow__handle.node-handle-connecting {
+  border-color: var(--ms-solid-brand) !important;
+}
+
+.node-handle-icon-out-assistant.react-flow__handle.node-handle-connecting {
+  border-color: var(--ms-border-warning) !important;
+}
+
+.node-handle-icon-out-image.react-flow__handle.node-handle-connecting {
+  border-color: var(--ms-solid-brand) !important;
+}
+
+.node-handle-icon-out-video.react-flow__handle.node-handle-connecting {
+  border-color: var(--sinal-voz) !important;
+}
+
+.node-handle-icon-out-audio.react-flow__handle.node-handle-connecting {
+  border-color: var(--ms-solid-brand-hover) !important;
+}
+
+/* ── Show only compatible input handles while connecting ─────────────────── */
+/* data-connecting-type is set by JS onConnectStart on the .react-flow element */
+
+/* Text/prompt output → only prompt inputs */
+.react-flow[data-connecting-type="prompt"] .react-flow__handle-left.node-handle-icon-prompt {
+  transform: translate(-100%, -50%) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transition-delay: 0ms !important;
+}
+
+/* Image output → image + resource + character inputs */
+.react-flow[data-connecting-type="image"] .react-flow__handle-left.node-handle-icon-image,
+.react-flow[data-connecting-type="image"] .react-flow__handle-left.node-handle-icon-resource,
+.react-flow[data-connecting-type="image"] .react-flow__handle-left.node-handle-icon-character {
+  transform: translate(-100%, -50%) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transition-delay: 0ms !important;
+}
+
+/* Video output → videoref + refvideo inputs */
+.react-flow[data-connecting-type="video"] .react-flow__handle-left.node-handle-icon-videoref,
+.react-flow[data-connecting-type="video"] .react-flow__handle-left.node-handle-icon-refvideo {
+  transform: translate(-100%, -50%) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transition-delay: 0ms !important;
+}
+
+/* Audio output → audioref inputs */
+.react-flow[data-connecting-type="audio"] .react-flow__handle-left.node-handle-icon-audioref {
+  transform: translate(-100%, -50%) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transition-delay: 0ms !important;
+}
+
+/* ── Duration slider ─────────────────────────────────────────────────────── */
+.dur-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 3px;
+  border-radius: 99px;
+  background: var(--ms-bg-component);
+  outline: none;
+  cursor: pointer;
+}
+
+.dur-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ms-bg);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.dur-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ms-bg);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Instant hide on deselect (class toggled by JS) ─────────────────────── */
+.handles-no-delay .node-handle.react-flow__handle,
+.handles-no-delay .node-handle-icon.react-flow__handle {
+  transition-delay: 0ms !important;
+}
+
+/* ── Suppress all transitions during rubber-band selection ────────────────── */
+/* Without this, every node gaining/losing .selected fires simultaneous handle
+   transform+opacity animations (180 ms + 280 ms delay), causing visible blinking. */
+.react-flow.is-rubber-band-selecting .node-handle.react-flow__handle,
+.react-flow.is-rubber-band-selecting .node-handle-icon.react-flow__handle {
+  transition: none !important;
+  animation: none !important;
+}
+
+.react-flow.is-rubber-band-selecting .node-card {
+  transition: none !important;
+}
+
+/* ── Selection rectangle (drag) + post-release overlay ── */
+.react-flow__selection {
+  background: rgba(67, 24, 255, 0.04) !important;
+  border: 1px solid rgba(67, 24, 255, 0.3) !important;
+  border-radius: 3px;
+  z-index: 0 !important;
+  pointer-events: none;
+}
+
+/* Post-release selection bounding box — keep it below nodes */
+.react-flow__nodesselection {
+  z-index: 1 !important;
+  /* below viewport z-index:2 where nodes live */
+}
+
+.react-flow__nodesselection-rect {
+  background: rgba(67, 24, 255, 0.03) !important;
+  border: 1px solid rgba(67, 24, 255, 0.2) !important;
+  border-radius: 3px;
+}
+
+/* ── React Flow overrides ────────────────────────────── */
+.react-flow {
+  --xy-background-color-default: var(--app-v2-bg-page);
+  background: var(--app-v2-bg-page);
+}
+
+.react-flow__node.selected .node-card {
+  border-color: var(--ms-solid-brand) !important;
+  box-shadow: 0 0 0 1px rgba(67, 24, 255, 0.25), 0 2px 16px rgba(0, 15, 30, 0.5);
+}
+
+.react-flow__node.selected .node-card.node-generating {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.react-flow__node .node-card.node-over-limit,
+.react-flow__node.selected .node-card.node-over-limit,
+.react-flow__node.node-ancestor .node-card.node-over-limit {
+  border-color: var(--ms-border-danger) !important;
+  box-shadow: 0 0 0 1px rgba(227, 26, 26, 0.2), 0 2px 14px rgba(227, 26, 26, 0.12) !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  filter: brightness(1.4);
+}
+
+/* ── Ancestor highlight (upstream nodes of selected node) ── */
+.react-flow__node.node-ancestor .node-card {
+  border-color: var(--ms-solid-brand) !important;
+  box-shadow: 0 0 0 1px rgba(67, 24, 255, 0.15), 0 2px 16px rgba(0, 0, 0, 0.5);
+  transition: border-color 150ms, box-shadow 150ms;
+}
+
+.react-flow__node.node-ancestor .node-above-label {
+  color: var(--ms-text-link);
+  transition: color 150ms;
+}
+
+.react-flow__edge.edge-ancestor .react-flow__edge-path {
+  filter: brightness(1.25);
+  opacity: 0.85;
+}
+
+/* ── Group-preview highlight (downstream + other connected nodes) ── */
+.react-flow__node.node-group-preview .node-card {
+  border-color: rgba(190, 190, 190, 0.65) !important;
+  box-shadow: 0 0 0 1px rgba(190, 190, 190, 0.1), 0 2px 16px rgba(0, 0, 0, 0.5);
+  transition: border-color 150ms, box-shadow 150ms;
+}
+
+.react-flow__node.node-group-preview .node-above-label {
+  color: rgba(190, 190, 190, 0.65);
+  transition: color 150ms;
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+.react-flow__controls {
+  box-shadow: none !important;
+  border: 1px solid var(--ms-border-subtle) !important;
+  border-radius: 6px !important;
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background: var(--app-v2-bg-page) !important;
+  border: none !important;
+  border-bottom: 1px solid var(--ms-border-subtle) !important;
+  color: var(--ms-text-secondary) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--ms-bg) !important;
+  color: var(--ms-text) !important;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+
+/* ── Menus e controles flutuantes do Workflow ─────────────────────────────
+   O canvas é claro. Superfícies pretas e pílulas translúcidas perdiam o texto
+   sobre a prévia dos nodes; estes estilos mantêm a hierarquia com contraste. */
+.workflow-node-picker {
+  box-shadow: 0 20px 52px rgba(42, 31, 74, 0.16), 0 5px 16px rgba(42, 31, 74, 0.08);
+}
+
+.workflow-node-picker-item + .workflow-node-picker-item {
+  border-top: 1px solid var(--ms-border-subtle);
+}
+
+.node-control-pill {
+  background: color-mix(in srgb, var(--ms-bg) 94%, var(--ms-bg-brand-subtle));
+  border: 1px solid var(--ms-border);
+  color: var(--ms-text);
+  box-shadow: 0 2px 7px rgba(42, 31, 74, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+button.node-control-pill:hover:not(:disabled) {
+  background: var(--ms-bg-brand-subtle);
+  border-color: var(--ms-border-brand);
+}
+
+button.node-control-pill:focus-visible {
+  outline: 2px solid var(--ms-ring);
+  outline-offset: 2px;
+}
+
+.node-control-menu {
+  background: var(--ms-bg);
+  border-color: var(--ms-border);
+  box-shadow: 0 16px 38px rgba(42, 31, 74, 0.16), 0 4px 12px rgba(42, 31, 74, 0.08);
+}
+
+.node-control-menu-item:hover,
+.node-control-menu-item:focus-visible {
+  background: var(--ms-bg-brand-subtle);
+  outline: none;
+}
+
+/* ── Node error blink ────────────────────────────────── */
+/* box-shadow handles the glow; the ::before pseudo-element overlays the border
+   so the red blink covers the blue selected border instead of appearing outside it. */
+@keyframes node-error-blink {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(80, 80, 80, 0.08), 0 2px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  20%,
+  55% {
+    box-shadow: 0 0 0 2px rgba(227, 26, 26, 0.35), 0 0 28px rgba(227, 26, 26, 0.25);
+  }
+
+  37%,
+  72% {
+    box-shadow: 0 0 0 1px rgba(80, 80, 80, 0.08), 0 2px 16px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Pseudo-element overlays the node border — covers the blue selected border with red */
+@keyframes node-error-blink-border {
+
+  0%,
+  100% {
+    border-color: transparent;
+  }
+
+  20%,
+  55% {
+    border-color: var(--ms-border-danger);
+  }
+
+  37%,
+  72% {
+    border-color: transparent;
+  }
+}
+
+@keyframes label-error-blink {
+
+  0%,
+  100% {
+    color: var(--ms-text-tertiary);
+  }
+
+  20%,
+  55% {
+    color: var(--ms-text-danger);
+  }
+
+  37%,
+  72% {
+    color: var(--ms-text-tertiary);
+  }
+}
+
+.node-error-blink {
+  animation: node-error-blink 1.4s ease 1 forwards;
+}
+
+/* Positioned over the node border, so the red ring covers the blue selected border */
+.node-card.node-error-blink::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  pointer-events: none;
+  z-index: 1;
+  animation: node-error-blink-border 1.4s ease 1 forwards;
+}
+
+/* ── Node identify blink (triggered from group toolbar job list) ── */
+/* Applied via an injected <style> tag (not via classList) so React can't wipe it */
+@keyframes node-identify-input-blink {
+  0%, 100% { box-shadow: 0 2px 16px rgba(0,0,0,0.5); border-color: transparent; }
+  18%       { box-shadow: 0 0 0 3px rgba(67, 24, 255,0.55), 0 0 30px rgba(67, 24, 255,0.15); border-color: rgba(67, 24, 255,0.65); }
+  35%       { box-shadow: 0 2px 16px rgba(0,0,0,0.5); border-color: transparent; }
+  58%       { box-shadow: 0 0 0 2px rgba(67, 24, 255,0.35), 0 0 20px rgba(67, 24, 255,0.08); border-color: rgba(67, 24, 255,0.45); }
+  75%       { box-shadow: 0 2px 16px rgba(0,0,0,0.5); border-color: transparent; }
+}
+
+@keyframes node-identify-blink {
+  0%, 100% {
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
+    border-color: transparent;
+  }
+  18% {
+    box-shadow: 0 0 0 3px var(--ms-grayA-11-hex), 0 0 30px var(--ms-grayA-5-hex);
+    border-color: var(--ms-grayA-11-hex);
+  }
+  35% {
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
+    border-color: transparent;
+  }
+  58% {
+    box-shadow: 0 0 0 2px var(--ms-grayA-9-hex), 0 0 20px var(--ms-grayA-4-hex);
+    border-color: var(--ms-grayA-9-hex);
+  }
+  75% {
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
+    border-color: transparent;
+  }
+}
+
+.node-error-blink .node-above-label {
+  animation: label-error-blink 1.4s ease 1 forwards;
+}
+
+/* ── Animated dashed edge (drag ghost + pending connection line) ── */
+@keyframes dash-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+
+/* Ghost line while dragging — stroke-dasharray set via connectionLineStyle prop */
+.react-flow__connection-path {
+  animation: dash-flow 0.45s linear infinite;
+}
+
+/* Persistent preview line while node-picker menu is open */
+.pending-edge-line {
+  animation: dash-flow 0.45s linear infinite;
+}
+
+/* ── Corner resize handles — show per-handle on hover ── */
+.corner-handle {
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.corner-handle:hover,
+.node-card:hover .corner-handle {
+  opacity: 1;
+}
+
+/* ── Toolbar buttons ─────────────────────────────────── */
+.toolbar-btn {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ms-text-secondary);
+  background: var(--app-v2-bg-page);
+  border: 1px solid var(--ms-border-subtle);
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: color 100ms, border-color 100ms;
+  font-family: inherit;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  color: var(--ms-text);
+  border-color: var(--ms-border-subtle);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.toolbar-btn-primary {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ms-text);
+  background: var(--ms-solid-brand);
+  border: 1px solid var(--ms-solid-brand);
+  border-radius: 6px;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: background 100ms, border-color 100ms, box-shadow 100ms;
+  font-family: inherit;
+}
+
+.toolbar-btn-primary:hover:not(:disabled) {
+  background: var(--ms-solid-brand);
+  border-color: var(--ms-solid-brand);
+  box-shadow: 0 0 12px rgba(67, 24, 255, 0.35);
+}
+
+.toolbar-btn-primary:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── Video Generator node — subtle border ────────────── */
+.video-node-card.node-card {
+  border-color: var(--ms-border-subtle);
+  box-shadow: 0 0 0 1px rgba(80, 80, 80, 0.08), 0 2px 16px rgba(0, 0, 0, 0.5);
+}
+
+.video-node-card.node-card:hover {
+  border-color: var(--ms-border);
+  box-shadow: 0 0 0 1px rgba(67, 24, 255, 0.12), 0 2px 20px rgba(0, 0, 0, 0.6);
+}
+
+.react-flow__node.selected .video-node-card.node-card {
+  border-color: var(--ms-solid-brand) !important;
+  box-shadow: 0 0 0 1px rgba(67, 24, 255, 0.25), 0 2px 16px rgba(0, 15, 30, 0.5);
+}
+
+.react-flow__node.node-ancestor .video-node-card.node-card {
+  border-color: var(--ms-solid-brand) !important;
+  box-shadow: 0 0 0 1px rgba(67, 24, 255, 0.15), 0 0 18px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Carousel slide ─────────────────────────────────────────────────────── */
+@keyframes carousel-slide-from-right {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes carousel-slide-from-left {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* ── Spinner ─────────────────────────────────────────────────────────────── */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Node action bar / group toolbar enter animation ─────────────────────── */
+@keyframes node-action-bar-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* ── Pílulas flutuantes do canvas (barra de ações do nó, da seleção, do grupo)
+   Eram cromo escuro (`rgba(16,16,16)` / `--ms-solid`) herdado do canvas
+   noturno. Desde a leva 9 o canvas é claro, e algumas delas ainda pintavam
+   ícone cinza-escuro sobre fundo preto — invisível. Agora todas usam a MESMA
+   cápsula branca da barra vertical (`.cr-toolbar-group`): papel, borda e
+   sombra do kit. Os botões pintam a cor pelo Tailwind (`text-ms-*`). */
+.canvas-pilula {
+  border-radius: 999px;
+  background: var(--ms-bg);
+  border: 1px solid var(--ms-border);
+  box-shadow: 0 8px 24px rgba(42, 31, 74, 0.12), 0 1px 3px rgba(42, 31, 74, 0.08);
+  white-space: nowrap;
+}
+.canvas-pilula-sep {
+  width: 1px; height: 16px; margin: 0 2px; flex-shrink: 0;
+  background: var(--ms-border);
+}
+.node-action-bar-enter {
+  animation: node-action-bar-enter 160ms ease forwards;
+}
+
+/* ── Node delete animation ───────────────────────────────────────────────── */
+/* Use individual `scale` property — does NOT conflict with RF's translate() transform */
+@keyframes node-delete {
+  0% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.node-dying {
+  animation: node-delete 200ms ease forwards !important;
+  pointer-events: none !important;
+  transition: none !important;
+}
+
+.node-dying .node-slide-reveal {
+  transform: translateY(0) !important;
+  transition: none !important;
+}
+
+/* ── Hover-revealed elements slide up from below ─────────────────────────── */
+.node-slide-reveal {
+  transform: translateY(5px);
+  transition: opacity 150ms ease, transform 150ms ease !important;
+}
+
+.group:hover .node-slide-reveal,
+.group\/player:hover .node-slide-reveal,
+.group\/gen:hover .node-slide-reveal,
+.group\/orient-info:hover .node-slide-reveal {
+  transform: translateY(0);
+}
+
+/* ── Float menu slide (bottom → top) ─────────────────────────────────────── */
+@keyframes float-menu-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes float-menu-out {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  to {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+.float-menu-enter {
+  animation: float-menu-in 140ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.float-menu-exit {
+  animation: float-menu-out 110ms ease forwards;
+}
+
+/* ── Edge error blink ────────────────────────────────────────────────────── */
+@keyframes edge-extracting {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -12; }
+}
+
+@keyframes edge-error-blink {
+
+  0%,
+  100% {
+    stroke: var(--edge-color);
+  }
+
+  20%,
+  55% {
+    stroke: var(--ms-border-danger);
+  }
+
+  37%,
+  72% {
+    stroke: var(--edge-color);
+  }
+}
+
+/* ── Handle error blink ──────────────────────────────────────────────────── */
+/* Glow via box-shadow; border overlay via ::before pseudo so the red covers
+   the role-color border instead of appearing as a ring outside it. */
+@keyframes handle-error-blink {
+
+  0%,
+  100% {
+    box-shadow: none;
+  }
+
+  20%,
+  55% {
+    box-shadow: 0 0 8px rgba(227, 26, 26, 0.5);
+  }
+
+  37%,
+  72% {
+    box-shadow: none;
+  }
+}
+
+/* Pseudo-element matches the handle's border position exactly */
+@keyframes handle-error-blink-border {
+
+  0%,
+  100% {
+    border-color: transparent;
+  }
+
+  20%,
+  55% {
+    border-color: var(--ms-border-danger);
+  }
+
+  37%,
+  72% {
+    border-color: transparent;
+  }
+}
+
+.node-handle-error.react-flow__handle {
+  opacity: 1 !important;
+  animation: handle-error-blink 1.4s ease 1 forwards;
+}
+
+/* Overlays the handle's role-color border with the blinking red border */
+.node-handle-icon.node-handle-error::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  pointer-events: none;
+  z-index: 1;
+  animation: handle-error-blink-border 1.4s ease 1 forwards;
+}
+
+/* ── Upload pulse (image node while uploading) ───────────────────────────── */
+@keyframes upload-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* ── Upload skeleton shimmer ─────────────────────────────────────────────── */
+@keyframes upload-shimmer {
+  0% {
+    left: -70%;
+  }
+
+  100% {
+    left: 130%;
+  }
+}
+
+.upload-shimmer-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  background: linear-gradient(to right,
+      transparent 0%,
+      var(--ms-grayA-4-hex) 30%,
+      var(--ms-grayA-6-hex) 50%,
+      var(--ms-grayA-4-hex) 70%,
+      transparent 100%);
+  animation: upload-shimmer 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── Lightbox blur-up pulse ───────────────────────────────────────────────── */
+@keyframes lightbox-blur-pulse {
+
+  0%,
+  100% {
+    filter: blur(6px);
+    opacity: 1;
+  }
+
+  50% {
+    filter: blur(22px);
+    opacity: 0.7;
+  }
+}
+
+.lightbox-blur-pulse {
+  animation: lightbox-blur-pulse 1.6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* ── Generating border animation ─────────────────────────────────────────── */
+/* A varredura azul da borda enquanto o nó gera é ANIMAÇÃO DE SINAL, não
+   tema: os quatro pontos do cônico são um degradê com identidade própria, e
+   mapeá-los para token achataria a varredura num tom só. Declarados aqui
+   como exceção, do mesmo jeito que a paleta do grupo em `paletaFixa.ts`.
+   Ver o relatório da leva 9. */
+.node-card.node-generating {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(var(--ms-bg), var(--ms-bg)) padding-box,
+    conic-gradient(
+      from var(--border-angle, 0deg),
+      rgba(67, 24, 255, 0.05) 0deg,
+      rgba(67, 24, 255, 0.05) 150deg,
+      #00266A 200deg,
+      #005FCC 250deg,
+      #00AEFF 305deg,
+      #00F2FF 340deg,
+      rgba(0, 242, 255, 0.05) 360deg
+    ) border-box;
+  transition: none;
+  box-shadow: none;
+}
+
+/* ── Pipeline queued state ───────────────────────────────────────────────── */
+@keyframes node-queued-pulse {
+  0%, 100% { border-color: rgba(148, 163, 184, 0.18); box-shadow: 0 2px 16px rgba(0,0,0,0.5); }
+  50%       { border-color: rgba(148, 163, 184, 0.5);  box-shadow: 0 2px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(148,163,184,0.15); }
+}
+
+.node-card.node-queued {
+  animation: node-queued-pulse 2s ease-in-out infinite;
+}
+
+/* ── Barra do textarea do promptNode ─────────────────────────────────────── */
+/* O `scrollbar-width: thin` e a cor saíram daqui: a regra da fundação já dá os
+   dois, e o branco a 15% que estava cravado nesta linha é exatamente o que o
+   `--scroll-polegar` vira sob `.pitch-night` — que é a classe do próprio
+   `/workflow`. Um token no lugar de um `rgba` cravado, mesmo desenho.
+
+   O que fica é o opt-out do WebKit, e ele é deliberado: o comentário original
+   registra que o trilho clássico do Safari aparecia sempre e desenhava uma
+   barra preta neste textarea. */
+.prompt-ta::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── @mention chip in PromptNode ─────────────────────────────────────────── */
+/* ── Canvas hand/pan mode cursor ─────────────────────────────────────────── */
+.canvas-hand-mode,
+.canvas-hand-mode .react-flow__pane {
+  cursor: grab !important;
+}
+
+.canvas-hand-mode:active,
+.canvas-hand-mode .react-flow__pane:active {
+  cursor: grabbing !important;
+}
+
+.mention-chip {
+  display: inline;
+  background: var(--ms-grayA-4-hex);
+  border-radius: 4px;
+  color: var(--ms-text);
+  padding: 2px 0;
+  pointer-events: auto;
+  /* shadows stay well under space-char width (~3-4 px) so the natural space
+     character creates a visible gap to surrounding text, and the caret lands
+     outside the chip */
+  box-shadow: -2px 0 0 var(--ms-grayA-4-hex), 2px 0 0 var(--ms-grayA-4-hex);
+}
+
+/* ============================================================
+   PITCH STUDIO — SHOCKWAVE
+   Onda radial em CSS a partir do ponto do clique.
+   Portado do protótipo original (legacy/src/models.css).
+   Usado por components/Shockwave.tsx.
+   ============================================================ */
+.web-shockwave { position: relative; }
+
+.shockwave-ring {
+  position: absolute;
+  z-index: 20;
+  left: var(--shock-x);
+  top: var(--shock-y);
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  border: 2px solid var(--primary, var(--ms-solid-brand));
+  pointer-events: none;
+  animation: shock 0.62s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+@keyframes shock {
+  from { transform: scale(1); opacity: 0.75; }
+  to   { transform: scale(34); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shockwave-ring { display: none; }
+}
+
+/* O compositor ocupa a base da tela no celular; o atalho flutuante do
+   Assistant cobriria o botão de envio. O assistente continua acessível
+   pelo item "Assistente" do menu lateral. */
+@media (max-width: 767px) {
+  .quick-assist-root { display: none; }
+}

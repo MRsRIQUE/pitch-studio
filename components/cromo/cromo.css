@@ -1,0 +1,654 @@
+/* ============================================================
+   O CROMO DO BLOCO 09 — as três peças que servem DUAS telas
+
+   A barra vertical de ferramentas, a pílula do canto superior direito e a
+   barra de visualização do rodapé. Portadas de
+   `miora/sections/09-workspace-canvas/preview.html` (regras
+   `[data-workflow-canvas-toolbar=left]`, `.design-app-v2-rs`,
+   `.design-view-toolbar`), com todo número vindo do `<style>` de lá.
+
+   Nasceram em `/projeto` na leva 3; na leva 4 passaram a vestir também
+   `/workflow/<id>`. Elas moram aqui, e não em `components/projeto/`, porque
+   duas cópias divergiriam em uma semana — cada tela passa o conteúdo e os
+   callbacks por prop, e a geometria é a mesma nas duas.
+
+   Onde a referência acende `--color-design-primary` (o laranja da marca
+   dela), aqui é `var(--hover-brand)`, que vira lilás sozinho sobre
+   superfície escura. Rótulo de UI vive no TSX, não aqui.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   A raiz do cromo — os custom properties que as três peças leem.
+   `/projeto` põe esta classe no mesmo elemento que o `.pjc-root`;
+   `/workflow` a põe no invólucro que o layout cria.
+   ------------------------------------------------------------ */
+.cr-root {
+  position: relative;
+
+  --cr-panel-inset: 8px;
+  --cr-panel-width: 368px;
+  --cr-right-panel-width: 240px;
+  /* 8 + 368 + 12 — é esta soma que a barra desfaz ao colapsar o painel.
+     Em /workflow não há painel de chat, então a tela nasce recolhida. */
+  --cr-toolbar-left: calc(var(--cr-panel-inset) + var(--cr-panel-width) + 12px);
+  /* A folga que as barras da direita guardam com o painel de Camadas aberto.
+     Sem ela, minimapa e barra de visualização ficam POR BAIXO dele. */
+  --cr-right-gutter: 12px;
+}
+
+/* Sem painel de chat (ou com ele recolhido) a barra encosta na borda:
+   a referência mede 388px → 12px em `transition: left .2s`. */
+.cr-root[data-painel="colapsado"] {
+  --cr-toolbar-left: 12px;
+}
+
+/* Com o painel de Camadas aberto, tudo o que flutua na direita recua a
+   largura dele. É o único uso possível do `--design-app-v2-right-sidebar-width`
+   da referência (`inset + right-panel-width` = 248) e a única leitura que
+   explica por que `.design-view-toolbar` anima `right` em .24s. */
+.cr-root[data-camadas="aberto"] {
+  --cr-right-gutter: calc(var(--cr-panel-inset) + var(--cr-right-panel-width) + 12px);
+}
+
+/* O traço que separa o nosso grupo dos que a referência tem: o mesmo
+   24×1px de `.miora-rail-entry::before`, o rail da barra lateral. */
+.cr-toolbar-traco {
+  width: 24px;
+  height: 1px;
+  flex-shrink: 0;
+  background: var(--app-v2-border-subtle);
+}
+
+/* ------------------------------------------------------------
+   Barra de ferramentas do canvas — literal de css-index-DtSFiOi0.css
+   ------------------------------------------------------------ */
+.cr-toolbar {
+  position: absolute;
+  z-index: 260;
+  top: 50%;
+  transform: translateY(-50%);
+  left: var(--cr-toolbar-left);
+  transition: left .2s cubic-bezier(.4, 0, .2, 1);
+}
+.cr-toolbar-groups { display: flex; flex-direction: column; align-items: flex-start; gap: 8px }
+.cr-toolbar-group {
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 999px;
+  background: var(--app-v2-bg-surface);
+  box-shadow: var(--app-v2-shadow-card);
+}
+.cr-toolbar-group button {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; min-width: 32px; min-height: 32px;
+  padding: 0;
+  border: none; border-radius: 9999px;
+  background: transparent;
+  color: var(--app-v2-text-primary);
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.cr-toolbar-group button svg { width: 16px; height: 16px }
+/* A referência preenche de laranja sólido com o glifo branco, tanto no hover
+   quanto no ativo. Mesma regra, na marca. */
+.cr-toolbar-group button:hover:not(:disabled),
+.cr-toolbar-group button.is-active {
+  background: var(--hover-brand);
+  color: var(--app-v2-text-on-solid);
+}
+.cr-toolbar-group button:disabled { color: var(--app-v2-text-disabled); cursor: not-allowed }
+
+/* `Wi` do bundle: um retângulo de 3,26×3,03 no canto inferior direito, na cor
+   do ícone. É o que distingue o botão que abre menu do que só seleciona. */
+.cr-has-dropdown::after {
+  content: "";
+  position: absolute; right: 8px; bottom: 8px;
+  height: 3.03px; width: 3.26px;
+  background: currentColor;
+}
+
+/* Tooltip: rótulo + tecla na MESMA caixa, à direita, sideOffset 14. */
+.cr-tip {
+  position: absolute;
+  left: calc(100% + 14px); top: 50%;
+  transform: translateY(-50%) scale(.96);
+  display: none; align-items: center; gap: 6px;
+  height: 28px; padding: 0 10px;
+  border-radius: 8px;
+  background: var(--app-v2-solid);
+  color: var(--app-v2-text-on-solid);
+  font-size: 12px; line-height: 20px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease, transform .15s ease;
+}
+.cr-toolbar-group button:hover .cr-tip { display: inline-flex; opacity: 1; transform: translateY(-50%) scale(1) }
+.cr-tip kbd { font: inherit; opacity: .6 }
+
+/* ------------------------------------------------------------
+   Canto superior direito — a pílula Camadas / Página / conta / Compartilhar
+   ------------------------------------------------------------ */
+.cr-rs {
+  --rs-row-gap: 4px;
+  --rs-row-icon-gap: 8px;
+  --rs-page-text-inset: 8px;
+  --rs-icon-btn: 32px;
+  position: absolute;
+  z-index: 240;
+  display: flex; flex-direction: column;
+  transition:
+    top .24s cubic-bezier(.4, 0, .2, 1),
+    right .24s cubic-bezier(.4, 0, .2, 1),
+    bottom .24s cubic-bezier(.4, 0, .2, 1),
+    width .24s cubic-bezier(.4, 0, .2, 1);
+}
+.cr-rs.is-collapsed {
+  top: 12px; right: 12px;
+  width: auto;
+  /* A referência trava em 350px, e essa conta não previa o seletor
+     `Conversa | Grafo`, que é acréscimo nosso (~152px). Sem folga os filhos
+     transbordam a caixa e o `Compartilhar` sai da tela. O teto continua
+     existindo — o que ele impede é o seletor de página crescer sem fim. */
+  max-width: 520px;
+  border-radius: 18px;
+  background: var(--app-v2-bg-surface);
+  box-shadow: var(--app-v2-shadow-card);
+}
+.cr-rs.is-collapsed .cr-rs-top { min-width: 0; padding: 8px; border-bottom: none; gap: 12px; flex-wrap: nowrap }
+.cr-rs-top { display: flex; flex-shrink: 0; align-items: center; gap: var(--rs-row-icon-gap) }
+
+.cr-rs-top__toggle {
+  display: inline-flex;
+  width: var(--rs-icon-btn); height: var(--rs-icon-btn);
+  flex-shrink: 0;
+  align-items: center; justify-content: center;
+  border: none; border-radius: var(--ms-radius-lg);
+  background: transparent;
+  color: var(--app-v2-icon-secondary);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.cr-rs-page-switcher {
+  display: inline-flex;
+  min-width: 0; height: var(--rs-icon-btn);
+  align-items: center; gap: var(--rs-row-gap);
+  padding: 0 var(--rs-page-text-inset);
+  border: none; border-radius: var(--ms-radius-lg);
+  background: transparent;
+  color: var(--app-v2-text-primary);
+  cursor: pointer;
+  font-family: inherit; font-size: var(--ms-text-md); font-weight: 400; line-height: 20px;
+  transition: background .15s ease, color .15s ease;
+}
+.cr-rs-page-switcher > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.cr-rs-page-switcher__chevron { flex-shrink: 0; color: var(--app-v2-text-secondary) }
+
+/* Uma das quatro áreas em que o usuário pediu o violeta: a referência acende
+   estes dois em cinza (`--app-v2-bg-surface-hover`); aqui é o lavado da marca. */
+.cr-rs-top__toggle:hover,
+.cr-rs-page-switcher:hover:not(:disabled) {
+  background: var(--hover-brand-wash);
+  color: var(--hover-brand);
+}
+.cr-rs-page-switcher:hover:not(:disabled) .cr-rs-page-switcher__chevron { color: var(--hover-brand) }
+
+/* ---- o MESMO nó, aberto: o painel de 240px ----
+   É por isso que ele anima `top/right/bottom/width`: a pílula não some para
+   dar lugar a outra caixa, ela cresce. */
+.cr-rs.is-open {
+  inset: var(--cr-panel-inset) var(--cr-panel-inset) var(--cr-panel-inset) auto;
+  width: 240px;
+  border: .5px solid var(--app-v2-border-subtle);
+  border-radius: 18px;
+  background: var(--app-v2-bg-surface);
+  box-shadow: var(--app-v2-shadow-card);
+  overflow: hidden;
+}
+.cr-rs.is-open .cr-rs-top { padding: 8px; gap: 12px; border-bottom: .5px solid var(--app-v2-border-subtle) }
+.cr-rs-body { display: flex; min-height: 0; flex: 1; flex-direction: column }
+.cr-rs-section { display: flex; min-height: 0; flex-direction: column }
+.cr-rs-section--pages { flex-shrink: 0; border-bottom: .5px solid var(--app-v2-border-subtle) }
+.cr-rs-section--layers { min-height: 0; flex: 1 }
+.cr-rs-section__header { display: flex; height: 40px; flex-shrink: 0; align-items: center; padding-right: 4px }
+.cr-rs-section__title {
+  overflow: hidden;
+  padding-left: 12px;
+  color: var(--app-v2-text-primary);
+  font-size: var(--ms-text-md); font-weight: 500; line-height: 20px;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.cr-rs-section__actions { display: flex; flex-shrink: 0; align-items: center; margin-left: auto }
+.cr-rs-section__body { display: flex; min-height: 0; flex-direction: column }
+.cr-rs-icon-btn {
+  display: inline-flex;
+  width: var(--rs-icon-btn); height: var(--rs-icon-btn);
+  flex-shrink: 0;
+  align-items: center; justify-content: center;
+  border: none; border-radius: var(--ms-radius-md);
+  background: transparent;
+  color: var(--app-v2-icon-secondary);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.cr-rs-icon-btn:hover:not(:disabled) { background: var(--hover-brand-wash); color: var(--hover-brand) }
+
+/* 8 linhas de 28 + 4 de intervalo é o teto da lista antes de rolar. */
+.cr-rs-page-list {
+  display: flex; min-height: 0;
+  max-height: calc((28px + 4px) * 8);
+  flex-direction: column; gap: 4px;
+  margin: 0; padding: 0 4px 4px;
+  overflow-y: auto;
+  list-style: none;
+}
+.cr-rs-page-item {
+  display: flex; height: 28px; flex-shrink: 0; align-items: center;
+  border-radius: var(--ms-radius);
+  cursor: pointer;
+}
+.cr-rs-page-item:hover:not(.is-active) { background: var(--app-v2-bg-component) }
+.cr-rs-page-item.is-active { background: var(--app-v2-brand-bg) }
+.cr-rs-page-item.is-active .cr-rs-page-item__label { color: var(--app-v2-brand-text) }
+.cr-rs-page-item__label {
+  display: flex; min-width: 0; height: 100%; flex: 1; align-items: center;
+  padding-left: 8px;
+  border: none; background: transparent;
+  color: var(--app-v2-text-primary);
+  cursor: pointer;
+  font-family: inherit; font-size: var(--ms-text-sm); font-weight: 400; line-height: 16px;
+  text-align: left;
+}
+.cr-layer-empty {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--app-v2-text-tertiary);
+  font-size: 12px;
+}
+.cr-layer-list { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 8px }
+.cr-layer-row {
+  display: flex; width: calc(100% - 16px); align-items: center; gap: 8px;
+  height: 28px; margin: 0 8px; padding: 0 8px;
+  border: none; border-radius: 6px;
+  background: transparent;
+  font-family: inherit; font-size: var(--ms-text-sm); line-height: 16px;
+  color: var(--app-v2-text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+.cr-layer-row:hover { background: var(--app-v2-bg-component) }
+.cr-layer-row.is-active { background: var(--app-v2-brand-bg); color: var(--app-v2-brand-text) }
+.cr-layer-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.cr-layer-row em { margin-left: auto; font-style: normal; color: var(--app-v2-text-tertiary) }
+
+/* ------------------------------------------------------------
+   O seletor Conversa | Grafo
+
+   Um projeto, duas vistas. Mora na pílula porque é a peça que as duas telas
+   já dividem — desenhá-lo duas vezes seria começar a divergir no dia 1.
+
+   Geometria da própria pílula: 32px de altura, como todos os filhos dela, e
+   o raio interno é o `--ms-radius-lg` dos botões, não os 999px da cápsula.
+   ------------------------------------------------------------ */
+.cr-vistas {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 2px;
+  border-radius: var(--ms-radius-lg);
+  background: var(--app-v2-bg-component);
+}
+.cr-vista {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--app-v2-text-secondary);
+  font-family: inherit;
+  font-size: var(--ms-text-md);
+  line-height: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s ease, color .15s ease;
+}
+.cr-vista:hover:not(.is-active) { background: var(--hover-brand-wash); color: var(--hover-brand) }
+/* A vista montada é a sólida: mesma leitura do item ativo da barra. */
+.cr-vista.is-active {
+  background: var(--app-v2-bg-surface);
+  color: var(--app-v2-text-primary);
+  font-weight: 500;
+  box-shadow: var(--app-v2-shadow-card);
+}
+
+.cr-avatar-btn {
+  display: inline-flex;
+  width: 32px; height: 32px;
+  flex-shrink: 0;
+  align-items: center; justify-content: center;
+  padding: 0; overflow: hidden;
+  border: none; border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.cr-avatar-mark {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--app-v2-bg-component);
+  color: var(--app-v2-text-secondary);
+  font-size: 12px; font-weight: 600; line-height: 1;
+}
+
+/* Créditos: a mesma caixa cinza das vistas (32 de altura, raio lg), com
+   o número em destaque e um botão discreto de atualizar. Abaixo do
+   limite, o número muda para a cor de alerta — cor em texto, nunca em
+   área grande, como manda o kit. */
+.cr-creditos {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 2px 2px 2px 0;
+  border-radius: var(--ms-radius-lg);
+  background: var(--app-v2-bg-component);
+  color: var(--app-v2-text-secondary);
+  font-family: inherit;
+  font-size: var(--ms-text-md);
+  line-height: 20px;
+  white-space: nowrap;
+}
+.cr-creditos__saldo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  min-width: 64px;
+  padding: 0 8px 0 10px;
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+  transition: background .15s ease, color .15s ease;
+}
+.cr-creditos__saldo:hover { background: var(--hover-brand-wash); color: var(--hover-brand) }
+.cr-creditos__numero {
+  color: var(--app-v2-text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.cr-creditos__saldo:hover .cr-creditos__numero { color: inherit }
+.cr-creditos[data-carregando="true"] .cr-creditos__numero { color: var(--app-v2-text-tertiary); font-weight: 500 }
+.cr-creditos[data-erro="true"] .cr-creditos__numero { color: var(--app-v2-text-tertiary) }
+.cr-creditos[data-baixo="true"] .cr-creditos__numero,
+.cr-creditos[data-baixo="true"] .cr-creditos__saldo { color: var(--ms-text-danger) }
+.cr-creditos__atualizar {
+  display: inline-flex;
+  width: 24px; height: 28px;
+  align-items: center; justify-content: center;
+  border: none; border-radius: 6px;
+  background: transparent;
+  color: var(--app-v2-icon-secondary);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.cr-creditos__atualizar:hover { background: var(--hover-brand-wash); color: var(--hover-brand) }
+/* Sem chave a pílula inteira é um botão: leva aos Ajustes. */
+.cr-creditos--sem-chave {
+  gap: 6px;
+  padding: 0 10px;
+  border: none;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.cr-creditos--sem-chave:hover { background: var(--hover-brand-wash); color: var(--hover-brand) }
+
+/* Compartilhar: preto sólido, o mesmo botão do resto do app. */
+.cr-share {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 32px; padding: 0 16px;
+  border: none; border-radius: 999px;
+  background: var(--app-v2-button-bg);
+  color: var(--app-v2-button-fg);
+  box-shadow: var(--app-v2-button-shadow);
+  font-family: inherit; font-size: 13px; font-weight: 500; line-height: 20px;
+  cursor: pointer;
+  transition: background .15s ease, box-shadow .15s ease;
+}
+.cr-share:hover { background: var(--app-v2-button-bg-hover); box-shadow: var(--app-v2-button-shadow-hover) }
+
+/* ------------------------------------------------------------
+   Canto inferior direito — a barra de visualização
+   ------------------------------------------------------------ */
+.cr-view-toolbar {
+  position: absolute;
+  z-index: 250;
+  right: var(--cr-right-gutter); bottom: 12px;
+  border-radius: 18px;
+  background: var(--app-v2-bg-surface);
+  box-shadow: var(--app-v2-shadow-card);
+  transition: right .24s cubic-bezier(.4, 0, .2, 1), bottom .24s cubic-bezier(.4, 0, .2, 1);
+}
+.cr-view-toolbar__inner { display: flex; align-items: center; padding: 6px; gap: 8px }
+/* gap 0: os quatro ícones ficam encostados, 32px cada */
+.cr-view-toolbar__icons { display: flex; align-items: center; gap: 0 }
+.cr-view-toolbar__icons button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  padding: 0;
+  border: none; border-radius: var(--ms-radius-lg);
+  background: transparent;
+  color: var(--app-v2-text-primary);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.cr-view-toolbar__icons button:hover { background: var(--hover-brand-wash); color: var(--hover-brand) }
+/* ligado = na cor da marca (a referência usa o laranja aqui) */
+.cr-view-toolbar__icons button[aria-pressed="true"] { color: var(--hover-brand) }
+
+.cr-zoom {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 32px; padding: 0 8px;
+  border: none; border-radius: var(--ms-radius-lg);
+  background: transparent;
+  color: var(--app-v2-text-primary);
+  font-family: inherit; font-size: 13px; line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.cr-zoom:hover { background: var(--hover-brand-wash); color: var(--hover-brand) }
+.cr-zoom svg { opacity: .55 }
+
+/* ------------------------------------------------------------
+   Minimapa — 220×140, acima da barra de visualização
+   ------------------------------------------------------------ */
+.cr-minimap {
+  position: absolute;
+  right: var(--cr-right-gutter); bottom: 68px;
+  transition: right .24s cubic-bezier(.4, 0, .2, 1);
+  z-index: 300;
+  width: 220px; height: 140px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, .08);
+  background: var(--app-v2-bg-surface);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .08);
+  overflow: hidden;
+}
+.cr-minimap__i { position: absolute; background: rgba(0, 0, 0, .18); border-radius: 1px }
+.cr-minimap__v { position: absolute; border: 1px solid var(--hover-brand); background: var(--hover-brand-wash) }
+
+/* ------------------------------------------------------------
+   Painel de atalhos — 860px, acima da barra de visualização
+   ------------------------------------------------------------ */
+.cr-shortcuts {
+  position: absolute;
+  right: calc(var(--cr-right-gutter) + 8px); bottom: 66px;
+  transition: right .24s cubic-bezier(.4, 0, .2, 1);
+  z-index: 350;
+  width: 860px; max-width: calc(100% - 40px);
+  padding: 20px 24px 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, .08);
+  background: var(--app-v2-bg-surface);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .08);
+}
+.cr-shortcuts__close {
+  position: absolute;
+  right: 14px; top: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border: none; border-radius: 6px;
+  background: transparent;
+  color: var(--app-v2-icon-secondary);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.cr-shortcuts__close:hover { background: var(--hover-brand-wash); color: var(--hover-brand) }
+.cr-shortcuts__cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 32px }
+.cr-shortcuts h4 { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: var(--app-v2-text-primary) }
+.cr-shortcuts dl + h4 { margin-top: 18px }
+.cr-shortcuts dl { margin: 0; display: flex; flex-direction: column }
+.cr-shortcuts .r {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  height: 30px;
+  font-size: 13px;
+  color: var(--app-v2-text-secondary);
+}
+.cr-shortcuts .k { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0 }
+.cr-key {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 24px; height: 22px; padding: 0 6px;
+  border: 1px solid rgba(0, 0, 0, .08); border-radius: 6px;
+  background: var(--app-v2-bg-surface);
+  font-size: 11px; line-height: 16px;
+  color: var(--app-v2-text-secondary);
+}
+
+/* ------------------------------------------------------------
+   Menu — a primitiva `ac` do bundle, usada pelo zoom e pelo fundo
+   ------------------------------------------------------------ */
+.cr-menu {
+  position: fixed;
+  z-index: 340;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, .08);
+  background: var(--app-v2-bg-surface);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .08);
+}
+.cr-menu button {
+  display: flex; width: 100%; align-items: center; gap: 10px;
+  height: 28px; padding: 0 8px;
+  border: none; border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit; font-size: 13px; line-height: 20px;
+  color: var(--app-v2-text-primary);
+  text-align: left;
+  white-space: nowrap;
+  transition: background .15s ease, color .15s ease;
+}
+.cr-menu button:hover { background: var(--hover-brand-wash); color: var(--hover-brand) }
+.cr-menu__sw { width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(0, 0, 0, .12) }
+
+/* ------------------------------------------------------------
+   Reduced motion — a referência derruba as durações no bloco final
+   do arquivo; a troca continua acontecendo, só instantânea.
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .cr-toolbar,
+  .cr-rs,
+  .cr-view-toolbar,
+  .cr-minimap,
+  .cr-shortcuts,
+  .cr-tip { transition: none }
+}
+
+/* ------------------------------------------------------------
+   O invólucro de /workflow
+
+   O layout precisa de um elemento próprio para ancorar as barras (elas são
+   `position: absolute`) sem quebrar a cadeia de flex que a página do canvas
+   herda do `SidebarInset`. Daí `flex-1 min-h-0` em CSS, e não em classe do
+   Tailwind: este arquivo é o dono da geometria do cromo.
+
+   A tela de workflow é escura (`#0F0F1A`, pintado pelo canvas congelado), e é
+   por isso que ela leva `.pitch-night`: o `--hover-brand` vira lilás sozinho.
+   ------------------------------------------------------------ */
+.cr-root--workflow {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+.cr-root--workflow > :first-child { flex: 1 1 auto; min-width: 0; display: flex }
+
+/* ------------------------------------------------------------
+   A pílula ⌘K contra a barra de visualização
+
+   `components/QuickAssist.tsx` nasceu antes do cromo e ocupa
+   `fixed bottom-2 right-6 z-[1000]` — exatamente o canto que a referência
+   reserva para a barra de visualização. Ela é montada pela página de
+   workflow, que é arquivo CONGELADO, então não dá para reordenar lá.
+
+   A barra fica onde a referência manda (right/bottom 12) e o ⌘K sobe os
+   44px da barra mais 8 de intervalo. Regra escrita aqui, escopada ao nosso
+   invólucro: `components/QuickAssist.tsx` não é tocado, e fora de
+   `/workflow/<id>` o ⌘K continua exatamente onde estava.
+   ------------------------------------------------------------ */
+.cr-root--workflow .qa-pilula { bottom: 64px }
+/* O painel dele abre 56px acima da pílula; sobe o mesmo tanto. */
+.cr-root--workflow .ms-superficie-entrada-baixo { bottom: 120px }
+
+/* ------------------------------------------------------------
+   O `<Controls>` do xyflow
+
+   O `WorkflowCanvas` congelado monta o `<Controls>` do `@xyflow/react` — a
+   coluna de +, − e ajustar no canto inferior esquerdo. A partir da leva 4 as
+   três funções vivem no menu de zoom da barra de visualização, no canto que a
+   referência reserva; deixar as duas é oferecer o mesmo comando em dois
+   lugares, e a referência não tem essa coluna.
+
+   Escondido daqui, escopado ao nosso invólucro: o arquivo congelado não é
+   tocado e, fora de `/workflow/<id>`, o `<Controls>` continua como estava.
+   Reverter é apagar este bloco.
+   ------------------------------------------------------------ */
+.cr-root--workflow .react-flow__controls { display: none }
+
+/* ------------------------------------------------------------
+   O PAINEL DE CHAT SOBRE O GRAFO — leva 7
+
+   `components/projeto/painel.css` foi escrito quando `/projeto/<id>` era uma
+   página inteira: `.pj-raiz` era o shell dela — coluna flex, fundo claro,
+   `overflow: hidden`. Na tela única ele deixa de ser página e passa a ser
+   só a camada onde o painel se posiciona, sobre o canvas congelado.
+
+   Não editei `painel.css`: ele é da frente do painel e continua servindo o
+   que serve. O que este bloco faz é desfazer, de fora, as três coisas que o
+   shell fazia como página — e nada mais:
+
+     1. sai do fluxo (era `flex: 1 1 auto` numa coluna que não existe aqui);
+     2. fica transparente (o fundo é o `#0F0F1A` do canvas congelado);
+     3. deixa o ponteiro passar, menos onde o painel de fato está.
+
+   As variáveis `--design-app-v2-*` continuam vindo de `painel.css`: são elas
+   que dão ao painel os 368px com `inset 8px`. A barra vertical NÃO as lê —
+   ela usa `--cr-toolbar-left`, movida pelo `data-painel` da raiz.
+   ------------------------------------------------------------ */
+.pj-raiz--sobre-grafo {
+  position: absolute;
+  inset: 0;
+  z-index: 230;
+  flex: none;
+  background: transparent;
+  pointer-events: none;
+}
+/* O painel volta a receber clique; o resto da camada não intercepta o canvas. */
+.pj-raiz--sobre-grafo > * { pointer-events: auto }
+/* Recolhido, o painel some de vez: `painel.css` já apaga o ponteiro dele,
+   mas a camada não pode continuar cobrindo o canto do canvas. */
+.pj-raiz--sobre-grafo .pj-painel[data-colapsado="true"] { pointer-events: none }

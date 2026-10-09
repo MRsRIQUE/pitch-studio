@@ -1,0 +1,653 @@
+/* ============================================================
+   BLOCO 04 — linha de especialistas + Inspiração em destaque
+
+   Todo número aqui saiu do `<style>` de
+   `miora/sections/04-home-skills-inspiration/preview.html` e da tabela de
+   geometria do `INFO.md` — nunca do `className` do bundle, que mente ~18%
+   quando o modificador de opacidade cai sobre um token que já tem alfa.
+
+   Os nomes de classe são nossos (`pe-` = pílula de especialista, `pi-` =
+   inspiração), mas a árvore é a mesma da referência, elemento por elemento,
+   para que as regras casem uma a uma com as de lá.
+
+   Onde a referência é laranja, aqui é o violeta da marca; cinza, alfa,
+   sombra, raio, peso e tamanho são copiados como estão.
+   ============================================================ */
+
+/* ============================================================
+   PARTE 1 — A LINHA DE ESPECIALISTAS
+   `.home-v2-skill-row` — 996×44, encostada à esquerda do conteúdo de 1000px
+   (`margin: 0`, não `auto`).
+   ============================================================ */
+
+.pe-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 996px;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  box-sizing: border-box;
+  background: var(--ms-bg-component);   /* hsl(--ms-gray-3) — o mesmo #F0F0F0 da referência */
+  border-radius: var(--ms-radius-xl);   /* 16px */
+}
+
+.pe-row__list {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 16px;
+  overflow: hidden;
+}
+
+/* `flex: 0 1 auto` + `min-width: 0` são o que deixa o rótulo cortar com
+   reticências quando quatro nomes longos não cabem nos 996px. O ícone de
+   59px é `flex-shrink: 0` e nunca encolhe. */
+.pe-pill {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--ms-radius-md);   /* 8px */
+  cursor: pointer;
+  transition: transform .12s cubic-bezier(.4, 0, .2, 1);
+  animation: pe-item-enter .3s cubic-bezier(.4, 0, .2, 1) both;
+}
+
+.pe-pill:hover .pe-pill__label { color: var(--ms-text-secondary) }
+.pe-pill.is-selected .pe-pill__label { font-weight: 500 }
+.pe-pill:active { transform: scale(.97) }
+
+.pe-pill__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 59px;
+  height: 28px;
+  border-radius: var(--ms-radius-md);
+  overflow: hidden;
+  background: var(--ms-bg-component-hover);
+  pointer-events: none;
+}
+
+.pe-pill__decoration {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* O ícone monocromático que a referência mostra quando a skill não tem
+   decoração — aqui, quando nenhuma geração usou o estilo ainda. */
+.pe-pill__mono { color: var(--app-v2-text-primary) }
+
+.pe-pill__label {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: .06px;
+  color: var(--app-v2-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pe-more {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--app-v2-text-primary);
+  transition: transform .12s cubic-bezier(.4, 0, .2, 1);
+  animation: pe-item-enter .3s cubic-bezier(.4, 0, .2, 1) both;
+}
+
+/* O traço vertical antes de "Mais" é um `::before` do próprio botão. O
+   `margin-right: 5px` se soma ao `gap: 2px`, então a distância real do traço
+   até a palavra é 5px — quem reproduz isso com um <div> separado erra. */
+.pe-more::before {
+  content: "";
+  flex-shrink: 0;
+  width: 1px;
+  height: 20px;
+  margin-right: 5px;
+  background: var(--ms-border-subtle);
+}
+
+.pe-more:hover .pe-more__label { color: var(--ms-text-secondary) }
+.pe-more:hover .pe-more__icon { color: var(--ms-icon-secondary) }
+.pe-more:active { transform: scale(.97) }
+
+.pe-more__label {
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.pe-more__icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.3;
+}
+
+/* A escada de entrada. Os atrasos moram aqui; o gatilho é a `key` da lista no
+   TSX — trocar de aba remonta os cinco filhos e a animação roda de novo, sem
+   uma linha de JavaScript de animação. */
+.pe-row__list > :nth-child(1) { animation-delay: 0ms }
+.pe-row__list > :nth-child(2) { animation-delay: 40ms }
+.pe-row__list > :nth-child(3) { animation-delay: 80ms }
+.pe-row__list > :nth-child(4) { animation-delay: .12s }
+.pe-row__list > :nth-child(5) { animation-delay: .16s }
+
+.pe-pill-skeleton {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 28px;
+  border-radius: var(--ms-radius-md);
+  background: var(--app-v2-bg-component-hover);
+  animation: pe-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.pe-more-skeleton {
+  flex-shrink: 0;
+  width: 60px;
+  height: 20px;
+  border-radius: var(--ms-radius-md);
+  background: var(--app-v2-bg-component-hover);
+  animation: pe-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pe-item-enter {
+  0%  { opacity: 0; transform: translateY(8px) }
+  to  { opacity: 1; transform: translateY(0) }
+}
+
+@keyframes pe-skeleton-pulse {
+  0%, to { opacity: 1 }
+  50%    { opacity: .55 }
+}
+
+/* ------------------------------------------------------------
+   O cartão que sobe no hover da pílula — portal em document.body.
+   O positioner só carrega o translate3d; quem anima o deslize entre
+   pílulas é a transição de `transform` dele.
+   ------------------------------------------------------------ */
+
+.pe-hover-positioner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.pe-hover-card {
+  opacity: 0;
+  transition: opacity .12s cubic-bezier(.4, 0, .2, 1);
+  width: 280px;
+  height: 196px;
+  position: relative;
+  border-radius: var(--ms-radius-xl);
+  overflow: hidden;
+  background: var(--app-v2-bg-component);
+  box-shadow: var(--app-v2-shadow-floating);
+}
+
+.pe-hover-card.is-visible {
+  opacity: 1;
+  transition-duration: .15s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pe-hover-positioner { transition: transform .15s cubic-bezier(.4, 0, .2, 1) }
+
+  .pe-hover-card {
+    transform: translateY(4px) scale(.97);
+    transform-origin: left bottom;
+    transition:
+      opacity .12s cubic-bezier(.4, 0, .2, 1),
+      transform .12s cubic-bezier(.4, 0, .2, 1);
+  }
+
+  .pe-hover-card.is-visible {
+    transform: translateY(0) scale(1);
+    transition-duration: .15s;
+  }
+}
+
+.pe-hover-card__media {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 120px;
+  overflow: hidden;
+}
+
+/* O "vitral" da referência é um data-URI de seis elipses borradas sob um
+   gradiente translúcido. Data-URI não aceita var(), e cor cravada em CSS
+   traria o laranja do Miora pela porta dos fundos — então o SVG virou
+   elemento no TSX e as seis cores viram variáveis aqui. Cinco são as cores
+   decorativas literais da referência (não há token nosso para elas); a sexta,
+   que lá é a laranja da marca deles, é o nosso violeta. */
+.pe-hover-card__vitral {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+
+  --pe-vitral-1: #ff6f61;
+  --pe-vitral-2: #ffffff;
+  --pe-vitral-3: var(--ms-solid-brand);   /* a elipse que lá é laranja */
+  --pe-vitral-4: #60b7ff;
+  --pe-vitral-5: #b3ffed;
+  --pe-vitral-6: #92ddff;
+}
+
+.pe-hover-card__media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--app-v2-bg-component) 89%, transparent),
+    color-mix(in srgb, var(--app-v2-bg-component-hover) 89%, transparent)
+  );
+}
+
+.pe-hover-card__media-asset {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pe-hover-card__info {
+  position: absolute;
+  left: 0;
+  top: 120px;
+  width: 100%;
+  height: 76px;
+  box-sizing: border-box;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--app-v2-bg-component);
+}
+
+.pe-hover-card__title {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--app-v2-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+}
+
+/* 76 − 16 de padding − 20 do título − 4 de gap = 36px = exatamente as duas
+   linhas de 18px que o `line-clamp` permite. */
+.pe-hover-card__desc {
+  margin: 0;
+  width: 264px;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--app-v2-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+/* ============================================================
+   PARTE 2 — INSPIRAÇÃO EM DESTAQUE
+   ============================================================ */
+
+/* A seção sangra 136,5px para cada lado do conteúdo de 1000px — a mesma
+   margem negativa do carrossel. O container da home publica
+   `--home-v2-wide-overflow`; enquanto o bloco não estiver plugado lá, a
+   reserva refaz a mesma conta a partir do viewport:
+   (100vw − barra − 2×padding − 1000) / 2, com teto de 136,5. */
+.pi-section {
+  --pi-sangria: clamp(
+    0px,
+    calc((100vw - var(--app-v2-nav-width, 250px) - 2 * var(--app-v2-spacing-page-x, 24px) - 1000px) / 2),
+    136.5px
+  );
+
+  width: auto;
+  margin-inline: calc(var(--home-v2-wide-overflow, var(--pi-sangria)) * -1);
+  display: flex;
+  flex-direction: column;
+  margin-top: 0;
+  gap: 20px;
+}
+
+.pi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pi-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--app-v2-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+/* Base do botão do design system (`bg-ms-button text-ms-button-fg
+   shadow-ms-button rounded-ms-md h-6 text-ms-xs`) seguida do que o CSS da
+   rota sobrescreve na referência: 32px de altura, raio 12, 11px/600.
+   Medido no pixel do PNG: 32 de altura, 75 de largura. */
+.pi-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  border: none;
+  cursor: pointer;
+  padding: 0 10px;
+  background: var(--ms-button-bg);
+  color: var(--ms-button-fg);
+  box-shadow: var(--ms-button-shadow);
+  transition:
+    background-color 150ms cubic-bezier(.4, 0, .2, 1),
+    box-shadow 150ms cubic-bezier(.4, 0, .2, 1),
+    opacity 150ms cubic-bezier(.4, 0, .2, 1),
+    transform 150ms cubic-bezier(0, 0, .2, 1);
+
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--ms-radius-lg);   /* 12px */
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pi-more:hover { background: var(--ms-button-bg-hover); box-shadow: var(--ms-button-shadow-hover) }
+.pi-more:active { background: var(--ms-button-bg-active); box-shadow: var(--ms-button-shadow-active); transform: scale(.97) }
+
+.pi-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  margin: 0;
+  color: var(--app-v2-text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* (1273 − 3×15,25) / 4 = 306,8125 */
+.pi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 15.25px;
+}
+
+@media (max-width: 1200px) { .pi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
+@media (max-width:  900px) { .pi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+
+/* O mesmo card serve à Home e ao masonry de /inspiracao. O que troca o
+   comportamento inteiro é o `aspect-ratio: auto !important` daqui: na Home a
+   grade é uniforme (307×182), no masonry a proporção real manda. */
+.pi-grid .pi-card { height: 247px; overflow: hidden }
+.pi-grid .pi-card__info { padding: 10px; gap: 3.27px; overflow: hidden }
+.pi-grid .pi-card__footer { margin-top: 0 }
+
+.pi-grid .pi-card__media {
+  position: relative;
+  height: 181.73px;
+  min-height: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.pi-grid .pi-card__media img,
+.pi-grid .pi-card__media video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pi-grid .pi-card__overlay { position: absolute; inset: 0; width: 100%; height: 100% }
+.pi-grid .pi-card__image-frame { position: relative; height: 100%; aspect-ratio: auto !important }
+
+.pi-skeleton {
+  height: 247px;
+  border-radius: 18px;
+  background: var(--app-v2-bg-component);
+  animation: pi-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pi-pulse {
+  0%, to { opacity: 1 }
+  50%    { opacity: .55 }
+}
+
+.pi-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--app-v2-bg-component);
+  cursor: pointer;
+  transition: box-shadow .15s ease;
+}
+
+/* O hover da Home é SÓ a sombra. */
+.pi-card:hover { box-shadow: var(--app-v2-shadow-card) }
+
+.pi-card__media {
+  position: relative;
+  width: 100%;
+  min-height: 180px;
+  background: var(--app-v2-bg-page);
+  overflow: hidden;
+}
+
+.pi-card__image-frame { position: relative; width: 100% }
+.pi-card__image { width: 100%; display: block }
+.pi-card__image--cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover }
+.pi-card__image--flow { position: relative; z-index: 1 }
+.pi-card__image--blur { filter: blur(12px); transform: scale(1.08) }
+.pi-card__image--fade { opacity: 0; transition: opacity .4s ease }
+.pi-card__image--fade.is-loaded { opacity: 1 }
+
+.pi-card__overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
+.pi-card__overlay--fade { opacity: 0; transition: opacity .2s ease }
+.pi-card__overlay--fade.is-visible { opacity: 1 }
+
+.pi-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.pi-card__info-top { display: flex; flex-direction: column; gap: 0; min-width: 0 }
+
+.pi-card__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  color: var(--ms-text);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pi-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.pi-card__author {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 20px;
+  color: var(--ms-text);
+}
+
+.pi-card__author span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+
+.pi-card__stats { display: flex; align-items: center; gap: 10px; flex-shrink: 0 }
+
+.pi-card__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  line-height: 20px;
+  color: var(--ms-text);
+  white-space: nowrap;
+}
+
+/* A regra existe no CSS da referência, mas a Home NÃO renderiza este botão:
+   lá o JSX é `showDoSame && onUsePrompt && <button>` e a Home passa só o
+   `onClick`. Copiada com o comportamento intacto — quem a usa é /inspiracao. */
+.pi-card__use-prompt {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  min-width: 76px;
+  padding: 4px 13px;
+  border: none;
+  border-radius: 44px;
+  background: var(--app-v2-brand-solid);
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: .11px;
+  color: var(--ms-text-on-brand);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s ease;
+}
+
+.pi-card__use-prompt:hover { background: var(--app-v2-brand-solid-hover) }
+.pi-card:hover .pi-card__use-prompt { display: inline-flex }
+
+/* A marca de 16px do rodapé ocupa a vaga do avatar do autor. Não é pessoa:
+   é o modelo que gerou a peça, então a cor é a da marca, não a laranja de
+   avatar da referência. Mesmo box, mesmo raio, mesmo aro. */
+.pi-mark {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--app-v2-brand-solid);
+  color: var(--ms-text-on-brand);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   O único @media de reduced-motion que a referência escreve para este
+   bloco cobre apenas o cartão de hover, dentro de (hover:hover). A escada
+   de entrada e o pulso do skeleton continuam rodando lá — e aqui também,
+   para não divergir.
+   ============================================================ */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
+  .pe-hover-positioner { transition: none }
+
+  .pe-hover-card,
+  .pe-hover-card.is-visible {
+    transform: none;
+    transition: opacity .1s cubic-bezier(.4, 0, .2, 1);
+  }
+}
+
+
+/* ============================================================
+   HOVER DE MARCA — acréscimo da frente do Orvalho (leva 3)
+
+   Pedido do usuário: em quatro áreas do app o ponteiro acende a
+   marca. A regra do Maestro vale inteira: o FUNDO continua o
+   cinza da referência; o que acende é ícone, texto e borda.
+
+   Este bloco só ACRESCENTA regra de `:hover`. Nenhum valor que já
+   estava no arquivo foi alterado, e nenhuma regra de repouso foi
+   tocada — a geometria da tabela do INFO.md fica onde estava.
+
+   O anel vai em `outline` com `outline-offset: -1px`, e não em
+   `box-shadow: inset`: neste cartão a mídia preenche a caixa, e
+   sombra interna é pintada ANTES dos filhos — o defeito que o
+   `cartao.css` já documenta no anel de "citado". `outline` é
+   pintado depois de todo o conteúdo, acompanha o `border-radius`
+   e não ocupa espaço, então a caixa não anda 1px.
+
+   O `:not(:focus-visible)` está lá para o anel de foco continuar
+   vencendo quando o cartão está focado E sob o ponteiro.
+   ============================================================ */
+
+/* A faixa de estilos: o nome acende e a decoração de 59×28 ganha o
+   anel. A pílula não tem superfície própria, então não há fundo a
+   preservar aqui — só texto e borda, como manda a regra. */
+.pe-pill:hover .pe-pill__label { color: var(--hover-brand); }
+.pe-pill:hover .pe-pill__icon {
+  outline: 1px solid var(--hover-brand-soft);
+  outline-offset: -1px;
+}
+
+/* Cartão 307×247 da grade. A sombra que a referência acende no
+   hover (`--app-v2-shadow-card`) continua sendo a mesma e está
+   intacta: o anel entra por outra propriedade, não por cima dela. */
+.pi-card:hover:not(:focus-visible) {
+  outline: 1px solid var(--hover-brand-soft);
+  outline-offset: -1px;
+}
+.pi-card:hover .pi-card__title { color: var(--hover-brand); }

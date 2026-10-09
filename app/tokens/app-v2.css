@@ -1,0 +1,133 @@
+/* ============================================================
+   MIORA — TOKENS DE APLICAÇÃO (--app-v2-*)
+   Transcrição de miora/design-system/tokens-app.css.
+   Esta é a camada que as telas usam; ela aponta para --ms-*.
+
+   DUAS ALTERAÇÕES EM RELAÇÃO À ORIGEM:
+
+   1. A origem redeclarava `--app-v2-nav-rail-motion: 0s` no fim do
+      `:root`, sobrescrevendo o `.26s cubic-bezier(.4,0,.2,1)` do topo
+      e desligando a animação de colapso da sidebar para todo mundo.
+      No bundle real do Miora essa linha só existe dentro de
+      `@media (prefers-reduced-motion: reduce)`. Removida daqui —
+      o `0s` vive no bloco de reduced-motion do globals.css.
+
+   2. As extensões Pitch no fim do arquivo (ver comentário lá).
+   ============================================================ */
+:root{
+  --app-v2-nav-width: 250px;
+  --app-v2-nav-rail-width: 64px;
+  --app-v2-nav-rail-shift: 186px;
+  --app-v2-nav-rail-motion: .26s cubic-bezier(.4, 0, .2, 1);
+  --app-v2-bg-page: var(--ms-bg-subtle);
+  --app-v2-bg-surface: var(--ms-bg);
+  --app-v2-bg-surface-hover: var(--ms-bg-hover);
+  --app-v2-bg-surface-active: var(--ms-bg-active);
+  --app-v2-bg-component: var(--ms-bg-component);
+  --app-v2-bg-component-hover: var(--ms-bg-component-hover);
+  --app-v2-bg-component-active: var(--ms-bg-component-active);
+  --app-v2-bg-neutral-strong: hsl(var(--ms-gray-4));
+  --app-v2-bg-overlay: var(--ms-bg-overlay);
+  --app-v2-border-subtle: var(--ms-border-subtle);
+  --app-v2-border-hairline: var(--ms-grayA-3-hex);
+  --app-v2-border: var(--ms-border);
+  --app-v2-border-strong: var(--ms-border-strong);
+  --app-v2-tab-shape-from: hsl(var(--ms-gray-6));
+  --app-v2-tab-shape-to: rgba(255, 255, 255, .051);
+  --app-v2-tab-shape-stroke-from: rgba(255, 255, 255, .08);
+  --app-v2-tab-shape-stroke-to: rgba(255, 255, 255, .008);
+  --app-v2-text-primary: var(--ms-text);
+  --app-v2-text-secondary: var(--ms-text-secondary);
+  --app-v2-text-tertiary: var(--ms-text-tertiary);
+  --app-v2-text-disabled: var(--ms-text-disabled);
+  --app-v2-text-on-solid: var(--ms-text-on-solid);
+  --app-v2-text-on-brand: var(--ms-text-on-brand);
+  --app-v2-icon-primary: var(--ms-icon);
+  --app-v2-icon-secondary: var(--ms-icon-secondary);
+  --app-v2-icon-disabled: var(--ms-icon-disabled);
+  --app-v2-icon-primary-solid: hsl(var(--ms-gray-12));
+  --app-v2-icon-disabled-solid: hsl(var(--ms-gray-8));
+  --app-v2-brand-bg: var(--ms-bg-brand);
+  --app-v2-brand-bg-subtle: var(--ms-bg-brand-subtle);
+  --app-v2-brand-solid: var(--ms-solid-brand);
+  --app-v2-brand-solid-hover: var(--ms-solid-brand-hover);
+  --app-v2-brand-text: var(--ms-text-link);
+  --app-v2-brand-border: var(--ms-border-brand);
+  --app-v2-bg-danger: var(--ms-bg-danger);
+  --app-v2-bg-danger-hover: var(--ms-bg-danger-hover);
+  --app-v2-bg-success: var(--ms-bg-success);
+  --app-v2-bg-success-hover: var(--ms-bg-success-hover);
+  --app-v2-bg-info: var(--ms-bg-info);
+  --app-v2-danger-text: var(--ms-text-danger);
+  --app-v2-success-text: var(--ms-text-success);
+  --app-v2-solid: var(--ms-solid);
+  --app-v2-solid-hover: var(--ms-solid-hover);
+  --app-v2-solid-active: var(--ms-solid-active);
+  --app-v2-icon-on-solid: var(--ms-icon-on-solid);
+  --app-v2-ring: var(--ms-ring);
+  --app-v2-radius-md: var(--ms-radius-lg);
+  --app-v2-radius-lg: var(--ms-radius-xl);
+  --app-v2-radius-xl: var(--ms-radius-2xl);
+  --app-v2-shadow-card: var(--ms-shadow-sm);
+  --app-v2-shadow-floating: var(--ms-shadow-md);
+  --app-v2-button-bg: var(--ms-button-bg);
+  --app-v2-button-bg-hover: var(--ms-button-bg-hover);
+  --app-v2-button-bg-active: var(--ms-button-bg-active);
+  --app-v2-button-bg-disabled: var(--ms-button-bg-disabled);
+  --app-v2-button-fg: var(--ms-button-fg);
+  --app-v2-button-danger-bg: var(--ms-button-danger-bg);
+  --app-v2-button-danger-bg-hover: var(--ms-button-danger-bg-hover);
+  --app-v2-button-danger-fg: var(--ms-button-danger-fg);
+  --app-v2-button-secondary-bg: var(--ms-button-secondary-bg);
+  --app-v2-button-secondary-bg-active: var(--ms-button-secondary-bg-active);
+  --app-v2-button-secondary-fg: var(--ms-button-secondary-fg);
+  --app-v2-button-shadow: var(--ms-button-shadow);
+  --app-v2-button-shadow-hover: var(--ms-button-shadow-hover);
+  --app-v2-button-shadow-active: var(--ms-button-shadow-active);
+  --app-v2-button-danger-shadow: var(--ms-button-danger-shadow);
+  --app-v2-button-danger-shadow-hover: var(--ms-button-danger-shadow-hover);
+  --app-v2-button-secondary-shadow: var(--ms-button-secondary-shadow);
+  --app-v2-button-secondary-shadow-hover: var(--ms-button-secondary-shadow-hover);
+  --app-v2-spacing-page-x: 24px;
+  --app-v2-spacing-section: 32px;
+  --app-v2-billing-bg: var(--ms-solid);
+  --app-v2-billing-surface: var(--ms-solid-hover);
+  --app-v2-billing-surface-hover: var(--ms-solid-active);
+  --app-v2-billing-surface-emphasis: var(--ms-bg-brand);
+  --app-v2-billing-border: var(--ms-border);
+  --app-v2-billing-border-strong: var(--ms-border-strong);
+  --app-v2-billing-border-brand: var(--ms-border-brand);
+  --app-v2-billing-text: var(--ms-text-on-solid);
+  --app-v2-billing-text-secondary: var(--ms-icon-on-solid);
+  --app-v2-billing-text-tertiary: var(--ms-icon-on-solid);
+  --app-v2-billing-text-on-solid: var(--ms-text-on-solid);
+  --app-v2-billing-brand: var(--ms-solid-brand);
+  --app-v2-billing-brand-hover: var(--ms-solid-brand-hover);
+  --app-v2-billing-danger: var(--ms-text-danger);
+  --app-v2-billing-success: var(--ms-text-success);
+  --app-v2-billing-button-bg: var(--ms-button-bg);
+  --app-v2-billing-button-fg: var(--ms-button-fg);
+  --app-v2-billing-button-shadow: var(--ms-button-shadow);
+  --mio-color-home-bg: var(--app-v2-bg-page);
+  --sidebar-offset: 0px;
+}
+
+/* ────────────────────────────────────────────────────────────
+   EXTENSÕES PITCH — não existem no Miora
+
+   Os 93 tokens acima cobrem quase tudo que o app consome, mas cinco
+   nomes nossos não têm equivalente na origem. Declará-los aqui é o que
+   permite que `components/WorkflowDashboard.tsx` e `app/gallery/page.tsx`
+   atravessem a migração sem uma linha de diff — e Workflows está
+   congelado, então isso é requisito, não conveniência.
+   ──────────────────────────────────────────────────────────── */
+:root{
+  --app-v2-accent: var(--app-v2-brand-solid);        /* #4318FF */
+  --app-v2-accent-soft: hsl(var(--ms-brand-9) / .09);
+  --app-v2-radius-sm: var(--ms-radius-md);           /* 8px */
+  --app-v2-shadow-popover: var(--ms-shadow-md);
+  --app-v2-nav-motion: var(--app-v2-nav-rail-motion);
+
+  /* O gradiente 135° do kit da marca, para o botão primário. */
+  --app-v2-brand-gradient: linear-gradient(135deg, #868CFF, #4318FF);
+}
