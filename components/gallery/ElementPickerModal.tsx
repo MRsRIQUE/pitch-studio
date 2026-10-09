@@ -37,6 +37,7 @@ import { createPortal } from "react-dom";
 import { getToken } from "@/lib/galleryUtils";
 import type { KlingElement } from "@/components/gallery/tipos";
 import "@/components/gallery/cartao.css";
+import { uploadAssetFetch } from "@/lib/media/uploadAssetFetch";
 
 const CHAVE_ELEMENTOS = "nf-kling-elements";
 const MAX_IMAGENS = 4;
@@ -159,7 +160,7 @@ function SeletorAberto({
     await Promise.all(aAdicionar.map(async (file, i) => {
       const entrada = novas[i];
       try {
-        const res = await fetch("/api/upload-asset", {
+        const res = await uploadAssetFetch({
           method: "POST",
           headers: { "Content-Type": file.type, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           body: file,

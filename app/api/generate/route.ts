@@ -147,7 +147,15 @@ export async function POST(req: NextRequest) {
     });
     if (!res.ok) throw new Error(res.status === 401 ? "Geração indisponível no momento." : await res.text());
     const d = await res.json();
-    if (d.code !== undefined && d.code !== 200) throw new Error(d.msg ?? `API error ${d.code}`);
+    if (d.code !== undefined && d.code !== 200) {
+      // 401/402: chave ou saldo da conta kie.ai do SaySell — problema de operação,
+      // não do usuário.
+      if (d.code === 401 || d.code === 402) {
+        console.error("[generate] kie.ai recusou a conta do servidor:", d.code, d.msg);
+        throw new Error("Geração indisponível no momento.");
+      }
+      throw new Error(d.msg ?? `API error ${d.code}`);
+    }
 
     const taskId: string | undefined = d.data?.taskId ?? d.data?.id ?? d.taskId ?? d.id;
     if (!taskId) throw new Error("No task ID in response");

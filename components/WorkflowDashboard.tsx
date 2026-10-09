@@ -196,12 +196,8 @@ const CSS = `
 
 // ── Template card ─────────────────────────────────────────────────────────────
 
-const TEMPLATE_PREVIEWS = [
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/1.png",
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/2.png",
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/3.png",
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/4.png",
-];
+// As miniaturas vinham do R2 do HeliosGen (hoje 401); o card do UGC usa a arte.
+const TEMPLATE_PREVIEWS: string[] = [];
 
 function TemplateCard({
   onLoad,
@@ -848,7 +844,7 @@ export default function WorkflowDashboard() {
           padding: "0 32px",
         }}>
           <CreateCard onCreate={handleCreate} />
-          <TemplateCard onLoad={handleLoadTemplate} onReset={handleResetTemplate} />
+          <TemplateCard onLoad={handleLoadTemplate} onReset={handleResetTemplate} art={<TrocaPessoaArt />} />
           <TemplateCard
             onLoad={handleLoadTrocaPessoa}
             onReset={handleResetTrocaPessoa}

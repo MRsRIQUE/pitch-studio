@@ -494,6 +494,8 @@ export async function POST(req: NextRequest) {
   }
   if (created.code !== 200) {
     console.error("[generate-video] kie.ai API error:", created.code, created.msg);
+    // 401/402: chave ou saldo da conta kie.ai do SaySell — problema de operação.
+    if (created.code === 401 || created.code === 402) return fail("Geração indisponível no momento.", 503);
     return fail(created.msg ?? "Task creation failed", 500);
   }
 

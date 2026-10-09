@@ -20,19 +20,8 @@ import { promptTrocaDePessoa } from "./ugcPromptKit";
 const STRIDE_X = 380;
 const X_OFFSET = 310;
 
-const REF_IMAGES = [
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/1.png",
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/2.png",
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/3.png",
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/4.png",
-];
-
-const REF_VIDEOS = [
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/1.mp4",
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/2.mp4",
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/3.mp4",
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/4.mp4",
-];
+// As amostras prontas do template moravam num bucket R2 do HeliosGen que hoje
+// responde 401. O template nasce vazio (status "idle") e o usuário gera.
 
 const IMG_PROMPTS = [
   "A photorealistic portrait. It features the specific young woman  She is relaxing leisurely in a luxurious overwater bungalow cabana in the Maldives. She is lying back on white linen cushions, looking calmly out over a stunning turquoise infinity pool that seamlessly merges with the clear ocean. She wears an elegant black swimsuit (consistent with her classy aesthetic) and her signature gold hoop earrings. She is looking toward the camera with a peaceful, knowing expression of automated income/freedom. Bright, sunny natural lighting; shallow depth of field focusing sharply on her face and expression. She seats if front of the camera, to speak for a vlog",
@@ -163,7 +152,9 @@ export function makeUGCTemplate(): {
       data: { label: `Text #${i + 5}`, status: "idle", prompt: VID_PROMPTS[i] },
     });
 
-    // Video gen node — seedance-2, 9:16, 1080p, sound on
+    // Video gen node — Seedance 2 Fast, 9:16, 720p, com som. Modelo e resolução
+    // do plano Pro: a versão 1080p do Seedance 2 custava ~4.150 créditos por
+    // rodada do template.
     nodes.push({
       id: vgId,
       type: "videoGeneratorNode",
@@ -171,17 +162,15 @@ export function makeUGCTemplate(): {
       style: { width: 320, height: 220 },
       data: {
         label: `Video Generator #${i + 1}`,
-        status: "done",
-        videoModel: "seedance-2",
+        status: "idle",
+        videoModel: "seedance-2-fast",
         aspectRatio: "9:16",
-        grokResolution: "1080p",
+        grokResolution: "720p",
         sound: true,
-        videoUrl: REF_VIDEOS[i],
       },
     });
 
-    // Image gen node — image pre-loaded as a "done" output so the node
-    // displays the image and the startFrame edge carries the URL.
+    // Image gen node — Nano Banana 2 em 1K (Pro), gerado pelo usuário.
     nodes.push({
       id: igId,
       type: "generateNode",
@@ -189,12 +178,10 @@ export function makeUGCTemplate(): {
       style: { width: 280, height: 280 },
       data: {
         label: `Image Generator #${i + 1}`,
-        status: "done",
-        model: "nano-banana-pro",
+        status: "idle",
+        model: "nano-banana-2",
         aspectRatio: "9:16",
-        quality: "2k",
-        imageUrl: REF_IMAGES[i],
-        r2Url: REF_IMAGES[i],
+        quality: "1k",
       },
     });
 
@@ -245,7 +232,6 @@ export function makeUGCTemplate(): {
     data: {
       label:             "Avatar",
       status:            "idle",
-      r2Url:             "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/avatar.png",
       imageNaturalRatio: "9 / 16",
     },
   });
@@ -640,7 +626,7 @@ export function makeLiveTemplate(): {
       type: "videoGeneratorNode",
       position: { x: 780, y: 60 },
       style: { width: 320, height: 220 },
-      data: { label: "Vitrine em loop", status: "idle", videoModel: "seedance-2", aspectRatio: "9:16", sound: false },
+      data: { label: "Vitrine em loop", status: "idle", videoModel: "seedance-2-fast", grokResolution: "720p", aspectRatio: "9:16", sound: false },
     },
   ];
 

@@ -5,6 +5,7 @@ import { useWorkflowStore } from "@/lib/store";
 import { generateProductionImage, outputToCanvas, productionRequest } from "@/lib/productionClient";
 import { STUDIO_PRESETS } from "@/lib/studioPresets";
 import { IMAGE_MODELS } from "@/lib/modelConfig";
+import { uploadAssetFetch } from "@/lib/media/uploadAssetFetch";
 
 const TOOLS = [ ["crop", "Crop · Recortar"], ["upscale", "HD Upscale"], ["grid", "Grid Split"], ["cutout", "Cutout · Remover fundo uniforme"], ["repaint", "Repaint · Pintar área"], ["erase", "Erase · Remover área"], ["outpaint", "Outpaint · Expandir"], ["multiangle", "Multi-Angle"], ["lighting", "Lighting"], ["lighting-ai", "Lighting Smart Mode"], ["focus", "Focus Edit"], ["lens", "Lens Focus"], ["panorama", "720 Panorama"], ["preset", "Studio Tools"] ];
 export default function MediaStudio({ id, data, kind }: { id: string; data: NodeData; kind: "image" | "video" | "audio" }) {
@@ -32,7 +33,7 @@ export default function MediaStudio({ id, data, kind }: { id: string; data: Node
         const instruction = tool === "preset" ? STUDIO_PRESETS[preset][1] : tool === "panorama" ? STUDIO_PRESETS[8][1] : tool === "multiangle" ? `Recrie a cena vista por uma câmera em azimute ${values.azimuth} graus, elevação ${values.elevation} graus e distância relativa ${values.distance}. Preserve a identidade e o espaço.` : tool === "outpaint" ? "Preencha as margens em branco continuando a cena, preservando a imagem central." : tool === "lighting-ai" ? `Reilumine a cena. ${prompt}` : tool === "focus" ? `Recomponha preservando os elementos indicados: ${prompt}` : tool === "lens" ? `Crie um close cinematográfico de ${prompt}, preservando a identidade.` : tool === "erase" ? "Remova o objeto indicado e reconstrua o fundo naturalmente. " + prompt : "Edite a região indicada: " + prompt;
         if (masked && !maskPresent) throw new Error("Pinte a área que deseja alterar.");
         let maskUrl: string | undefined;
-        if (masked && canvas.current) { const blob = await new Promise<Blob>((resolve, reject) => canvas.current!.toBlob(b => b ? resolve(b) : reject(new Error("Falha na máscara")))); const res = await fetch("/api/upload-asset", { method: "POST", headers: { "Content-Type": "image/png" }, body: blob, signal: controller.signal }); const uploaded = await res.json(); if (!res.ok) throw new Error(uploaded.error); maskUrl = uploaded.cdnUrl; }
+        if (masked && canvas.current) { const blob = await new Promise<Blob>((resolve, reject) => canvas.current!.toBlob(b => b ? resolve(b) : reject(new Error("Falha na máscara")))); const res = await uploadAssetFetch({ method: "POST", headers: { "Content-Type": "image/png" }, body: blob, signal: controller.signal }); const uploaded = await res.json(); if (!res.ok) throw new Error(uploaded.error); maskUrl = uploaded.cdnUrl; }
         const resultUrl = await generateProductionImage(`${instruction}\n${prompt}${masked ? "\nA segunda imagem é a máscara: pixels opacos indicam a região a alterar." : ""}`, [reference, ...(maskUrl ? [maskUrl] : [])], model, controller.signal);
         result = masked ? await productionRequest("/api/production/media", { operation: "image-mask", url, replacementUrl: resultUrl, maskUrl }, controller.signal) : { url: resultUrl };
       }

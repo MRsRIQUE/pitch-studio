@@ -12,6 +12,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { NodeData } from "./store";
 import { WORKFLOW_FORMAT } from "./exportWorkflow";
+import { uploadAssetFetch } from "@/lib/media/uploadAssetFetch";
 
 const ASSET_PREFIX = "assets/";
 
@@ -157,7 +158,7 @@ export async function importWorkflowZip(file: File): Promise<ImportedWorkflow> {
   for (const entry of entries) {
     if (!entry.name.startsWith(ASSET_PREFIX)) continue;
     try {
-      const res = await fetch("/api/upload-asset", {
+      const res = await uploadAssetFetch({
         method: "POST",
         headers: { "Content-Type": contentTypeFromName(entry.name) },
         body: entry.data as BodyInit,

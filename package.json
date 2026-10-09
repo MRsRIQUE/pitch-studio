@@ -7,15 +7,10 @@
     "build": "next build",
     "start": "next start -p ${PORT:-3000}",
     "lint": "eslint",
-    "desktop:dev": "node scripts/desktop/dev.mjs",
-    "desktop:build": "CI=true tauri build",
-    "desktop:icon": "tauri icon",
-    "tauri": "tauri",
     "test": "vitest run"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
-    "@higgsfield/client": "^0.2.6",
     "@vercel/blob": "^2.8.1",
     "@xyflow/react": "^12.10.2",
     "border-beam": "^1.3.0",
@@ -40,7 +35,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@tauri-apps/cli": "^2",
     "@types/ffprobe-static": "^2.0.3",
     "@types/node": "^22",
     "@types/react": "^19",

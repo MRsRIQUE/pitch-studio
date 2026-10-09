@@ -41,6 +41,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { QuickAssist } from "@/components/QuickAssist";
 import { browserNotify, requestNotificationPermission } from "@/lib/browserNotify";
 import { isSafetyBlocked } from "@/lib/generationError";
+import { uploadAssetFetch } from "@/lib/media/uploadAssetFetch";
 
 class GenerationJobError extends Error {
   constructor(message: string, readonly code?: string) {
@@ -1327,7 +1328,7 @@ function GalleryInner() {
     await Promise.all(toAdd.map(async (file, i) => {
       const entry = newEntries[i];
       try {
-        const res = await fetch("/api/upload-asset", {
+        const res = await uploadAssetFetch({
           method: "POST",
           headers: {
             "Content-Type": file.type,
@@ -1428,7 +1429,7 @@ function GalleryInner() {
     await Promise.all(toAdd.map(async (file, i) => {
       const entry = newEntries[i];
       try {
-        const res = await fetch("/api/upload-asset", {
+        const res = await uploadAssetFetch({
           method: "POST",
           headers: { "Content-Type": file.type, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           body: file,
@@ -4553,7 +4554,7 @@ function ElementPickerModal({
     await Promise.all(toAdd.map(async (file, i) => {
       const entry = newEntries[i];
       try {
-        const res = await fetch("/api/upload-asset", {
+        const res = await uploadAssetFetch({
           method: "POST",
           headers: { "Content-Type": file.type, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           body: file,

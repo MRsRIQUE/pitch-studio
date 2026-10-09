@@ -8,6 +8,7 @@ import { useWorkflowStore, NodeData } from "@/lib/store";
 import { VIDEO_MODELS } from "@/lib/modelConfig";
 import { sha256Hex } from "@/lib/assetHash";
 import MediaStudio from "./MediaStudio";
+import { uploadAssetFetch } from "@/lib/media/uploadAssetFetch";
 
 type VideoInputNodeType = Node<NodeData, "videoInputNode">;
 
@@ -260,7 +261,7 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
       const bytes = await blob.arrayBuffer();
       const authHeaders: Record<string, string> = {};
 
-      const res  = await fetch("/api/upload-asset", {
+      const res  = await uploadAssetFetch({
         method: "POST",
         headers: { "Content-Type": "image/jpeg", ...authHeaders },
         body: bytes,
@@ -413,7 +414,7 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
     setUploading(true);
 
     try {
-      const res  = await fetch("/api/upload-asset", {
+      const res  = await uploadAssetFetch({
         method: "POST",
         headers: { "Content-Type": file.type || "video/mp4", ...authHeaders },
         body: bytes,

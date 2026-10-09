@@ -43,6 +43,7 @@ import SelectionToolbar from "./SelectionToolbar";
 import CanvasToolbar from "./CanvasToolbar";
 import AddNodeMenu from "./AddNodeMenu";
 import { MessageSquare, Sparkles, Clapperboard } from "lucide-react";
+import { uploadAssetFetch } from "@/lib/media/uploadAssetFetch";
 
 // Local-only app: no auth token, kept so call sites don't churn.
 async function getAccessToken(): Promise<string | undefined> {
@@ -548,7 +549,7 @@ export default function WorkflowCanvas() {
                 if (cdnUrl) { updateNodeDataRef.current(nodeId, { inputImage: cdnUrl, r2Url: cdnUrl }); return; }
               } catch { /* fall through */ }
 
-              const res = await fetch("/api/upload-asset", {
+              const res = await uploadAssetFetch({
                 method: "POST",
                 headers: { "Content-Type": file.type || "image/jpeg" },
                 body: bytes,
@@ -578,7 +579,7 @@ export default function WorkflowCanvas() {
                 if (cdnUrl) { updateNodeDataRef.current(nodeId, { videoUrl: cdnUrl }); return; }
               } catch { /* fall through */ }
 
-              const res = await fetch("/api/upload-asset", {
+              const res = await uploadAssetFetch({
                 method: "POST",
                 headers: { "Content-Type": file.type || "video/mp4" },
                 body: bytes,

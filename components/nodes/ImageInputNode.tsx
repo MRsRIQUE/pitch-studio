@@ -7,6 +7,7 @@ import CornerResizer from "./CornerResizer";
 import { useWorkflowStore, NodeData } from "@/lib/store";
 import { sha256Hex } from "@/lib/assetHash";
 import MediaStudio from "./MediaStudio";
+import { uploadAssetFetch } from "@/lib/media/uploadAssetFetch";
 
 
 type ImageInputNodeType = Node<NodeData, "imageInputNode">;
@@ -148,7 +149,7 @@ export default function ImageInputNode({ id, data, selected }: NodeProps<ImageIn
           "Content-Type": file.type || "image/jpeg",
           ...authHeaders,
         };
-        const res     = await fetch("/api/upload-asset", { method: "POST", headers: uploadHeaders, body: bytes });
+        const res     = await uploadAssetFetch({ method: "POST", headers: uploadHeaders, body: bytes });
         const { cdnUrl } = await res.json() as { cdnUrl?: string };
         if (cdnUrl) {
           updateNodeData(id, { r2Url: cdnUrl, inputImage: cdnUrl });

@@ -248,6 +248,31 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // A kie.ai devolve alguns erros (chave, saldo, modelo) com HTTP 200 e um
+  // JSON `{ code, msg }` no lugar do stream. Isso não é resposta: estorna.
+  if ((upstream.headers.get("content-type") ?? "").includes("application/json")) {
+    const raw = await upstream.text();
+    let corpo: { code?: number; msg?: string } = {};
+    try {
+      corpo = JSON.parse(raw) as typeof corpo;
+    } catch {
+      /* corpo não-JSON cai no erro genérico abaixo */
+    }
+    if (corpo.code === undefined || corpo.code !== 200) {
+      await refundCharge(user.uid, charge.creditJobId);
+      console.error("[assistant] kie.ai recusou:", corpo.code, corpo.msg ?? raw.slice(0, 200));
+      return new Response(JSON.stringify({ error: "Assistente indisponível no momento. Tente de novo." }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    // JSON com code 200 sem stream: devolve como veio, cobrado.
+    await settleCredits(user.uid, charge.creditJobId, "committed").catch((err) =>
+      console.error("[assistant] confirmação do crédito falhou:", err),
+    );
+    return new Response(raw, { headers: { "Content-Type": "application/json" } });
+  }
+
   // O provedor aceitou: a mensagem está cobrada.
   await settleCredits(user.uid, charge.creditJobId, "committed").catch((err) =>
     console.error("[assistant] confirmação do crédito falhou:", err),
