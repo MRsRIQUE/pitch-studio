@@ -147,7 +147,7 @@ export async function settleCredits(
 export function reserveDenyMessage(reason: ReserveDenyReason): string {
   switch (reason) {
     case "insufficient_credits":
-      return "Seus créditos acabaram. Compre um pacote para continuar gerando.";
+      return "Seus créditos acabaram. Compre um pacote em saysell.app/studio/creditos para continuar gerando.";
     case "studio_not_in_plan":
       return "O Studio faz parte dos planos Pro e Max.";
     case "model_blocked":

@@ -18,8 +18,8 @@ import * as React from "react";
 
 export const EVENTO_CREDITOS = "credits-refresh";
 
-/** Onde o SaySell vende planos e pacotes de créditos do Studio. */
-export const URL_COMPRAR_CREDITOS = `${process.env.NEXT_PUBLIC_SAYSELL_SITE_URL || "https://www.saysell.app"}/planos`;
+/** Onde o SaySell vende os pacotes avulsos de créditos do Studio. */
+export const URL_COMPRAR_CREDITOS = `${process.env.NEXT_PUBLIC_SAYSELL_SITE_URL || "https://www.saysell.app"}/studio/creditos`;
 
 export type EstadoCreditos = {
   /** `null` enquanto não se sabe, ou quando não há chave configurada. */
