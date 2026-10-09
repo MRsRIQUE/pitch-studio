@@ -1742,9 +1742,9 @@ export default function WorkflowCanvas() {
                       width: "210px",
                       padding: "24px 22px 26px",
                       borderRadius: "18px",
-                      border: "1px solid #e4e0ef",
+                      border: "1px solid #e0e6ef",
                       background: "rgba(255,255,255,0.92)",
-                      boxShadow: "0 8px 24px rgba(60,45,100,0.08)",
+                      boxShadow: "0 8px 24px rgba(45, 65, 100,0.08)",
                       cursor: "pointer",
                       outline: "none",
                       transition: "transform 200ms ease, box-shadow 220ms ease, border-color 220ms ease, background 220ms ease",
@@ -1760,7 +1760,7 @@ export default function WorkflowCanvas() {
                       const el = e.currentTarget;
                       el.style.transform = "translateY(0)";
                       el.style.boxShadow = "";
-                      el.style.borderColor = "#e4e0ef";
+                      el.style.borderColor = "#e0e6ef";
                       el.style.background = "rgba(255,255,255,0.92)";
                     }}
                   >
@@ -1783,7 +1783,7 @@ export default function WorkflowCanvas() {
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "7px" }}>
                       <span style={{
                         fontSize: "15px", fontWeight: 700,
-                        color: "#28243a",
+                        color: "#242c3a",
                         letterSpacing: "-0.2px",
                         lineHeight: 1.2,
                       }}>

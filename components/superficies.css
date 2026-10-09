@@ -86,7 +86,7 @@
   padding: 5px 10px 5px 5px;
   border: 1px solid #b7a7ff66;
   border-radius: 999px;
-  background: linear-gradient(115deg, #aaa5ff 0%, #7770ff 33%, #0057FF 88%);
+  background: linear-gradient(115deg, #a5c6ff 0%, #70a4ff 33%, #0057FF 88%);
   box-shadow: inset 0 1px 2px #ffffff91, inset 0 -1px 3px #cbbdff42, 0 10px 28px #0057FF45;
   color: #fff;
   font-family: inherit;
@@ -100,7 +100,7 @@
 }
 
 .qa-pilula:focus-visible {
-  outline: 2px solid #c8bdff;
+  outline: 2px solid #bdd5ff;
   outline-offset: 4px;
 }
 
@@ -111,7 +111,7 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: linear-gradient(#f7f2ff, #d5cbff);
+  background: linear-gradient(#f2f7ff, #cbdeff);
   box-shadow: inset 0 1px 2px #fff;
 }
 

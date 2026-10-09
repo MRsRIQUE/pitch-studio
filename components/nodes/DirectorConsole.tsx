@@ -43,7 +43,7 @@ export default function DirectorConsole({ id, data }: { id: string; data: NodeDa
     let renderer: THREE.WebGLRenderer;
     try { renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); } catch { setError("WebGL não está disponível neste navegador."); return; }
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(host.current.clientWidth, 360); host.current.appendChild(renderer.domElement);
-    const scene = new THREE.Scene(); scene.background = new THREE.Color("#eeeaf4");
+    const scene = new THREE.Scene(); scene.background = new THREE.Color("#eaeef4");
     scene.add(new THREE.HemisphereLight(0xffffff, 0x6f6384, 2)); const light = new THREE.DirectionalLight(0xffffff, 3); light.position.set(3, 7, 5); scene.add(light);
     const grid = new THREE.GridHelper(20, 20, 0xbab0cc, 0xd8d0e2); scene.add(grid);
     const camera = new THREE.PerspectiveCamera(45, host.current.clientWidth / 360, 0.05, 1000); camera.position.set(6, 4, 7);
@@ -74,7 +74,7 @@ export default function DirectorConsole({ id, data }: { id: string; data: NodeDa
     for (const item of objects) {
       let object: THREE.Object3D;
       if (item.kind === "character") object = mannequin(item.color);
-      else if (item.kind === "camera") { object = new THREE.Group(); const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.4), new THREE.MeshStandardMaterial({ color: "#62557b" })); object.add(mesh); }
+      else if (item.kind === "camera") { object = new THREE.Group(); const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.4), new THREE.MeshStandardMaterial({ color: "#55637b" })); object.add(mesh); }
       else if (item.kind === "model") { object = new THREE.Group(); if (item.modelUrl) new GLTFLoader().load(item.modelUrl, gltf => { if (alive) object.add(gltf.scene); else dispose(gltf.scene); }, undefined, () => setError("Falha ao carregar o modelo GLB.")); }
       else object = new THREE.Mesh(item.kind === "sphere" ? new THREE.SphereGeometry(0.5, 24, 16) : new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: item.color }));
       object.userData.id = item.id; rt.scene.add(object); rt.models.set(item.id, object);

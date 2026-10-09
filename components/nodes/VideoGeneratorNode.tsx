@@ -2025,7 +2025,7 @@ export default function VideoGeneratorNode({ id, data, selected }: NodeProps<Vid
                 <div
                   className="flex items-center shrink-0"
                   onMouseDown={(e) => e.stopPropagation()}
-                  style={{ height: 26, borderRadius: 8, border: "1px solid var(--ms-border)", background: "var(--ms-bg)", boxShadow: "0 2px 7px rgba(42, 31, 74, 0.1)", overflow: "hidden" }}
+                  style={{ height: 26, borderRadius: 8, border: "1px solid var(--ms-border)", background: "var(--ms-bg)", boxShadow: "0 2px 7px rgba(31, 47, 74, 0.1)", overflow: "hidden" }}
                 >
                   <button
                     onClick={(e) => { e.stopPropagation(); setGenCount(c => Math.max(1, c - 1)); }}

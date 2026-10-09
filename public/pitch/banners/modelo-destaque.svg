@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="750" height="280" viewBox="0 0 750 280" role="img" aria-label="Modelo em destaque">
   <defs>
     <linearGradient id="mod-field" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#F5F2FF"/>
-      <stop offset="1" stop-color="#C3B4FF"/>
+      <stop offset="0" stop-color="#F2F7FF"/>
+      <stop offset="1" stop-color="#B4D0FF"/>
     </linearGradient>
     <radialGradient id="mod-glow" cx=".76" cy=".64" r=".5">
-      <stop offset="0" stop-color="#868CFF" stop-opacity=".9"/>
-      <stop offset="1" stop-color="#868CFF" stop-opacity="0"/>
+      <stop offset="0" stop-color="#86B2FF" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#86B2FF" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
@@ -15,11 +15,11 @@
 
   <!-- Três quadros 9:16, a proporção padrão do modelo -->
   <g>
-    <rect x="512" y="74" width="60" height="107" rx="10" fill="#4318FF" opacity=".16"/>
-    <rect x="584" y="60" width="72" height="128" rx="12" fill="#4318FF" opacity=".26"/>
-    <rect x="668" y="74" width="60" height="107" rx="10" fill="#4318FF" opacity=".16"/>
-    <path d="M612 106l30 18-30 18z" fill="#4318FF" opacity=".72"/>
-    <g fill="#4318FF" opacity=".5">
+    <rect x="512" y="74" width="60" height="107" rx="10" fill="#186DFF" opacity=".16"/>
+    <rect x="584" y="60" width="72" height="128" rx="12" fill="#186DFF" opacity=".26"/>
+    <rect x="668" y="74" width="60" height="107" rx="10" fill="#186DFF" opacity=".16"/>
+    <path d="M612 106l30 18-30 18z" fill="#186DFF" opacity=".72"/>
+    <g fill="#186DFF" opacity=".5">
       <rect x="584" y="204" width="4" height="14" rx="2"/>
       <rect x="592" y="198" width="4" height="26" rx="2"/>
       <rect x="600" y="192" width="4" height="38" rx="2"/>
@@ -33,9 +33,9 @@
   </g>
 
   <g font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
-    <text x="46" y="86" font-size="15" font-weight="700" fill="#4318FF" letter-spacing="2.4">MODELO EM DESTAQUE</text>
-    <text x="46" y="150" font-size="52" font-weight="800" font-style="italic" fill="#2C04D7" letter-spacing="-1.6">Seedance 2.5</text>
-    <text x="46" y="188" font-size="19" font-weight="600" fill="#3B2E8C">Vídeo com áudio, até 30 segundos.</text>
-    <text x="46" y="232" font-size="14" font-weight="700" fill="#4318FF" letter-spacing=".4">Abrir no Criar &#8594;</text>
+    <text x="46" y="86" font-size="15" font-weight="700" fill="#186DFF" letter-spacing="2.4">MODELO EM DESTAQUE</text>
+    <text x="46" y="150" font-size="52" font-weight="800" font-style="italic" fill="#0451D7" letter-spacing="-1.6">Seedance 2.5</text>
+    <text x="46" y="188" font-size="19" font-weight="600" fill="#2E508C">Vídeo com áudio, até 30 segundos.</text>
+    <text x="46" y="232" font-size="14" font-weight="700" fill="#186DFF" letter-spacing=".4">Abrir no Criar &#8594;</text>
   </g>
 </svg>

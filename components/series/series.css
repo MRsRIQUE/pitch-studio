@@ -28,17 +28,17 @@
 /* Faixa da meta */
 .ser-meta { isolation:isolate; display:grid; grid-template-columns:1.3fr 1fr; gap:28px; position:relative; overflow:hidden; border-radius:17px; background:#19191d; color:#fff; padding:30px 34px; margin-bottom:34px; }
 .ser-meta::before { content:''; position:absolute; inset:0; z-index:-1; background:radial-gradient(ellipse at 95% 90%,#60457766,transparent 55%),radial-gradient(ellipse at 0% 0%,#3b3b4240,transparent 60%); }
-.ser-eyebrow { display:inline-flex; align-items:center; gap:7px; font-size:8px; letter-spacing:.15em; font-weight:550; color:#c9c2d7; }
-.ser-eyebrow>span { width:5px; height:5px; border-radius:50%; background:#c2b0ea; box-shadow:0 0 0 3px #c2b0ea12; }
+.ser-eyebrow { display:inline-flex; align-items:center; gap:7px; font-size:8px; letter-spacing:.15em; font-weight:550; color:#c2cad7; }
+.ser-eyebrow>span { width:5px; height:5px; border-radius:50%; background:#b0c5ea; box-shadow:0 0 0 3px #c2b0ea12; }
 .ser-page .ser-meta h2 { font-size:clamp(26px,3.2cqw,42px); letter-spacing:-1.4px; font-weight:500; line-height:1.1; margin:14px 0 12px; }
-.ser-meta h2 em { font-family:Georgia,'Times New Roman',serif; font-weight:400; color:#d2c2e8; }
+.ser-meta h2 em { font-family:Georgia,'Times New Roman',serif; font-weight:400; color:#c2d0e8; }
 .ser-meta-copy>p { font-size:12px; line-height:1.75; color:#bfbec7; max-width:560px; }
 .ser-meta-progress { display:flex; flex-direction:column; justify-content:center; gap:12px; }
 .ser-meta-number { display:flex; align-items:baseline; gap:8px; }
 .ser-meta-number strong { font-size:44px; font-weight:500; letter-spacing:-2px; line-height:1; }
 .ser-meta-number span { font-size:12px; color:#bfbec7; }
 .ser-bar { height:8px; border-radius:99px; background:#ffffff18; overflow:hidden; }
-.ser-bar>span { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#b39ddb,#e5d9fa); transition:width .5s; }
+.ser-bar>span { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#9db4db,#d9e5fa); transition:width .5s; }
 .ser-meta-note { font-size:10px; color:#99959f; }
 
 /* Seções */
@@ -80,7 +80,7 @@
 .ser-formato-band { height:6px; }
 .ser-formato--realista-nostalgico .ser-formato-band { background:linear-gradient(90deg,#8a5a34,#e0b07a); }
 .ser-formato--objeto-falante .ser-formato-band { background:linear-gradient(90deg,#f2c744,#ff7b54); }
-.ser-formato--mini-novela-3d .ser-formato-band { background:linear-gradient(90deg,#7f8cf5,#c6a4f7); }
+.ser-formato--mini-novela-3d .ser-formato-band { background:linear-gradient(90deg,#7f8cf5,#a4c2f7); }
 .ser-formato--processo-satisfatorio .ser-formato-band { background:linear-gradient(90deg,#5cc2a4,#d7e6e0); }
 .ser-formato-body { flex:1; padding:16px 16px 12px; display:flex; flex-direction:column; gap:8px; }
 .ser-formato-meta { display:flex; gap:6px; font-size:9px; letter-spacing:.08em; color:var(--ser-muted); }

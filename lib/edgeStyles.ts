@@ -11,7 +11,7 @@ export const EDGE_COLORS: Record<string, string> = {
   referenceVideo: "#1b84ff", // sky    — matches node-handle-icon-refvideo
   audioRef: "#60A5FA", // violet — matches node-handle-icon-audioref
   character: "#01b574", // pink   — matches node-handle-icon-character (motion control startFrame)
-  default: "#33334f", // neutral
+  default: "#333d4f", // neutral
 };
 
 // Handles that carry image data get a heavier stroke

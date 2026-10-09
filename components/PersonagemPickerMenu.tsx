@@ -174,7 +174,7 @@ export default function PersonagemPickerMenu({ anchorRect, onClose, onCriarNo }:
           background: color-mix(in srgb, var(--ms-bg) 96%, transparent);
           backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
           border: 1px solid var(--ms-border); border-radius: 16px;
-          box-shadow: 0 22px 54px rgba(42, 31, 74, 0.16), 0 5px 16px rgba(42, 31, 74, 0.08);
+          box-shadow: 0 22px 54px rgba(31, 47, 74, 0.16), 0 5px 16px rgba(31, 47, 74, 0.08);
           animation: persPickerIn 160ms cubic-bezier(0.22,1,0.36,1) both;
           color: var(--ms-text); font-size: 13px;
         }

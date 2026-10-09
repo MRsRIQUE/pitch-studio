@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="750" height="280" viewBox="0 0 750 280" role="img" aria-label="Inspiração em destaque">
   <defs>
     <linearGradient id="ins-field" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#EFEBFC"/>
-      <stop offset="1" stop-color="#B9AEE4"/>
+      <stop offset="0" stop-color="#EBF1FC"/>
+      <stop offset="1" stop-color="#AEC2E4"/>
     </linearGradient>
     <radialGradient id="ins-glow" cx=".72" cy=".6" r=".48">
-      <stop offset="0" stop-color="#4318FF" stop-opacity=".42"/>
-      <stop offset="1" stop-color="#4318FF" stop-opacity="0"/>
+      <stop offset="0" stop-color="#186DFF" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#186DFF" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
@@ -14,7 +14,7 @@
   <rect width="750" height="280" fill="url(#ins-glow)"/>
 
   <!-- Masonry de quatro colunas: a mesma grade da tela de Inspiração -->
-  <g fill="#4318FF">
+  <g fill="#186DFF">
     <rect x="500" y="46" width="48" height="76" rx="9" opacity=".22"/>
     <rect x="500" y="130" width="48" height="104" rx="9" opacity=".16"/>
     <rect x="556" y="46" width="48" height="112" rx="9" opacity=".3"/>
@@ -26,9 +26,9 @@
   </g>
 
   <g font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
-    <text x="46" y="86" font-size="15" font-weight="700" fill="#4318FF" letter-spacing="2.4">INSPIRAÇÃO EM DESTAQUE</text>
-    <text x="46" y="150" font-size="52" font-weight="800" font-style="italic" fill="#2C04D7" letter-spacing="-1.6">O que já foi criado</text>
-    <text x="46" y="188" font-size="19" font-weight="600" fill="#3B2E8C">Remixe qualquer geração e leve o prompt para o Criar.</text>
-    <text x="46" y="232" font-size="14" font-weight="700" fill="#4318FF" letter-spacing=".4">Abrir a Inspiração &#8594;</text>
+    <text x="46" y="86" font-size="15" font-weight="700" fill="#186DFF" letter-spacing="2.4">INSPIRAÇÃO EM DESTAQUE</text>
+    <text x="46" y="150" font-size="52" font-weight="800" font-style="italic" fill="#0451D7" letter-spacing="-1.6">O que já foi criado</text>
+    <text x="46" y="188" font-size="19" font-weight="600" fill="#2E508C">Remixe qualquer geração e leve o prompt para o Criar.</text>
+    <text x="46" y="232" font-size="14" font-weight="700" fill="#186DFF" letter-spacing=".4">Abrir a Inspiração &#8594;</text>
   </g>
 </svg>

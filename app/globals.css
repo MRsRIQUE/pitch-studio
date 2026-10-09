@@ -320,13 +320,13 @@ body {
 }
 
 .miora-workflows { color: #202020; }
-.miora-workflow-hero { display: flex; align-items: center; justify-content: space-between; gap: 40px; margin: 32px; padding: 42px; border: 1px solid #e2ddf6; border-radius: 22px; background: linear-gradient(120deg,#efedfa,#e3dff8); }
+.miora-workflow-hero { display: flex; align-items: center; justify-content: space-between; gap: 40px; margin: 32px; padding: 42px; border: 1px solid #dde6f6; border-radius: 22px; background: linear-gradient(120deg,#edf2fa,#dfe8f8); }
 .miora-workflow-hero > div:first-child { max-width: 460px; }
 .miora-workflow-hero span { font-size: 11px; color: var(--brand-ink); }
 .miora-workflow-hero h2 { font-size: 38px; line-height: 1.1; letter-spacing: -.045em; margin: 14px 0; font-weight: 500; color: #292929; }
 .miora-workflow-hero p { font-size: 13px; line-height: 1.7; color: #696660; }
-.miora-workflow-preview { display: flex; align-items: center; gap: 18px; color: #a5a0c2; }
-.miora-workflow-preview > div { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 14px; width: 120px; height: 130px; border-radius: 18px; border: 1px solid #fff; box-shadow: 0 10px 24px rgba(43, 26, 92, .09); background: #ffffffab; color: #8b84c4; transform: rotate(-4deg); }
+.miora-workflow-preview { display: flex; align-items: center; gap: 18px; color: #a0acc2; }
+.miora-workflow-preview > div { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 14px; width: 120px; height: 130px; border-radius: 18px; border: 1px solid #fff; box-shadow: 0 10px 24px rgba(26, 50, 92, .09); background: #ffffffab; color: #849bc4; transform: rotate(-4deg); }
 .miora-workflow-preview > div:nth-of-type(2) { transform: translateY(-18px); color: var(--brand-solid); }
 .miora-workflow-preview > div:nth-of-type(3) { transform: rotate(4deg); }
 .miora-workflows .wsd-card,.miora-workflows .wsd-new,.miora-workflows .wsd-tmpl { background: #fff; border-color: #e2e2e2; box-shadow: none; color: #202020; }
@@ -1020,7 +1020,7 @@ body {
    O canvas é claro. Superfícies pretas e pílulas translúcidas perdiam o texto
    sobre a prévia dos nodes; estes estilos mantêm a hierarquia com contraste. */
 .workflow-node-picker {
-  box-shadow: 0 20px 52px rgba(42, 31, 74, 0.16), 0 5px 16px rgba(42, 31, 74, 0.08);
+  box-shadow: 0 20px 52px rgba(31, 47, 74, 0.16), 0 5px 16px rgba(31, 47, 74, 0.08);
 }
 
 .workflow-node-picker-item + .workflow-node-picker-item {
@@ -1031,7 +1031,7 @@ body {
   background: color-mix(in srgb, var(--ms-bg) 94%, var(--ms-bg-brand-subtle));
   border: 1px solid var(--ms-border);
   color: var(--ms-text);
-  box-shadow: 0 2px 7px rgba(42, 31, 74, 0.1);
+  box-shadow: 0 2px 7px rgba(31, 47, 74, 0.1);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -1049,7 +1049,7 @@ button.node-control-pill:focus-visible {
 .node-control-menu {
   background: var(--ms-bg);
   border-color: var(--ms-border);
-  box-shadow: 0 16px 38px rgba(42, 31, 74, 0.16), 0 4px 12px rgba(42, 31, 74, 0.08);
+  box-shadow: 0 16px 38px rgba(31, 47, 74, 0.16), 0 4px 12px rgba(31, 47, 74, 0.08);
 }
 
 .node-control-menu-item:hover,
@@ -1322,7 +1322,7 @@ button.node-control-pill:focus-visible {
   border-radius: 999px;
   background: var(--ms-bg);
   border: 1px solid var(--ms-border);
-  box-shadow: 0 8px 24px rgba(42, 31, 74, 0.12), 0 1px 3px rgba(42, 31, 74, 0.08);
+  box-shadow: 0 8px 24px rgba(31, 47, 74, 0.12), 0 1px 3px rgba(31, 47, 74, 0.08);
   white-space: nowrap;
 }
 .canvas-pilula-sep {

@@ -281,9 +281,9 @@ function TemplateCard({
  *  porque este template nasce vazio — não há capa para mostrar. */
 function TrocaPessoaArt() {
   return (
-    <svg viewBox="0 0 160 106" width="70%" height="70%" fill="none" stroke="rgba(180,170,255,0.85)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 160 106" width="70%" height="70%" fill="none" stroke="rgba(170, 201, 255,0.85)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="8" y="10" width="44" height="28" rx="5" />
-      <path d="M24 18v12l10-6z" fill="rgba(180,170,255,0.85)" stroke="none" />
+      <path d="M24 18v12l10-6z" fill="rgba(170, 201, 255,0.85)" stroke="none" />
       <rect x="8" y="46" width="44" height="28" rx="5" />
       <circle cx="30" cy="57" r="5" />
       <path d="M18 72c2-6 6-9 12-9s10 3 12 9" />
@@ -302,7 +302,7 @@ function TrocaPessoaArt() {
  *  para não parecer o mesmo ícone de vídeo-pronto-pra-postar dos outros cards. */
 function LiveArt() {
   return (
-    <svg viewBox="0 0 160 106" width="70%" height="70%" fill="none" stroke="rgba(180,170,255,0.85)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 160 106" width="70%" height="70%" fill="none" stroke="rgba(170, 201, 255,0.85)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="45" y="8" width="70" height="90" rx="6" />
       <path d="M68 8v-4h20v4" />
       <path d="M59 30h52M59 44h52M59 58h40M59 72h46" />
