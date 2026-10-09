@@ -15,7 +15,8 @@
 import { devGetMe, devReserve, devSettle } from "./devWallet";
 
 export type StudioLevel = "none" | "selected" | "all";
-export type StudioBalance = { monthly: number; pack: number; total: number };
+/** `debt`: créditos devidos por estorno de algo já usado; enquanto > 0, não gera. */
+export type StudioBalance = { monthly: number; pack: number; total: number; debt: number };
 export type StudioMe = {
   level: StudioLevel;
   monthlyCredits: number;
@@ -32,6 +33,7 @@ export type ReserveInput = {
 };
 export type ReserveDenyReason =
   | "insufficient_credits"
+  | "credit_debt"
   | "studio_not_in_plan"
   | "model_blocked"
   | "model_requires_max"
@@ -90,7 +92,7 @@ async function call(
 function readBalance(value: unknown): StudioBalance {
   const b = (value ?? {}) as Record<string, unknown>;
   const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
-  return { monthly: n(b.monthly), pack: n(b.pack), total: n(b.total) };
+  return { monthly: n(b.monthly), pack: n(b.pack), total: n(b.total), debt: n(b.debt) };
 }
 
 export async function getStudioMe(uid: string): Promise<StudioMe> {
@@ -109,6 +111,7 @@ export async function getStudioMe(uid: string): Promise<StudioMe> {
 
 const DENY: ReadonlySet<string> = new Set([
   "insufficient_credits",
+  "credit_debt",
   "studio_not_in_plan",
   "model_blocked",
   "model_requires_max",
@@ -148,6 +151,8 @@ export function reserveDenyMessage(reason: ReserveDenyReason): string {
   switch (reason) {
     case "insufficient_credits":
       return "Seus créditos acabaram. Compre um pacote em saysell.app/studio/creditos para continuar gerando.";
+    case "credit_debt":
+      return "Há créditos devidos de um pagamento estornado. As gerações voltam quando a franquia do próximo mês ou um novo pacote cobrir o saldo devedor.";
     case "studio_not_in_plan":
       return "O Studio faz parte dos planos Pro e Max.";
     case "model_blocked":
@@ -163,7 +168,7 @@ export function reserveDenyMessage(reason: ReserveDenyReason): string {
 
 /** Status HTTP que a rota do Studio devolve ao navegador para cada recusa. */
 export function reserveDenyStatus(reason: ReserveDenyReason): number {
-  if (reason === "insufficient_credits") return 402;
+  if (reason === "insufficient_credits" || reason === "credit_debt") return 402;
   if (reason === "job_conflict") return 409;
   return 403;
 }

@@ -66,7 +66,7 @@ export function devGetMe(uid: string): StudioMe {
     level: level(),
     monthlyCredits: monthly(),
     period: new Date().toISOString().slice(0, 7),
-    balance: { monthly: left, pack: 0, total: left },
+    balance: { monthly: left, pack: 0, total: left, debt: 0 },
   };
 }
 
