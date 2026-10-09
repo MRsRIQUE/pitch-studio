@@ -4,6 +4,8 @@ import "./globals.css";
 import { ShellApp } from "@/components/ShellApp";
 import GlobalModals from "@/components/GlobalModals";
 import { BloqueioAcesso } from "@/components/acesso/BloqueioAcesso";
+import { AceiteCreditos } from "@/components/acesso/AceiteCreditos";
+import type { CreditsTerms } from "@/lib/saysell/client";
 import { getSessionUser } from "@/lib/auth/currentUser";
 import { getStudioMe } from "@/lib/saysell/client";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -76,8 +78,11 @@ export default async function RootLayout({
   // O plano manda: Start, Free ou vencido não entram; sem resposta do
   // SaySell, fecha em vez de liberar sem saber.
   let bloqueio: "sem_plano" | "indisponivel" | null = null;
+  let clausulaPendente: CreditsTerms | null = null;
   try {
-    if ((await getStudioMe(user.uid)).level === "none") bloqueio = "sem_plano";
+    const me = await getStudioMe(user.uid);
+    if (me.level === "none") bloqueio = "sem_plano";
+    else if (me.creditsTerms && !me.creditsTerms.accepted) clausulaPendente = me.creditsTerms;
   } catch (error) {
     console.error("[layout] plano indisponível:", error);
     bloqueio = "indisponivel";
@@ -87,6 +92,18 @@ export default async function RootLayout({
       <html {...html}>
         <body className="h-full overflow-auto">
           <BloqueioAcesso motivo={bloqueio} email={user.email} />
+        </body>
+      </html>
+    );
+  }
+
+  // Primeiro acesso: a cláusula de créditos é aceita antes de abrir o app (o
+  // saysell-web também recusa reservar crédito sem esse aceite).
+  if (clausulaPendente) {
+    return (
+      <html {...html}>
+        <body className="h-full overflow-auto">
+          <AceiteCreditos clausula={clausulaPendente} email={user.email} />
         </body>
       </html>
     );

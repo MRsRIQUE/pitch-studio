@@ -5,23 +5,30 @@
  *
  * Contrato (saysell-web, `docs/superpowers/plans/2026-10-08-studio-a-acesso-creditos.md`):
  *   headers  x-saysell-studio-key: STUDIO_SERVICE_KEY, x-saysell-uid: <uid>
- *   GET  /api/studio/me       → { ok, level, monthlyCredits, period, balance }
+ *   GET  /api/studio/me       → { ok, level, monthlyCredits, period, balance, creditsTerms }
  *   POST /api/studio/reserve  → 200 | 402 insufficient_credits | 403 <motivo> | 409 job_conflict
+ *   POST /api/studio/terms    → 200 | 409 terms_stale (aceite da cláusula de créditos)
  *   POST /api/studio/settle   → 200 | 404 not_found | 409 already_settled
  *
  * Fora da Vercel, sem `SAYSELL_API_URL`, entra a carteira de desenvolvimento
  * (`devWallet.ts`). Na Vercel a falta de configuração é erro, nunca carteira falsa.
  */
-import { devGetMe, devReserve, devSettle } from "./devWallet";
+import { devAcceptTerms, devGetMe, devReserve, devSettle } from "./devWallet";
 
 export type StudioLevel = "none" | "selected" | "all";
 /** `debt`: créditos devidos por estorno de algo já usado; enquanto > 0, não gera. */
 export type StudioBalance = { monthly: number; pack: number; total: number; debt: number };
+/**
+ * Cláusula de créditos que precisa ser aceita uma vez antes de gerar. `null`
+ * quando o saysell-web não pede aceite (versão anterior da API).
+ */
+export type CreditsTerms = { accepted: boolean; version: string; text: string; sha256: string };
 export type StudioMe = {
   level: StudioLevel;
   monthlyCredits: number;
   period: string;
   balance: StudioBalance;
+  creditsTerms: CreditsTerms | null;
 };
 export type CreditKind = "image" | "video" | "chat";
 export type ReserveInput = {
@@ -38,6 +45,7 @@ export type ReserveDenyReason =
   | "model_blocked"
   | "model_requires_max"
   | "resolution_requires_max"
+  | "terms_required"
   | "job_conflict";
 export type ReserveResult =
   | { ok: true; balance: StudioBalance }
@@ -89,6 +97,20 @@ async function call(
   return { status: res.status, data };
 }
 
+function readCreditsTerms(value: unknown): CreditsTerms | null {
+  const t = (value ?? null) as Record<string, unknown> | null;
+  if (
+    !t ||
+    typeof t.accepted !== "boolean" ||
+    typeof t.version !== "string" ||
+    typeof t.text !== "string" ||
+    typeof t.sha256 !== "string"
+  ) {
+    return null;
+  }
+  return { accepted: t.accepted, version: t.version, text: t.text, sha256: t.sha256 };
+}
+
 function readBalance(value: unknown): StudioBalance {
   const b = (value ?? {}) as Record<string, unknown>;
   const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
@@ -106,7 +128,21 @@ export async function getStudioMe(uid: string): Promise<StudioMe> {
     monthlyCredits: typeof data.monthlyCredits === "number" ? data.monthlyCredits : 0,
     period: typeof data.period === "string" ? data.period : "",
     balance: readBalance(data.balance),
+    creditsTerms: readCreditsTerms(data.creditsTerms),
   };
+}
+
+/** Registra no saysell-web o aceite da cláusula que o Studio mostrou. */
+export async function acceptCreditsTerms(
+  uid: string,
+  shown: { version: string; sha256: string },
+): Promise<"ok" | "stale"> {
+  const cfg = config();
+  if (cfg === "dev") return devAcceptTerms(uid, shown);
+  const { status, data } = await call(cfg, uid, "/api/studio/terms", { accepted: true, ...shown });
+  if (status === 200 && data.ok === true) return "ok";
+  if (status === 409) return "stale";
+  throw new SaySellUnavailable(`terms respondeu ${status}`);
 }
 
 const DENY: ReadonlySet<string> = new Set([
@@ -116,6 +152,7 @@ const DENY: ReadonlySet<string> = new Set([
   "model_blocked",
   "model_requires_max",
   "resolution_requires_max",
+  "terms_required",
   "job_conflict",
 ]);
 
@@ -161,6 +198,8 @@ export function reserveDenyMessage(reason: ReserveDenyReason): string {
       return "Este modelo é exclusivo do plano Max.";
     case "resolution_requires_max":
       return "Esta resolução é exclusiva do plano Max.";
+    case "terms_required":
+      return "Antes de gerar, aceite a cláusula de créditos do Studio. Atualize a página.";
     case "job_conflict":
       return "Esta geração já foi enviada. Atualize a tela.";
   }

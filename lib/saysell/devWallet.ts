@@ -6,6 +6,9 @@
  *
  * Espelha a regra de modelos do saysell-web (`src/lib/studio/policy.ts`) só
  * para o dev ver as mesmas recusas que produção. A regra que vale é a de lá.
+ *
+ * `STUDIO_DEV_TERMS=pendente` liga a tela de aceite da cláusula de créditos
+ * (aceite em memória, some ao reiniciar).
  */
 import type {
   ReserveDenyReason,
@@ -20,8 +23,15 @@ type DevReservation = { credits: number; status: "reserved" | SettleOutcome };
 
 const globalForDev = globalThis as unknown as {
   __studioDevWallet?: Map<string, { used: number; reservations: Map<string, DevReservation> }>;
+  __studioDevTerms?: Set<string>;
 };
 const wallets = (globalForDev.__studioDevWallet ??= new Map());
+const devAccepted = (globalForDev.__studioDevTerms ??= new Set<string>());
+const DEV_TERMS = {
+  version: "dev",
+  text: "Créditos do SaySell Studio são consumidos a cada geração (texto de desenvolvimento; o vigente vem dos Termos do saysell-web).",
+  sha256: "dev",
+};
 
 const SELECTED_MODELS = new Set([
   "nano-banana-2", "nano-banana-2-lite", "google-nano-banana", "seedream-5-lite", "gpt-image-2",
@@ -67,7 +77,20 @@ export function devGetMe(uid: string): StudioMe {
     monthlyCredits: monthly(),
     period: new Date().toISOString().slice(0, 7),
     balance: { monthly: left, pack: 0, total: left, debt: 0 },
+    creditsTerms:
+      process.env.STUDIO_DEV_TERMS === "pendente"
+        ? { accepted: devAccepted.has(uid), ...DEV_TERMS }
+        : null,
   };
+}
+
+export function devAcceptTerms(
+  uid: string,
+  shown: { version: string; sha256: string },
+): "ok" | "stale" {
+  if (shown.version !== DEV_TERMS.version || shown.sha256 !== DEV_TERMS.sha256) return "stale";
+  devAccepted.add(uid);
+  return "ok";
 }
 
 export function devReserve(uid: string, input: ReserveInput): ReserveResult {
