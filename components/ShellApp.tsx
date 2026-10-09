@@ -47,6 +47,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
  *  `/workflow` (a lista de projetos) **não** entra: lá é painel de cards, e a
  *  referência também tem navegação nas telas de lista. */
 function semNavegacao(pathname: string): boolean {
+  if (pathname === "/entrar" || pathname.startsWith("/share/")) return true;
   if (pathname === "/projeto" || pathname.startsWith("/projeto/")) return true;
   return /^\/workflow\/[^/]+/.test(pathname);
 }

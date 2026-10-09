@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SaySellLogo, SaySellMark } from "@/components/SaySellLogo";
+import { URL_COMPRAR_CREDITOS } from "@/hooks/useCreditos";
 import { useWorkflowStore } from "@/lib/store";
 import {
   ImageIcon,
@@ -128,15 +129,12 @@ export function AppSidebar() {
   const setKieKeySet      = useWorkflowStore((s) => s.setKieKeySet);
   const setAzureKeySet    = useWorkflowStore((s) => s.setAzureKeySet);
 
+  // No Studio hospedado as chaves dos provedores ficam no servidor: a kie.ai
+  // está sempre conectada e o Azure não existe. O que limita a geração é o
+  // saldo de créditos do plano, não uma chave do usuário.
   React.useEffect(() => {
-    fetch("/api/settings/kie-key")
-      .then((r) => r.json())
-      .then((d) => setKieKeySet(!!d.hasToken))
-      .catch(() => setKieKeySet(null));
-    fetch("/api/settings/azure-key")
-      .then((r) => r.json())
-      .then((d) => setAzureKeySet(!!d.hasToken))
-      .catch(() => setAzureKeySet(null));
+    setKieKeySet(true);
+    setAzureKeySet(false);
   }, [setKieKeySet, setAzureKeySet]);
 
   React.useEffect(() => {
@@ -353,7 +351,7 @@ export function AppSidebar() {
             <span>Créditos</span>
             <strong className="metric">{balance !== null ? balance.toLocaleString() : "0"}</strong>
           </div>
-          <button type="button" className="miora-upgrade group-data-[collapsible=icon]:hidden" onClick={() => window.open("https://kie.ai?ref=25abb3f2236cbff9780ab9c2f84479ec", "_blank")}>Adicionar créditos</button>
+          <button type="button" className="miora-upgrade group-data-[collapsible=icon]:hidden" onClick={() => window.open(URL_COMPRAR_CREDITOS, "_blank")}>Adicionar créditos</button>
           <div className="miora-credit-rail hidden group-data-[collapsible=icon]:flex">
             <CreditIcon size={13} />
             <strong className="metric">{balance !== null ? balance.toLocaleString() : "0"}</strong>
@@ -428,9 +426,9 @@ export function AppSidebar() {
             {/* Comprar créditos */}
             <DropdownMenuItem
               className="flex items-center justify-between rounded-none px-4 py-3 text-[14px] text-ms-text-secondary hover:text-ms-text focus:text-ms-text focus:bg-ms-bg-hover cursor-pointer"
-              onClick={() => window.open("https://kie.ai?ref=25abb3f2236cbff9780ab9c2f84479ec", "_blank")}
+              onClick={() => window.open(URL_COMPRAR_CREDITOS, "_blank")}
             >
-              <span>Comprar créditos na Kie</span>
+              <span>Comprar créditos</span>
               <CreditIcon size={15} />
             </DropdownMenuItem>
 

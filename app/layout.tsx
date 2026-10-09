@@ -3,8 +3,9 @@ import { Inter, JetBrains_Mono, Sora } from "next/font/google";
 import "./globals.css";
 import { ShellApp } from "@/components/ShellApp";
 import GlobalModals from "@/components/GlobalModals";
-import KieBanner from "@/components/KieBanner";
-import UpdateBanner from "@/components/UpdateBanner";
+import { BloqueioAcesso } from "@/components/acesso/BloqueioAcesso";
+import { getSessionUser } from "@/lib/auth/currentUser";
+import { getStudioMe } from "@/lib/saysell/client";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cookies } from "next/headers";
 
@@ -55,20 +56,51 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
+  const html = {
+    lang: "pt-BR",
+    className: `${inter.variable} ${sora.variable} ${jetbrainsMono.variable} antialiased`,
+    style: { height: "100%" },
+  };
+
+  // Sem sessão o proxy só deixa passar as telas públicas (/entrar, /share):
+  // elas desenham sozinhas, sem a barra nem os modais do app.
+  const user = await getSessionUser();
+  if (!user) {
+    return (
+      <html {...html}>
+        <body className="h-full overflow-auto">{children}</body>
+      </html>
+    );
+  }
+
+  // O plano manda: Start, Free ou vencido não entram; sem resposta do
+  // SaySell, fecha em vez de liberar sem saber.
+  let bloqueio: "sem_plano" | "indisponivel" | null = null;
+  try {
+    if ((await getStudioMe(user.uid)).level === "none") bloqueio = "sem_plano";
+  } catch (error) {
+    console.error("[layout] plano indisponível:", error);
+    bloqueio = "indisponivel";
+  }
+  if (bloqueio) {
+    return (
+      <html {...html}>
+        <body className="h-full overflow-auto">
+          <BloqueioAcesso motivo={bloqueio} email={user.email} />
+        </body>
+      </html>
+    );
+  }
 
   return (
-    <html
-      lang="pt-BR"
-      className={`${inter.variable} ${sora.variable} ${jetbrainsMono.variable} antialiased`}
-      style={{ height: "100%" }}
-    >
+    <html {...html}>
       <body className="h-full overflow-hidden">
         <TooltipProvider>
           {/* Quem decide se há navegação é o `ShellApp`: a página de projeto e o
               canvas de workflow são full-bleed, como na referência. */}
           <ShellApp
             sidebarOpen={sidebarOpen}
-            banners={<><KieBanner /><UpdateBanner /></>}
+            banners={null}
           >
             {children}
           </ShellApp>

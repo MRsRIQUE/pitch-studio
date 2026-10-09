@@ -18,8 +18,8 @@ import * as React from "react";
 
 export const EVENTO_CREDITOS = "credits-refresh";
 
-/** Onde a Kie vende créditos — o mesmo link de referência da sidebar. */
-export const URL_COMPRAR_CREDITOS = "https://kie.ai?ref=25abb3f2236cbff9780ab9c2f84479ec";
+/** Onde o SaySell vende planos e pacotes de créditos do Studio. */
+export const URL_COMPRAR_CREDITOS = `${process.env.NEXT_PUBLIC_SAYSELL_SITE_URL || "https://www.saysell.app"}/planos`;
 
 export type EstadoCreditos = {
   /** `null` enquanto não se sabe, ou quando não há chave configurada. */
