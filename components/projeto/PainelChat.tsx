@@ -172,7 +172,7 @@ export function PainelChat({ projetoId }: { projetoId: string }) {
        existe — é metade do valor do pedido. Vai numa mensagem de sistema
        à parte da persona, porque muda a cada turno e a persona não. */
     const contextoDoGrafo = [
-      "Você está dentro de um projeto do Pitch Studio e pode escrever no grafo dele",
+      "Você está dentro de um projeto do SaySell Studio e pode escrever no grafo dele",
       "usando as ferramentas. Monte; não gere: quem decide executar é o usuário, pela",
       "pílula de modo de execução. Use apenas ids de modelo da lista abaixo.",
       "",

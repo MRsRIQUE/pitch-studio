@@ -26,26 +26,26 @@ export default function KieBanner() {
           justifyContent: "center",
           gap: "8px",
           padding: "9px 16px",
-          background: "rgba(134, 140, 255,0.12)",
+          background: "rgba(96, 165, 250,0.12)",
           border: "none",
-          borderBottom: "1px solid rgba(134, 140, 255,0.3)",
+          borderBottom: "1px solid rgba(96, 165, 250,0.3)",
           cursor: "pointer",
           transition: "background 150ms",
         }}
-        onMouseEnter={e => { e.currentTarget.style.background = "rgba(134, 140, 255,0.18)"; }}
-        onMouseLeave={e => { e.currentTarget.style.background = "rgba(134, 140, 255,0.12)"; }}
+        onMouseEnter={e => { e.currentTarget.style.background = "rgba(96, 165, 250,0.18)"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = "rgba(96, 165, 250,0.12)"; }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(134, 140, 255,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(96, 165, 250,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <circle cx="12" cy="12" r="10" />
           <line x1="12" y1="16" x2="12" y2="12" />
           <line x1="12" y1="8" x2="12.01" y2="8" />
         </svg>
-        <span style={{ fontSize: "12px", color: "rgba(134, 140, 255,0.95)", fontWeight: 500 }}>
+        <span style={{ fontSize: "12px", color: "rgba(96, 165, 250,0.95)", fontWeight: 500 }}>
           Modo simulado — a geração produz mídia de placeholder, não imagens reais.
         </span>
         <span style={{
-          fontSize: "11px", fontWeight: 600, color: "rgba(134, 140, 255,0.75)",
-          background: "rgba(134, 140, 255,0.12)", border: "1px solid rgba(134, 140, 255,0.25)",
+          fontSize: "11px", fontWeight: 600, color: "rgba(96, 165, 250,0.75)",
+          background: "rgba(96, 165, 250,0.12)", border: "1px solid rgba(96, 165, 250,0.25)",
           borderRadius: "5px", padding: "2px 8px", marginLeft: "4px",
         }}>
           Adicionar chave kie.ai →

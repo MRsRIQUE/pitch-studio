@@ -18,7 +18,7 @@
    ============================================================ */
 
 import * as React from "react";
-import { PitchMark } from "@/components/PitchLogo";
+import { SaySellMark } from "@/components/SaySellLogo";
 import { thumbSrc, type GalleryItem } from "@/lib/galleryUtils";
 import { clampRatio } from "@/components/inspiracao/masonry";
 
@@ -102,7 +102,7 @@ export function InspiracaoCard({
         {/* O mascote fica no fundo enquanto a capa não chega; a capa entra por
             cima com o fade de 400ms. */}
         <div className="insp-card__placeholder" aria-hidden>
-          <PitchMark size={40} />
+          <SaySellMark size={40} />
         </div>
 
         {/* Blur-up: a miniatura de 32px que o nosso pipeline de imagem entrega,

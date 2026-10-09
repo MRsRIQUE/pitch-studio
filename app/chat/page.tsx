@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore, 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useChatSessionStore, type StoredMessage, type ChatSession } from "@/lib/chatSessionStore";
 import { getToken } from "@/lib/galleryUtils";
-import { PitchMark } from "@/components/PitchLogo";
+import { SaySellMark } from "@/components/SaySellLogo";
 import { CHAT_MODEL_GROUPS as MODEL_GROUPS, CHAT_MODELS as MODELS, type ModelId } from "@/lib/models";
 import { CHAT_PROMPT, contextoChat, executarAcaoChat, workflowDaConversa } from "@/lib/chatActions";
 import { lerTurno } from "@/lib/assistantTurno";
@@ -23,7 +23,7 @@ import { loadAzureBaseUrl, loadAzureTextDeployment, loadAzureTextModelName } fro
 // ── Logo ──────────────────────────────────────────────────────────────────────
 
 function LogoIcon({ size = 40 }: { size?: number }) {
-  return <PitchMark size={size} />;
+  return <SaySellMark size={size} />;
 }
 
 function ModelPicker({

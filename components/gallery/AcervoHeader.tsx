@@ -10,7 +10,7 @@
    O que muda em relação à referência, e só isto:
 
    • COR — onde o site pinta o chip ativo de laranja, entra
-     `--ms-solid-brand`, que já é o violeta `#4318FF`.
+     `--ms-solid-brand`, que já é o violeta `#0057FF`.
    • IDIOMA — rótulos em português.
    • CONTEÚDO — os 7 chips de categoria semântica do Miora
      (`Character · Scene · Item · Brand · Timbre · Others`) são as
@@ -83,7 +83,7 @@ const PERIODOS: Opcao<AcervoWindow>[] = [
 const CORES_DE_PASTA: { color: string | null; label: string }[] = [
   { color: null, label: "Padrão" },
   { color: "#1B84FF", label: "Azul" },
-  { color: "#868CFF", label: "Lilás" },
+  { color: "#60A5FA", label: "Lilás" },
   { color: "#A855F7", label: "Roxo" },
   { color: "#01B574", label: "Verde" },
   { color: "#FFB547", label: "Âmbar" },

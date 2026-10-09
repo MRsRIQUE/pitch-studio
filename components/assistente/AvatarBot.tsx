@@ -9,7 +9,7 @@
    biblioteca de animação) e os tempos da piscada. Nenhum traço do desenho
    deles foi copiado: os presets são bolhas redondas com olhos escuros; este
    aqui é um quadrado de canto redondo com a tinta da marca e olhos claros,
-   irmão do `PitchMark`.
+   irmão do `SaySellMark`.
 
    Os três tempos, literais do painel "ANIMATION DETAILS" deles:
 
@@ -91,12 +91,12 @@ export function AvatarBot({ estado = "idle", size = 22, className }: PropsAvatar
       <defs>
         {/* O gradiente 135° do kit, pelos tokens — nada de hex aqui. */}
         <linearGradient id={`ava-g-${id}`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="var(--brand-lilac)" />
-          <stop offset="100%" stopColor="var(--brand-violet)" />
+          <stop offset="0%" stopColor="var(--brand-light)" />
+          <stop offset="100%" stopColor="var(--brand-solid)" />
         </linearGradient>
       </defs>
 
-      {/* A cabeça: quadrado de canto redondo, a mesma família do PitchMark. */}
+      {/* A cabeça: quadrado de canto redondo, a mesma família do SaySellMark. */}
       <rect className="ava__cabeca" x="2" y="3" width="20" height="18" rx="6" fill={`url(#ava-g-${id})`} />
 
       {/* O anel de escuta: só aparece em `listening`, pulsando. */}

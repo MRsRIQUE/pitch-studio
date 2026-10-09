@@ -47,7 +47,7 @@
    Um anel que respira sobre a cabeça, enquanto o assistente ouve ou o ditado
    está aberto. Os olhos abrem um tico — é o sinal de atenção. */
 .ava--listening .ava__anel {
-  stroke: var(--brand-lilac);
+  stroke: var(--brand-light);
   opacity: 1;
   transform-box: fill-box;
   transform-origin: center;

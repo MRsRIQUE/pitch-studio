@@ -24,7 +24,7 @@ import { AzureCustomSize } from "@/components/gallery/Composer/AzureCustomSize";
 import { usePolishPrompt } from "@/components/gallery/Composer/usePolishPrompt";
 import { useChatSessionStore } from "@/lib/chatSessionStore";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { PitchMark } from "@/components/PitchLogo";
+import { SaySellMark } from "@/components/SaySellLogo";
 import { IMAGE_MODELS, VIDEO_MODELS, parseSegmentMaskIndexes } from "@/lib/modelConfig";
 import { PROVIDERS, getModelProvider, setModelProvider, modelHasProviderChoice } from "@/lib/providers";
 import { useWorkflowStore } from "@/lib/store";
@@ -178,7 +178,7 @@ function splitByMentions(
     nodes.push(
       <span
         key={k++}
-        style={{ color: "#868CFF", fontWeight: 500, cursor: "text", pointerEvents: "auto", userSelect: "none", background: "rgba(1, 181, 116,0.15)", boxShadow: "0 0 0 3px rgba(1, 181, 116,0.15)", borderRadius: "3px" }}
+        style={{ color: "#60A5FA", fontWeight: 500, cursor: "text", pointerEvents: "auto", userSelect: "none", background: "rgba(1, 181, 116,0.15)", boxShadow: "0 0 0 3px rgba(1, 181, 116,0.15)", borderRadius: "3px" }}
         onMouseEnter={e => onEnter(tag, e.currentTarget.getBoundingClientRect())}
         onMouseLeave={onLeave}
         onMouseDown={e => { e.preventDefault(); onMouseDown(tag); }}
@@ -219,7 +219,7 @@ function renderGalleryMentions(
       <span
         key={key++}
         style={{
-          color: "#868CFF",
+          color: "#60A5FA",
           fontWeight: 500,
           cursor: "text",
           pointerEvents: "auto",
@@ -3194,7 +3194,7 @@ function GalleryInner() {
           )}
           {loadingMore && (
             <div style={{ padding: "20px", display: "flex", justifyContent: "center" }}>
-              <span style={{ width: "20px", height: "20px", borderRadius: "50%", border: "2px solid var(--ms-border-subtle)", borderTopColor: "var(--brand-violet)", animation: "spin 0.8s linear infinite" }} />
+              <span style={{ width: "20px", height: "20px", borderRadius: "50%", border: "2px solid var(--ms-border-subtle)", borderTopColor: "var(--brand-solid)", animation: "spin 0.8s linear infinite" }} />
             </div>
           )}
           <div ref={sentinelRef} style={{ height: "1px", width: "100%" }} />
@@ -3207,7 +3207,7 @@ function GalleryInner() {
               lista é curta, como na referência. */}
           {!showCreationHome && !isGalleryEmpty && (
             <footer className="mx-auto mt-auto flex w-full max-w-[1310px] flex-wrap items-center justify-center gap-3 pt-12 text-ms-base leading-5 text-ms-text-tertiary">
-              <PitchMark size={48} />
+              <SaySellMark size={48} />
               <span>Tudo que você gera ou envia aparece aqui automaticamente.</span>
             </footer>
           )}
@@ -4595,7 +4595,7 @@ function ElementPickerModal({
         position: "relative",
         width: "min(520px, calc(100vw - 32px))",
         maxHeight: "80vh",
-        background: "rgba(15, 15, 26,0.98)",
+        background: "rgba(7, 16, 31,0.98)",
         border: "1px solid rgba(255,255,255,0.09)",
         borderRadius: "18px",
         display: "flex",
@@ -4654,7 +4654,7 @@ function ElementPickerModal({
                       style={{
                         width: "100%", height: "100%", borderRadius: "10px", overflow: "hidden",
                         border: isAttached ? "2px solid #01b574" : "2px solid transparent",
-                        background: "#171728", cursor: isAttached || atMax ? "default" : "pointer",
+                        background: "#0D1B32", cursor: isAttached || atMax ? "default" : "pointer",
                         padding: 0, display: "block", position: "relative",
                         transition: "border-color 110ms, opacity 110ms",
                         opacity: atMax ? 0.4 : 1,
@@ -4708,7 +4708,7 @@ function ElementPickerModal({
               <div style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" as const, color: "rgba(255,255,255,0.4)", marginBottom: "8px" }}>Images (2–4 · JPG/PNG · max 10 MB each)</div>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" as const }}>
                 {createImages.map((img, i) => (
-                  <div key={img.id} style={{ position: "relative", width: "72px", height: "72px", borderRadius: "8px", overflow: "hidden", border: img.error ? "1px solid rgba(255, 138, 138,0.4)" : "1px solid rgba(255,255,255,0.12)", background: "#171728", flexShrink: 0 }}>
+                  <div key={img.id} style={{ position: "relative", width: "72px", height: "72px", borderRadius: "8px", overflow: "hidden", border: img.error ? "1px solid rgba(255, 138, 138,0.4)" : "1px solid rgba(255,255,255,0.12)", background: "#0D1B32", flexShrink: 0 }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={img.objectUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     {img.uploading && (
@@ -5098,7 +5098,7 @@ function GalleryCard({
           padding: "2px 6px", borderRadius: 999,
           background: "linear-gradient(135deg, rgba(30,100,200,0.85) 0%, rgba(20,160,140,0.85) 100%)",
           backdropFilter: "blur(6px)",
-          border: "1px solid rgba(134, 140, 255,0.35)",
+          border: "1px solid rgba(96, 165, 250,0.35)",
           fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
           color: "#fff", pointerEvents: "none", lineHeight: 1.4,
           textTransform: "uppercase",
@@ -5109,7 +5109,7 @@ function GalleryCard({
       {/* ── Checkbox (top-left) ── */}
       <div className="gallery-checkbox" onClick={e => { e.stopPropagation(); onSelect?.(); }}>
         {selected && (
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0F0F1A" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#07101F" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 6 9 17l-5-5" />
           </svg>
         )}
@@ -5260,7 +5260,7 @@ function GalleryCard({
         {item.prompt && onCopyPrompt && (
           <button className="gallery-action-btn" title={copied ? "Copied!" : "Copy prompt"} onClick={handleCopy}>
             {copied ? (
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#868CFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6 9 17l-5-5" />
               </svg>
             ) : (
@@ -5356,7 +5356,7 @@ function DownloadToast({ downloads, onClear }: { downloads: DownloadTask[]; onCl
             <circle cx="14" cy="14" r="12" stroke="rgba(1, 181, 116,0.2)" strokeWidth="2" />
             <circle
               cx="14" cy="14" r="12"
-              stroke="#868CFF" strokeWidth="2"
+              stroke="#60A5FA" strokeWidth="2"
               strokeLinecap="round"
               strokeDasharray={`${2 * Math.PI * 12}`}
               strokeDashoffset={allDone ? 0 : `${2 * Math.PI * 12 * 0.25}`}
@@ -5365,7 +5365,7 @@ function DownloadToast({ downloads, onClear }: { downloads: DownloadTask[]; onCl
             />
           </svg>
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#868CFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
             </svg>
           </div>
@@ -5409,7 +5409,7 @@ function DownloadToast({ downloads, onClear }: { downloads: DownloadTask[]; onCl
                   <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
                 </svg>
               ) : (
-                <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#868CFF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#60A5FA", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#060A06" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 6 9 17l-5-5" />
                   </svg>
@@ -5460,7 +5460,7 @@ function syntaxHighlightJson(
     } else if (m[3] !== undefined) {
       push(m.index, m.index + m[3].length, "#ffb547");
     } else if (m[4] !== undefined) {
-      push(m.index, m.index + m[4].length, "#868cff");
+      push(m.index, m.index + m[4].length, "#60A5FA");
     } else if (m[5] !== undefined) {
       push(m.index, m.index + m[5].length, "#5a6795");
     }
@@ -5544,11 +5544,11 @@ function colorYamlValue(
   };
 
   if (/^(true|false|yes|no|on|off)$/i.test(trimmed)) {
-    pushValue(main, "#868cff");
+    pushValue(main, "#60A5FA");
   } else if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(trimmed) || /^0x[\da-fA-F]+$/.test(trimmed)) {
     pushValue(main, "#ffb547");
   } else if (/^(null|~)$/.test(trimmed)) {
-    pushValue(main, "#868cff");
+    pushValue(main, "#60A5FA");
   } else if (/^['"]/.test(trimmed)) {
     pushValue(main, "#4ade9b");
   } else if (trimmed !== "") {
@@ -5684,7 +5684,7 @@ function Lightbox({ item, thumbUrl, onClose, onCopyPrompt, onPrev, onNext }: { i
   ].filter(Boolean) as { label: string; value: string }[];
 
   const panelStyle: React.CSSProperties = {
-    background: "#0F0F1A",
+    background: "#07101F",
     border: "1px solid rgba(255,255,255,0.07)",
     borderRadius: "16px",
     overflow: "hidden",
@@ -5890,7 +5890,7 @@ function Lightbox({ item, thumbUrl, onClose, onCopyPrompt, onPrev, onNext }: { i
                   padding: "4px 12px", borderRadius: "8px",
                   border: "1px solid rgba(255,255,255,0.1)",
                   background: "rgba(255,255,255,0.05)",
-                  color: copied ? "#868CFF" : "rgba(255,255,255,0.65)",
+                  color: copied ? "#60A5FA" : "rgba(255,255,255,0.65)",
                   fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                   transition: "background 140ms, color 140ms",
                   borderColor: copied ? "rgba(1, 181, 116,0.3)" : "rgba(255,255,255,0.1)",
@@ -5935,13 +5935,13 @@ function Lightbox({ item, thumbUrl, onClose, onCopyPrompt, onPrev, onNext }: { i
             display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
             width: "100%", padding: "13px 16px",
             borderRadius: "14px", border: "1px solid rgba(255,255,255,0.07)",
-            background: "#0F0F1A",
+            background: "#07101F",
             color: downloading ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.75)",
             fontSize: "13px", fontWeight: 600, cursor: downloading ? "default" : "pointer",
             fontFamily: "inherit", transition: "background 140ms, color 140ms",
           }}
           onMouseEnter={e => { if (!downloading) { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#fff"; } }}
-          onMouseLeave={e => { if (!downloading) { e.currentTarget.style.background = "#0F0F1A"; e.currentTarget.style.color = "rgba(255,255,255,0.75)"; } }}
+          onMouseLeave={e => { if (!downloading) { e.currentTarget.style.background = "#07101F"; e.currentTarget.style.color = "rgba(255,255,255,0.75)"; } }}
         >
           {downloading ? (
             <span style={{ width: 13, height: 13, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.5)", display: "inline-block", animation: "spin 0.75s linear infinite" }} />
@@ -6040,7 +6040,7 @@ const GALLERY_CSS = `
     width: 13px;
     height: 13px;
     border-radius: 50%;
-    background: var(--brand-violet);
+    background: var(--brand-solid);
     cursor: pointer;
     transition: transform 120ms;
   }
@@ -6049,7 +6049,7 @@ const GALLERY_CSS = `
     width: 13px;
     height: 13px;
     border-radius: 50%;
-    background: var(--brand-violet);
+    background: var(--brand-solid);
     cursor: pointer;
     border: none;
   }

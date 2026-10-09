@@ -1057,7 +1057,7 @@ function VideoModelsPanel({
       <ProviderLegend />
       <ModelGroup
         title="Modelos de vídeo"
-        accent="var(--brand-violet)"
+        accent="var(--brand-solid)"
         models={models}
         providers={providers}
         onProviderChange={onProviderChange}

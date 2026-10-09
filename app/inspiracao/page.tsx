@@ -312,7 +312,7 @@ export default function InspiracaoPage() {
       </div>
 
       <div className="insp-footer">
-        <span>Pitch Studio · as suas gerações, prontas para remixar</span>
+        <span>SaySell Studio · as suas gerações, prontas para remixar</span>
       </div>
 
       {preview && (

@@ -89,7 +89,7 @@ export function Memoria() {
             <button
               type="button"
               className="mem-btn mem-btn-fantasma mem-r-md"
-              aria-label="O que o Pitch Studio lembra?"
+              aria-label="O que o SaySell Studio lembra?"
               aria-expanded={ajuda}
               onClick={() => setAjuda(a => !a)}
             >

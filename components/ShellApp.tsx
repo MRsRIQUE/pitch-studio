@@ -19,7 +19,7 @@
 
    Quem entra na lista abaixo perde a navegação — então precisa ter um
    caminho de volta dentro da própria tela. Na página de projeto é o
-   PitchMark do cabeçalho do painel.
+   SaySellMark do cabeçalho do painel.
    ============================================================ */
 
 import * as React from "react";

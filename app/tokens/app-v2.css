@@ -122,12 +122,12 @@
    congelado, então isso é requisito, não conveniência.
    ──────────────────────────────────────────────────────────── */
 :root{
-  --app-v2-accent: var(--app-v2-brand-solid);        /* #4318FF */
+  --app-v2-accent: var(--app-v2-brand-solid);        /* #0057FF */
   --app-v2-accent-soft: hsl(var(--ms-brand-9) / .09);
   --app-v2-radius-sm: var(--ms-radius-md);           /* 8px */
   --app-v2-shadow-popover: var(--ms-shadow-md);
   --app-v2-nav-motion: var(--app-v2-nav-rail-motion);
 
   /* O gradiente 135° do kit da marca, para o botão primário. */
-  --app-v2-brand-gradient: linear-gradient(135deg, #868CFF, #4318FF);
+  --app-v2-brand-gradient: linear-gradient(135deg, #60A5FA, #0057FF);
 }

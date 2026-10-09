@@ -3,7 +3,7 @@
    Transcrição de miora/design-system/tokens-ms.css.
 
    ALTERADO EM RELAÇÃO À ORIGEM: apenas a escala --ms-brand-1..12,
-   trocada do laranja do Miora para o Violeta da Pitch AI. Todo o
+   trocada do laranja do Miora para o azul do SaySell. Todo o
    resto é literal — o diff contra a origem deve ser inspecionável.
 
    --ms-solid-brand, --ms-ring, --ms-text-link, --ms-bg-brand*,
@@ -93,42 +93,30 @@
   --ms-gray-11: 0 0% 39.21%;
   --ms-gray-12: 0 0% 12.55%;
   /* ─────────────────────────────────────────────────────────────────────
-     ESCALA DE MARCA — VIOLETA PITCH AI (substitui o laranja do Miora)
+     ESCALA DE MARCA — AZUL SAYSELL (substitui o laranja do Miora)
 
-     O Violeta do kit cai quase exatamente no degrau 9 da escala original:
-       #4318FF        = hsl(251.17  100.00%  54.71%)
-       --ms-brand-9   = hsl( 27.24   98.37%  53.69%)   (o laranja #fd7a12)
-     Mesma saturação, mesma luminosidade — 224° de matiz de diferença.
-
-     A curva de luminosidade NÃO foi copiada. A laranja mergulha para L 39/33
-     nos degraus 10–12 porque #fd7a12 tem só 2,3:1 sobre branco e precisa
-     escurecer muito para virar texto. O #4318FF já dá 7,46:1 — copiar a curva
-     laranja daria degraus quase pretos e mataria a identidade. A topologia
-     aqui é a do violeta do Radix, que é onde o degrau 9 naturalmente cai.
-
-     Deriva de matiz 260 → 251,2 → 253: no setor HSL [240,300) o matiz mais
-     alto injeta mais vermelho, entao os tints claros ficam roxos em vez de
-     azul-lavados. É a mesma deriva que o Miora faz no laranja (23 → 27 → 31).
-
-     Saturação ≤ 100% em todos os degraus. A escala original tem valores fora
-     de spec (145%, 160%) que o navegador clampa silenciosamente.
+     Os degraus vêm da escala azul de produção do site (`--ss-50..900` em
+     `src/styles/paleta-ss.css` do saysell-web). O degrau 9 é o azul de ação
+     `--ss-azul` #0057FF; 10 e 11 são o hover e o pressionado do kit; 3 é o
+     "item selecionado" #E7EFFF.
 
      Contraste sobre branco, monotônico e conferido:
-       1,02 · 1,08 · 1,15 · 1,27 · 1,43 · 1,69 · 2,21 · 3,68 · 7,46 · 8,63 · 9,97 · 13,62
-     O degrau 8 (anel de foco) em 3,68 passa o mínimo de 3:1 da SC 1.4.11.
+       1,04 · 1,09 · 1,15 · 1,22 · 1,42 · 1,80 · 2,54 · 3,68 · 5,52 · 7,31 · 8,98 · 14,91
+     O degrau 8 (anel de foco) em 3,68 passa o mínimo de 3:1 da SC 1.4.11; o
+     degrau 9 em 5,52 passa AA para texto de link.
      ───────────────────────────────────────────────────────────────────── */
-  --ms-brand-1: 260 100% 99.4%;      /* #FDFCFF */
-  --ms-brand-2: 258 100% 98%;        /* #F8F5FF */
-  --ms-brand-3: 257 100% 96.3%;      /* #F1ECFF  bg-brand */
-  --ms-brand-4: 256 100% 93.9%;      /* #E8E0FF  bg-brand-hover */
-  --ms-brand-5: 255 100% 91%;        /* #DDD1FF  bg-brand-active */
-  --ms-brand-6: 254 100% 87.3%;      /* #CDBEFF */
-  --ms-brand-7: 253 100% 81.6%;      /* #B5A1FF  border-brand */
-  --ms-brand-8: 252 100% 71.4%;      /* #8A6DFF  ring */
-  --ms-brand-9: 251.17 100% 54.71%;  /* #4318FF  A MARCA — solid-brand */
-  --ms-brand-10: 251.2 100% 48%;     /* #2E00F5  solid-brand-hover */
-  --ms-brand-11: 251.2 96% 43%;      /* #2C04D7 */
-  --ms-brand-12: 253 50% 26.5%;      /* #302265 */
+  --ms-brand-1: 214.29 100% 98.63%;    /* #F8FBFF */
+  --ms-brand-2: 213.75 100% 96.86%;    /* #EFF6FF */
+  --ms-brand-3: 220 100% 95.29%;       /* #E7EFFF  bg-brand */
+  --ms-brand-4: 214.29 94.59% 92.75%;  /* #DBEAFE  bg-brand-hover */
+  --ms-brand-5: 213.33 96.92% 87.25%;  /* #BFDBFE  bg-brand-active */
+  --ms-brand-6: 211.7 96.36% 78.43%;   /* #93C5FD */
+  --ms-brand-7: 213.12 93.9% 67.84%;   /* #60A5FA  border-brand */
+  --ms-brand-8: 217.22 91.22% 59.8%;   /* #3B82F6  ring */
+  --ms-brand-9: 219.53 100% 50%;       /* #0057FF  A MARCA — solid-brand */
+  --ms-brand-10: 220.09 100% 41.96%;   /* #0047D6  solid-brand-hover */
+  --ms-brand-11: 220.43 100% 36.08%;   /* #003CB8 */
+  --ms-brand-12: 228.43 72.17% 22.55%; /* #102063 */
   --ms-blue-1: 211.82 98.57% 99.24%;
   --ms-blue-2: 212.14 79.18% 96.87%;
   --ms-blue-3: 209.78 100.18% 95.32%;
@@ -328,7 +316,7 @@
    O site define as escalas duas vezes em css-index-CFAj46Uo.css:
    uma em `:root` (claro) e outra em `.dark` (escuro).
    O arquivo acima traz a versão de `:root` — primeira ocorrência vence.
-   A escala de marca deste arquivo foi TROCADA para o Violeta Pitch AI.
+   A escala de marca deste arquivo foi TROCADA para o azul do SaySell.
    Os valores originais do Miora eram:
      Laranja da marca (claro):  --ms-brand-9: 27.24 98.37% 53.69%   = #fd7a12
      Laranja da marca (escuro): --ms-brand-9: 25.99 97.77% 57.98%

@@ -17,13 +17,13 @@ export default function GenerateButton({ onClick, busy, disabled, extracting, wa
     ? "rgba(227, 26, 26,0.15)"
     : extracting
     ? "rgba(255, 181, 71,0.15)"
-    : "rgba(134, 140, 255,0.18)";
+    : "rgba(96, 165, 250,0.18)";
 
   const border = hasWarning
     ? "1px solid rgba(227, 26, 26,0.45)"
     : extracting
     ? "1px solid rgba(255, 181, 71,0.45)"
-    : "1px solid rgba(134, 140, 255,0.55)";
+    : "1px solid rgba(96, 165, 250,0.55)";
 
   return (
     <div

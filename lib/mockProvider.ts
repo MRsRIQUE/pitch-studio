@@ -48,7 +48,7 @@ export function shouldMock(kieToken: string | null | undefined): boolean {
 // ── Render do placeholder ────────────────────────────────────────────────────
 
 // Paleta da marca: Lilas, Voz, Atencao, Sucesso, Critico suave, Texto fraco.
-const PALETTE = ["#868CFF", "#0BC5EA", "#FFB547", "#01B574", "#FF8A8A", "#8B9CC7"];
+const PALETTE = ["#60A5FA", "#0BC5EA", "#FFB547", "#01B574", "#FF8A8A", "#9FB0CC"];
 
 /** Cor estável por prompt: o mesmo prompt sempre gera o mesmo placeholder. */
 function tone(seed: string): string {
@@ -102,22 +102,22 @@ async function renderImage(prompt: string, aspectRatio: string, model: string): 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0F0F1A"/>
-      <stop offset="100%" stop-color="#171728"/>
+      <stop offset="0%" stop-color="#07101F"/>
+      <stop offset="100%" stop-color="#0D1B32"/>
     </linearGradient>
   </defs>
   <rect width="${w}" height="${h}" fill="url(#bg)"/>
   <circle cx="${w / 2}" cy="${h / 2}" r="${Math.min(w, h) * 0.34}" fill="none" stroke="${accent}" stroke-width="1.5" opacity="0.20"/>
   <circle cx="${w / 2}" cy="${h / 2}" r="${Math.min(w, h) * 0.24}" fill="none" stroke="${accent}" stroke-width="1.5" opacity="0.32"/>
-  <text x="${w / 2}" y="${h * 0.16}" text-anchor="middle" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="17" letter-spacing="5" fill="${accent}" opacity="0.85">PITCH STUDIO · MODO SIMULADO</text>
+  <text x="${w / 2}" y="${h * 0.16}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" letter-spacing="5" fill="${accent}" opacity="0.85">SAYSELL STUDIO · MODO SIMULADO</text>
 ${lines
   .map(
     (l, i) =>
-      `  <text x="${w / 2}" y="${startY + i * 38}" text-anchor="middle" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="28" fill="#C9D2EA">${escapeXml(l)}</text>`,
+      `  <text x="${w / 2}" y="${startY + i * 38}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="28" fill="#C9D2EA">${escapeXml(l)}</text>`,
   )
   .join("\n")}
-  <text x="${w / 2}" y="${h * 0.88}" text-anchor="middle" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="15" letter-spacing="2" fill="#5a6795">${escapeXml(model)} · ${escapeXml(aspectRatio)}</text>
-  <text x="${w / 2}" y="${h * 0.94}" text-anchor="middle" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#5a6795">configure sua chave kie.ai em Settings para gerar de verdade</text>
+  <text x="${w / 2}" y="${h * 0.88}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" letter-spacing="2" fill="#5a6795">${escapeXml(model)} · ${escapeXml(aspectRatio)}</text>
+  <text x="${w / 2}" y="${h * 0.94}" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" fill="#5a6795">configure sua chave kie.ai em Settings para gerar de verdade</text>
 </svg>`;
 
   return sharp(Buffer.from(svg)).png().toBuffer();

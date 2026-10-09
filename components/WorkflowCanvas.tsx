@@ -1677,7 +1677,7 @@ export default function WorkflowCanvas() {
             <div
               className="absolute inset-0 pointer-events-none"
               style={{
-                background: "radial-gradient(ellipse 70% 50% at 50% 52%, rgba(134, 140, 255,0.06) 0%, transparent 70%)",
+                background: "radial-gradient(ellipse 70% 50% at 50% 52%, rgba(96, 165, 250,0.06) 0%, transparent 70%)",
               }}
             />
 
@@ -1685,7 +1685,7 @@ export default function WorkflowCanvas() {
               {/* Logo + title */}
               <div className="flex flex-col items-center gap-4 pointer-events-none">
                 {/* Star icon */}
-                <svg width="44" height="44" viewBox="0 0 20 20" fill="#868CFF" stroke="none">
+                <svg width="44" height="44" viewBox="0 0 20 20" fill="#60A5FA" stroke="none">
                   <path d="M11.8525 4.21651L11.7221 3.2387C11.6906 3.00226 11.4889 2.82568 11.2504 2.82568C11.0118 2.82568 10.8102 3.00226 10.7786 3.23869L10.6483 4.21651C10.2658 7.0847 8.00939 9.34115 5.14119 9.72358L4.16338 9.85396C3.92694 9.88549 3.75037 10.0872 3.75037 10.3257C3.75037 10.5642 3.92694 10.7659 4.16338 10.7974L5.14119 10.9278C8.00938 11.3102 10.2658 13.5667 10.6483 16.4349L10.7786 17.4127C10.8102 17.6491 11.0118 17.8257 11.2504 17.8257C11.4889 17.8257 11.6906 17.6491 11.7221 17.4127L11.8525 16.4349C12.2349 13.5667 14.4913 11.3102 17.3595 10.9278L18.3374 10.7974C18.5738 10.7659 18.7504 10.5642 18.7504 10.3257C18.7504 10.0872 18.5738 9.88549 18.3374 9.85396L17.3595 9.72358C14.4913 9.34115 12.2349 7.0847 11.8525 4.21651Z" />
                 </svg>
 
@@ -1726,7 +1726,7 @@ export default function WorkflowCanvas() {
                     type: "videoGeneratorNode",
                     label: "Video Generator",
                     desc: "Generate videos from a text prompt",
-                    accent: "#868cff",
+                    accent: "#60A5FA",
                     icon: <Clapperboard size={20} strokeWidth={1.6} />,
                   },
                 ].map(({ type, label, desc, icon, accent }) => (
@@ -1811,9 +1811,9 @@ export default function WorkflowCanvas() {
         )}
 
         {log.length > 0 && (
-          <div className="h-24 bg-[#0F0F1A] border-t border-[#262640] overflow-y-auto px-4 py-2 shrink-0">
+          <div className="h-24 bg-[#07101F] border-t border-[#22375A] overflow-y-auto px-4 py-2 shrink-0">
             {log.map((l, i) => (
-              <p key={i} className={`text-[11px] font-mono leading-5 ${l.ok ? "text-[#8B9CC7]" : "text-red-500"}`}>
+              <p key={i} className={`text-[11px] font-mono leading-5 ${l.ok ? "text-[#9FB0CC]" : "text-red-500"}`}>
                 {l.text}
               </p>
             ))}

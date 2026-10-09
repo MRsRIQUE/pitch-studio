@@ -661,9 +661,9 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
               <div
                 className="h-7 flex items-center rounded-full"
                 style={{
-                  border: `1px solid ${pipelineRunning ? "rgba(134, 140, 255,0.5)" : "rgba(134, 140, 255,0.25)"}`,
-                  background: pipelineRunning ? "rgba(134, 140, 255,0.18)" : "rgba(134, 140, 255,0.07)",
-                  color: readyJobCount === 0 ? "var(--ms-grayA-6-hex)" : "rgba(134, 140, 255,0.9)",
+                  border: `1px solid ${pipelineRunning ? "rgba(96, 165, 250,0.5)" : "rgba(96, 165, 250,0.25)"}`,
+                  background: pipelineRunning ? "rgba(96, 165, 250,0.18)" : "rgba(96, 165, 250,0.07)",
+                  color: readyJobCount === 0 ? "var(--ms-grayA-6-hex)" : "rgba(96, 165, 250,0.9)",
                   opacity: readyJobCount === 0 ? 0.45 : 1,
                 }}
               >
@@ -678,8 +678,8 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
                 >
                   {pipelineRunning ? (
                     <svg width="9" height="9" viewBox="0 0 10 10" fill="none" style={{ animation: "spin 0.9s linear infinite", flexShrink: 0 }}>
-                      <circle cx="5" cy="5" r="4" stroke="rgba(134, 140, 255,0.3)" strokeWidth="1.5" />
-                      <path d="M5 1 A4 4 0 0 1 9 5" stroke="rgba(134, 140, 255,0.9)" strokeWidth="1.5" strokeLinecap="round" />
+                      <circle cx="5" cy="5" r="4" stroke="rgba(96, 165, 250,0.3)" strokeWidth="1.5" />
+                      <path d="M5 1 A4 4 0 0 1 9 5" stroke="rgba(96, 165, 250,0.9)" strokeWidth="1.5" strokeLinecap="round" />
                     </svg>
                   ) : (
                     <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor" style={{ flexShrink: 0 }}>
@@ -690,7 +690,7 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
                   {readyJobCount > 0 && (
                     <span
                       className="text-[10px] font-semibold leading-none rounded-full px-1.5 py-0.5"
-                      style={{ background: "rgba(134, 140, 255,0.2)" }}
+                      style={{ background: "rgba(96, 165, 250,0.2)" }}
                     >
                       {readyJobCount}
                     </span>
@@ -702,7 +702,7 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
                   className="shrink-0"
                   style={{
                     width: 1, height: 14,
-                    background: pipelineRunning ? "rgba(134, 140, 255,0.4)" : "rgba(134, 140, 255,0.2)",
+                    background: pipelineRunning ? "rgba(96, 165, 250,0.4)" : "rgba(96, 165, 250,0.2)",
                   }}
                 />
 
@@ -783,18 +783,18 @@ export default function GroupNode({ id, data, selected }: NodeProps<GroupNodeTyp
 
                       {/* Target icon */}
                       {job.isVideo ? (
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(134, 140, 255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(96, 165, 250,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                           <polygon points="23 7 16 12 23 17 23 7" />
                           <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                         </svg>
                       ) : (
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(134, 140, 255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(96, 165, 250,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                           <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                           <circle cx="8.5" cy="8.5" r="1.5" />
                           <polyline points="21 15 16 10 5 21" />
                         </svg>
                       )}
-                      <ScrollLabel text={job.genLabel} color="rgba(134, 140, 255,0.85)" />
+                      <ScrollLabel text={job.genLabel} color="rgba(96, 165, 250,0.85)" />
                       {job.missingInputs.length > 0 && (
                         <span style={{ marginLeft: "auto" }}>
                           <InlineWarning messages={job.missingInputs} />

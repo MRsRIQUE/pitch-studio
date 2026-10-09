@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { PitchLogo, PitchMark } from "@/components/PitchLogo";
+import { SaySellLogo, SaySellMark } from "@/components/SaySellLogo";
 import { useWorkflowStore } from "@/lib/store";
 import {
   ImageIcon,
@@ -101,7 +101,7 @@ function PixelAvatar({ seed, size = 36 }: { seed: string; size?: number }) {
 
 // ── Static icons ──────────────────────────────────────────────────────────────
 function LogoIcon() {
-  return <PitchMark size={26} />;
+  return <SaySellMark size={26} />;
 }
 
 function CreditIcon({ size = 12 }: { size?: number }) {
@@ -253,7 +253,7 @@ export function AppSidebar() {
       <SidebarHeader className="flex-row items-center justify-between h-[84px] pl-5 pr-2 py-[22px] gap-0">
         {/* `logo-btn` de 40px de altura em x 20: mascote 32 + gap 8 + lockup 63. */}
         <div className="flex h-10 items-center group-data-[collapsible=icon]:hidden">
-          <PitchLogo size={32} />
+          <SaySellLogo size={32} />
         </div>
         {/* Collapsed: logo fades to trigger on hover */}
         <div className="hidden group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-1">

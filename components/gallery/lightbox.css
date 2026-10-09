@@ -39,7 +39,7 @@
    é literal do mesmo modal
    (`.subscription-modal-current-plan{border-radius:12px}`).
 
-   O HeliosGen usava véu a 55% com blur(16px) e painel #0F0F1A.
+   O HeliosGen usava véu a 55% com blur(16px) e painel #07101F.
    Trocados pelo par medido acima.
    ============================================================ */
 
@@ -369,7 +369,7 @@
      --ms-blue-11              #0070DF      4.20         4.79
      --ms-green-11             #00844E      4.18         4.76
      --ms-yellow-11            #9E6C00      4.01         4.57
-     --ms-brand-11             #2C04D7      8.75         9.97
+     --ms-brand-11             #003CB8      8.75         9.97
 
    Os hexes crus dos sinais não passam em nenhum dos dois fundos.
    O passo 11 de cada escala é o degrau de "texto legível sobre

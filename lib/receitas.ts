@@ -44,7 +44,7 @@ export const RECEITAS: Receita[] = [
     titulo: "UGC realista: pessoa, produto e vídeo falado",
     resumo:
       "Uma pessoa gerada que parece gravada no celular, segurando o seu produto e falando com a câmera. O segredo não é o modelo: é o prompt de produção com ações marcadas por segundo.",
-    credito: "Receita de @ViralOps_ no X (set/2026), adaptada ao Pitch Studio",
+    credito: "Receita de @ViralOps_ no X (set/2026), adaptada ao SaySell Studio",
     modelos: ["nano-banana-pro", "gpt-image-2", "seedance-2-5"],
     passos: [
       "Crie o personagem: descreva a pessoa ou parta de uma foto casual de referência (enquadramento, pose e luz vêm dela; a pessoa é nova).",
