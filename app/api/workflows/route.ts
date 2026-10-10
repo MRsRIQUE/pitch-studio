@@ -1,20 +1,25 @@
 /**
- * Local workflow ("space") storage, backed by the SQLite DB (lib/guest/spaces).
+ * Projetos (workflows, "spaces") do usuário — camada de dados (`lib/data`).
  *
- *   GET  → { spaces: GuestSpace[] }
- *   PUT  { spaces: GuestSpace[] } → { ok: true }
+ *   GET  → { spaces: StudioSpace[] }
+ *   PUT  { spaces: StudioSpace[] } → { ok: true }
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getSpaces, saveSpaces, type GuestSpace } from "@/lib/guest/spaces";
+import { getSessionUser, unauthorized } from "@/lib/auth/currentUser";
+import { SpaceTooLarge, data, type StudioSpace } from "@/lib/data";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  return NextResponse.json({ spaces: getSpaces() });
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
+  return NextResponse.json({ spaces: await (await data()).getSpaces(user.uid) });
 }
 
 export async function PUT(req: NextRequest) {
-  let body: { spaces?: GuestSpace[] };
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
+  let body: { spaces?: StudioSpace[] };
   try {
     body = await req.json();
   } catch {
@@ -24,6 +29,13 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "spaces[] required" }, { status: 400 });
   }
 
-  saveSpaces(body.spaces);
+  try {
+    await (await data()).saveSpaces(user.uid, body.spaces);
+  } catch (error) {
+    if (error instanceof SpaceTooLarge) {
+      return NextResponse.json({ error: error.message, spaceId: error.spaceId }, { status: 413 });
+    }
+    throw error;
+  }
   return NextResponse.json({ ok: true });
 }

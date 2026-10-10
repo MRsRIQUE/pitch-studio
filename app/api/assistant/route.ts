@@ -16,12 +16,14 @@ export const dynamic = "force-dynamic";
    ────────────────────────────────────────────────────────────── */
 
 import { NextRequest } from "next/server";
+import { getSessionUser, unauthorized } from "@/lib/auth/currentUser";
 import { getKieToken } from "@/lib/getKieToken";
-import { getAzureToken } from "@/lib/getAzureKey";
+import { chargeGeneration, refundCharge } from "@/lib/jobs/charge";
+import { chatCredits } from "@/lib/jobs/chatCost";
 import { mediaBytes } from "@/lib/productionMedia";
+import { settleCredits } from "@/lib/saysell/client";
 import sharp from "sharp";
 import { ferramentasAnthropic, ferramentasOpenAI } from "@/lib/assistantTools";
-import { codexChatResponse } from "@/lib/codexChat";
 
 /** Uma chamada de ferramenta, no formato neutro do cliente. */
 interface ChamadaNeutra {
@@ -95,6 +97,8 @@ const OPENAI_COMPAT_ENDPOINTS: Record<string, string> = {
 const AZURE_API_VERSION = "2024-04-01-preview";
 
 export async function POST(req: NextRequest) {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
   const body = (await req.json()) as {
     messages?: Message[];
     prompt?: string;
@@ -167,91 +171,24 @@ export async function POST(req: NextRequest) {
       : paraAnthropic(m);
   };
 
-  if (model === "codex-chatgpt") {
-    /* O Codex recebe as imagens pelo `--image` do CLI; a ordem é a de
-       aparição no histórico, para a numeração bater com as mensagens. */
-    const imagensCodex = urlsUnicas
-      .filter(u => imagemPorUrl.has(u))
-      .map(u => ({ url: u, jpeg: Buffer.from(imagemPorUrl.get(u)!, "base64") }));
-    return codexChatResponse(messages, body.tools, req.signal, imagensCodex);
-  }
-
-  // ── Azure Auto (model-router) ──────────────────────────────────────────────
-  if (model === "azure-auto") {
-    const azureKey = await getAzureToken(req);
-    if (!azureKey) {
-      return new Response(
-        JSON.stringify({ error: "No Azure API key configured. Add one in Settings." }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
-      );
-    }
-    // Normalise: strip trailing slashes and any /openai suffix users may have pasted
-    const endpoint = (body.azureEndpoint ?? "")
-      .trim()
-      .replace(/\/+$/, "")
-      .replace(/\/openai$/i, "");
-    const deployment  = (body.azureDeployment || "auto-model").trim();
-    const modelName   = (body.azureModelName  || "model-router").trim();
-    if (!endpoint) {
-      return new Response(
-        JSON.stringify({ error: "Azure base URL not configured. Add it in Settings → API Keys." }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-    const url = `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=${AZURE_API_VERSION}`;
-    console.log("[azure-auto] POST", url.replace(/api-version=.*/, "api-version=…"));
-    const upstream = await fetch(url, {
-      method: "POST",
-      cache: "no-store",
-      headers: { "api-key": azureKey, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: modelName,
-        messages: messages.map(openAIVision),
-        ...(comFerramentas ? { tools: ferramentasOpenAI(chat), tool_choice: "auto" } : {}),
-        stream: true,
-        max_tokens: 8192,
-        temperature: 0.7,
-        top_p: 0.95,
-        frequency_penalty: 0,
-        presence_penalty: 0,
-      }),
-    });
-    if (!upstream.ok) {
-      const errText = await upstream.text();
-      // Extract human-readable message from Azure error envelope
-      let errorMsg = errText;
-      try {
-        const parsed = JSON.parse(errText);
-        errorMsg = parsed?.error?.message ?? parsed?.message ?? errText;
-      } catch { /* use raw text */ }
-      console.error("[azure-auto] upstream error", upstream.status, errorMsg);
-      return new Response(
-        JSON.stringify({ error: `Azure ${upstream.status}: ${errorMsg}` }),
-        { status: upstream.status, headers: { "Content-Type": "application/json" } }
-      );
-    }
-    return new Response(upstream.body, {
-      headers: {
-        "Content-Type":      "text/event-stream",
-        "Cache-Control":     "no-cache, no-transform",
-        "Connection":        "keep-alive",
-        "X-Accel-Buffering": "no",
-      },
-    });
-  }
-
   // ── Kie.ai models ─────────────────────────────────────────────────────────
   const apiKey = await getKieToken(req);
   if (!apiKey) {
     return new Response(
-      JSON.stringify({ error: "No Kie.ai API key configured. Add one in Settings." }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Assistente indisponível no momento." }),
+      { status: 503, headers: { "Content-Type": "application/json" } }
     );
   }
 
+  // Cada mensagem debita créditos fixos por modelo (lib/jobs/chatCost.ts).
+  const charge = await chargeGeneration(user.uid, { kind: "chat", model, resolution: "-", credits: chatCredits(model) });
+  if (!charge.ok) return charge.response;
+
   const openaiEndpoint = OPENAI_COMPAT_ENDPOINTS[model];
 
-  const upstream = openaiEndpoint
+  let upstream: Response;
+  try {
+  upstream = openaiEndpoint
     ? await fetch(openaiEndpoint, {
         method: "POST",
         cache: "no-store",
@@ -294,13 +231,52 @@ export async function POST(req: NextRequest) {
         }),
       });
 
+  } catch (error) {
+    await refundCharge(user.uid, charge.creditJobId);
+    return new Response(JSON.stringify({ error: `Assistente indisponível: ${(error as Error).message}` }), {
+      status: 502,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   if (!upstream.ok) {
+    await refundCharge(user.uid, charge.creditJobId);
     const errText = await upstream.text();
     return new Response(JSON.stringify({ error: errText }), {
       status: upstream.status,
       headers: { "Content-Type": "application/json" },
     });
   }
+
+  // A kie.ai devolve alguns erros (chave, saldo, modelo) com HTTP 200 e um
+  // JSON `{ code, msg }` no lugar do stream. Isso não é resposta: estorna.
+  if ((upstream.headers.get("content-type") ?? "").includes("application/json")) {
+    const raw = await upstream.text();
+    let corpo: { code?: number; msg?: string } = {};
+    try {
+      corpo = JSON.parse(raw) as typeof corpo;
+    } catch {
+      /* corpo não-JSON cai no erro genérico abaixo */
+    }
+    if (corpo.code === undefined || corpo.code !== 200) {
+      await refundCharge(user.uid, charge.creditJobId);
+      console.error("[assistant] kie.ai recusou:", corpo.code, corpo.msg ?? raw.slice(0, 200));
+      return new Response(JSON.stringify({ error: "Assistente indisponível no momento. Tente de novo." }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    // JSON com code 200 sem stream: devolve como veio, cobrado.
+    await settleCredits(user.uid, charge.creditJobId, "committed").catch((err) =>
+      console.error("[assistant] confirmação do crédito falhou:", err),
+    );
+    return new Response(raw, { headers: { "Content-Type": "application/json" } });
+  }
+
+  // O provedor aceitou: a mensagem está cobrada.
+  await settleCredits(user.uid, charge.creditJobId, "committed").catch((err) =>
+    console.error("[assistant] confirmação do crédito falhou:", err),
+  );
 
   return new Response(upstream.body, {
     headers: {

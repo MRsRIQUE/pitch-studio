@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="750" height="280" viewBox="0 0 750 280" role="img" aria-label="Workflow UGC">
   <defs>
     <linearGradient id="ugc-field" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0B0A18"/>
-      <stop offset="1" stop-color="#241C4D"/>
+      <stop offset="0" stop-color="#0A0F18"/>
+      <stop offset="1" stop-color="#1C2E4D"/>
     </linearGradient>
     <radialGradient id="ugc-glow" cx=".74" cy=".58" r=".52">
-      <stop offset="0" stop-color="#4318FF" stop-opacity=".78"/>
-      <stop offset="1" stop-color="#4318FF" stop-opacity="0"/>
+      <stop offset="0" stop-color="#186DFF" stop-opacity=".78"/>
+      <stop offset="1" stop-color="#186DFF" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="ugc-wire" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#8A6DFF" stop-opacity=".15"/>
-      <stop offset="1" stop-color="#8A6DFF" stop-opacity=".85"/>
+      <stop offset="0" stop-color="#6DA3FF" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#6DA3FF" stop-opacity=".85"/>
     </linearGradient>
   </defs>
 
@@ -24,7 +24,7 @@
     <path d="M470 180h58a14 14 0 0 1 14-14v-18a14 14 0 0 1 14-14h58"/>
     <path d="M470 232h58a14 14 0 0 1 14-14v-70a14 14 0 0 1 14-14h58"/>
   </g>
-  <g fill="#8A6DFF">
+  <g fill="#6DA3FF">
     <rect x="440" y="68" width="30" height="16" rx="5" opacity=".55"/>
     <rect x="440" y="120" width="30" height="16" rx="5" opacity=".55"/>
     <rect x="440" y="172" width="30" height="16" rx="5" opacity=".55"/>
@@ -33,9 +33,9 @@
   </g>
 
   <g font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
-    <text x="46" y="86" font-size="15" font-weight="700" fill="#8A6DFF" letter-spacing="2.4">TEMPLATE PRONTO</text>
+    <text x="46" y="86" font-size="15" font-weight="700" fill="#6DA3FF" letter-spacing="2.4">TEMPLATE PRONTO</text>
     <text x="46" y="150" font-size="52" font-weight="800" font-style="italic" fill="#FFFFFF" letter-spacing="-1.6">Workflow UGC</text>
-    <text x="46" y="188" font-size="19" font-weight="600" fill="#CFC4FF">Quatro roteiros, quatro vídeos, um clique.</text>
-    <text x="46" y="232" font-size="14" font-weight="700" fill="#8A6DFF" letter-spacing=".4">Abrir o template &#8594;</text>
+    <text x="46" y="188" font-size="19" font-weight="600" fill="#C4DAFF">Quatro roteiros, quatro vídeos, um clique.</text>
+    <text x="46" y="232" font-size="14" font-weight="700" fill="#6DA3FF" letter-spacing=".4">Abrir o template &#8594;</text>
   </g>
 </svg>

@@ -1,10 +1,13 @@
 /**
  * POST /api/extract-frame
  * Body: { videoUrl: string, timeSeconds?: number, lastFrame?: boolean }
- * Extracts a single JPEG frame from a video using ffmpeg and uploads to R2.
+ * Extrai um quadro JPEG de um vídeo com ffmpeg e guarda na mídia do Studio.
  * Returns: { cdnUrl: string }
  */
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionUser, unauthorized } from "@/lib/auth/currentUser";
+import { FFMPEG, FFPROBE } from "@/lib/ffmpegBin";
+import { readStoredBytes } from "@/lib/media";
 import { uploadBuffer } from "@/lib/storage";
 import { writeFile, readFile, unlink, mkdtemp } from "fs/promises";
 import { join } from "path";
@@ -16,7 +19,11 @@ const execFileAsync = promisify(execFile);
 
 export const maxDuration = 60;
 
+export const runtime = "nodejs";
+
 export async function POST(req: NextRequest) {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
   let inputPath: string | null  = null;
   let outputPath: string | null = null;
 
@@ -27,18 +34,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "videoUrl is required" }, { status: 400 });
     }
 
-    const res = await fetch(videoUrl);
-    if (!res.ok) {
-      return NextResponse.json({ error: `Failed to fetch video: ${res.status}` }, { status: 400 });
+    let videoBuffer: Buffer;
+    try {
+      videoBuffer = await readStoredBytes(String(videoUrl));
+    } catch (e) {
+      return NextResponse.json({ error: `Failed to fetch video: ${(e as Error).message}` }, { status: 400 });
     }
-    const videoBuffer = Buffer.from(await res.arrayBuffer());
 
     const tmpDir  = await mkdtemp(join(tmpdir(), "frame-"));
     inputPath  = join(tmpDir, "input.mp4");
     outputPath = join(tmpDir, "frame.jpg");
     await writeFile(inputPath, videoBuffer);
 
-    const { stdout: probeOut } = await execFileAsync("ffprobe", [
+    const { stdout: probeOut } = await execFileAsync(FFPROBE, [
       "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", inputPath,
     ]);
     const dur = parseFloat(probeOut.trim());
@@ -56,7 +64,7 @@ export async function POST(req: NextRequest) {
       ffmpegArgs = ["-ss", String(clampedTime), "-i", inputPath, "-frames:v", "1", "-q:v", "2", "-y", outputPath];
     }
 
-    await execFileAsync("ffmpeg", ffmpegArgs);
+    await execFileAsync(FFMPEG, ffmpegArgs);
 
     const frameBuffer = await readFile(outputPath);
     const cdnUrl = await uploadBuffer(frameBuffer, "image/jpeg", "references");

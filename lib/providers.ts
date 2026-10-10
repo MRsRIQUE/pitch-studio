@@ -1,17 +1,17 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// PROVIDERS — single source of truth for per-model backend selection
-// (Kie.ai / Azure Foundry / Codex CLI), shared by the Settings modal, the
-// workflow GenerateNode, and the gallery generation composer.
+// PROVIDERS — seleção de backend por modelo, usada pelo modal de ajustes, pelo
+// GenerateNode do workflow e pelo composer da galeria.
+//
+// No Studio hospedado só existe a kie.ai: Azure Foundry e Codex CLI eram do
+// app desktop (chave e login na máquina do usuário). Os ids continuam no tipo
+// para as telas antigas compilarem, mas nenhum modelo sai da kie.ai.
 // ─────────────────────────────────────────────────────────────────────────────
-import { IMAGE_MODELS } from "@/lib/modelConfig";
 
-export const PROVIDERS = [
-  { id: "kie",   label: "Kie.ai" },
-  { id: "azure", label: "Azure Foundry" },
-  { id: "codex", label: "Codex CLI" },
-] as const;
+export type ProviderId = "kie" | "azure" | "codex";
 
-export type ProviderId = (typeof PROVIDERS)[number]["id"];
+export const PROVIDERS: ReadonlyArray<{ id: ProviderId; label: string }> = [
+  { id: "kie", label: "Kie.ai" },
+];
 
 const STORAGE_KEY = "aiui-model-providers";
 
@@ -31,8 +31,9 @@ export function saveModelProviders(map: Record<string, ProviderId>) {
   } catch { /* noop */ }
 }
 
-export function getModelProvider(modelId: string): ProviderId {
-  return loadModelProviders()[modelId] ?? "kie";
+/** Sempre a kie.ai — uma escolha antiga de Azure/Codex no navegador é ignorada. */
+export function getModelProvider(_modelId: string): ProviderId {
+  return "kie";
 }
 
 /** Persists the backend for a single model, leaving the others untouched. */
@@ -41,14 +42,7 @@ export function setModelProvider(modelId: string, provider: ProviderId) {
   saveModelProviders({ ...map, [modelId]: provider });
 }
 
-/**
- * Models with more than one backend to choose from. Both Azure and Codex are
- * image-only, and Azure additionally needs a per-model deployment configured.
- */
-const MULTI_PROVIDER_MODEL_IDS = new Set(
-  IMAGE_MODELS.filter((m) => !!m.azureSizeMap).map((m) => m.id),
-);
-
-export function modelHasProviderChoice(modelId: string): boolean {
-  return MULTI_PROVIDER_MODEL_IDS.has(modelId);
+/** Nenhum modelo tem mais de um backend no Studio hospedado. */
+export function modelHasProviderChoice(_modelId: string): boolean {
+  return false;
 }

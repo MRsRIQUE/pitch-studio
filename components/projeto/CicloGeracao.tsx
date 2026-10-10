@@ -17,7 +17,7 @@
    **Não há porcentagem, e é de propósito.** A referência faz polling em
    `/api/ai/media-generate/progress`, que devolve `progress: N`. O nosso
    `/api/job-stream` emite exatamente um evento terminal (`done` ou `error`) e
-   `lib/jobStore.ts` guarda `pending | done | error` — não existe número de
+   o job (`lib/data`, `StudioJob`) guarda `pending | done | error` — não existe número de
    progresso em lugar nenhum da nossa pilha. Desenhar uma barra subindo seria
    inventar o dado. O que fica é o que a referência também mostra na tela: o
    shimmer e a pílula "Gerando".
@@ -157,7 +157,9 @@ export function useCicloGeracao(opcoes?: {
 
       /* Fechar no erro evita a reconexão automática do EventSource; o turno é
          retomado na próxima montagem, com o mesmo taskId. */
-      es.onerror = () => es.close();
+      // O servidor fecha o stream perto do limite da função e o navegador
+      // reconecta sozinho (CONNECTING). Só desiste quando ele mesmo desistiu.
+      es.onerror = () => { if (es.readyState === EventSource.CLOSED) es.close(); };
       return es;
     });
 

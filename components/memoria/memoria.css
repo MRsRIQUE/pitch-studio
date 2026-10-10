@@ -19,7 +19,7 @@
    Cópia literal do `.dark` da referência para cinza e alfa —
    cinza e alfa NÃO são licença. A rampa de marca é a única
    substituída: onde a referência tem a rampa laranja escura, o
-   nosso acento é o Lilás, porque o Violeta #4318FF não alcança
+   nosso acento é o Lilás, porque o Violeta #0057FF não alcança
    contraste sobre a superfície noturna. */
 .ms-memoria-dark {
   --ms-gray-1: 0 0% 6.66%;   --ms-gray-2: 0 0% 9.8%;    --ms-gray-3: 0 0% 13.34%;
@@ -63,21 +63,21 @@
      `hsl(--ms-brand-11)`, os dois laranjas. Aqui os dois papéis
      são o Lilás, que é exatamente o que `app/tokens/pitch.css`
      define para superfície escura. */
-  --ms-ring: var(--brand-lilac);
-  --ms-icon-brand: var(--brand-lilac-soft);
+  --ms-ring: var(--brand-light);
+  --ms-icon-brand: var(--brand-light-soft);
   /* Na referência estes dois são os degraus 3 e 4 da rampa LARANJA
      ESCURA (L 11,88% e 21,34%) — tinta de marca rebaixada até virar
      fundo. A nossa rampa `--ms-brand-*` é de tema claro, então aqui
      eles são o Violeta rebaixado sobre a Noite, nas mesmas
      luminâncias. É o que faz o contador de anexos ter contraste com
      o branco, como lá. */
-  --ms-bg-brand: color-mix(in srgb, var(--brand-violet) 10%, var(--surface-night));
-  --ms-bg-brand-hover: color-mix(in srgb, var(--brand-violet) 28%, var(--surface-night));
-  --ms-solid-brand: var(--brand-violet);
+  --ms-bg-brand: color-mix(in srgb, var(--brand-solid) 10%, var(--surface-night));
+  --ms-bg-brand-hover: color-mix(in srgb, var(--brand-solid) 28%, var(--surface-night));
+  --ms-solid-brand: var(--brand-solid);
   --ms-text-on-brand: var(--ms-whiteA-12-hex);
   /* O segmentado ativo é tinta cheia com texto branco: aí o Violeta
      é que serve (7,46:1 com branco), não o Lilás (2,91:1). */
-  --ms-tabs-trigger-active-bg: color-mix(in srgb, var(--brand-violet) 90%, transparent);
+  --ms-tabs-trigger-active-bg: color-mix(in srgb, var(--brand-solid) 90%, transparent);
 
   /* ── 4. Literais sem token na nossa camada ────────────────
      Os três valores abaixo vêm da referência e não têm token
@@ -113,10 +113,10 @@
      Onde a referência anda de #ff7908 a #ffb508 (marca → marca
      clareada), nós andamos de Violeta a Lilás. Mesma relação,
      nossa cor. Lidos pelo JS via getComputedStyle. */
-  --mem-chip-de: var(--brand-violet);
-  --mem-chip-para: var(--brand-lilac);
-  --mem-rastro-halo: var(--brand-violet);
-  --mem-rastro-nucleo: var(--brand-lilac-soft);
+  --mem-chip-de: var(--brand-solid);
+  --mem-chip-para: var(--brand-light);
+  --mem-rastro-halo: var(--brand-solid);
+  --mem-rastro-nucleo: var(--brand-light-soft);
 
   /* ── 6. Camadas ───────────────────────────────────────────
      `--z-dialog` e `--z-toolbar` da referência. */
@@ -333,8 +333,8 @@
    As duas únicas regras que a referência escreve por cima do
    xyflow. A de seleção é laranja lá; aqui é a nossa marca. */
 .mem-overlay .react-flow {
-  --xy-selection-background-color: color-mix(in srgb, var(--brand-violet) 12%, transparent);
-  --xy-selection-border: 1px solid var(--brand-violet);
+  --xy-selection-background-color: color-mix(in srgb, var(--brand-solid) 12%, transparent);
+  --xy-selection-border: 1px solid var(--brand-solid);
 }
 .mem-overlay .react-flow__node {
   content-visibility: auto;

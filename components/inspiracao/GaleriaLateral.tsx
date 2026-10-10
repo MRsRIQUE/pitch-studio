@@ -34,7 +34,6 @@ import Link from "next/link";
 import {
   Copy,
   Download,
-  Flame,
   Images,
   Maximize2,
   MoreHorizontal,
@@ -46,7 +45,6 @@ import {
 import { thumbSrc, type GalleryItem } from "@/lib/galleryUtils";
 import { distribuirEmColunas } from "@/components/inspiracao/galeriaColunas";
 import { parseRatio } from "@/components/inspiracao/masonry";
-import { PainelQuentes } from "@/components/produtos/PainelQuentes";
 import "./galeria-lateral.css";
 
 /** Largura do painel medida no BoardUI, e o limite do arrasto (escolha nossa). */
@@ -60,7 +58,7 @@ const COLUNAS = 3;
 /** Quanto o menu de "mais ações" desce em relação ao botão que o abriu. */
 const MENU_DESLOCAMENTO = 4;
 
-type Aba = "galeria" | "estilos" | "quentes";
+type Aba = "galeria" | "estilos";
 type Menu = { item: GalleryItem; direita: number; topo: number };
 
 export function GaleriaLateral({
@@ -233,20 +231,8 @@ export function GaleriaLateral({
             <Palette size={18} strokeWidth={1.75} />
             Estilos
           </button>
-          {/* A terceira aba. O rótulo é "Quentes" e não "Produtos quentes"
-              porque o cabeçalho tem 410px divididos com três ações à
-              direita — e "Quentes" é o nome que a coisa já tem no PitchAI. */}
-          <button
-            type="button"
-            role="tab"
-            aria-selected={aba === "quentes"}
-            className="gal__aba"
-            onClick={() => setAba("quentes")}
-          >
-            <span className="gal__aba-realce" aria-hidden />
-            <Flame size={18} strokeWidth={1.75} />
-            Quentes
-          </button>
+          {/* A aba "Quentes" (Firestore do PitchAI) saiu do Studio hospedado:
+              os produtos quentes do SaySell entram numa fase própria. */}
         </div>
 
         <div className="gal__acoes">
@@ -269,9 +255,7 @@ export function GaleriaLateral({
 
       {/* ── Corpo ── */}
       <div className="gal__rolagem">
-        {aba === "quentes" ? (
-          <PainelQuentes />
-        ) : aba === "estilos" ? (
+        {aba === "estilos" ? (
           <div className="gal__vazio">
             <p>Os seus estilos moram na tela de Estilos.</p>
             <Link href="/estilos">Abrir Estilos</Link>

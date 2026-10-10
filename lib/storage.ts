@@ -1,15 +1,10 @@
 /**
- * Local media storage. HeliosGen writes all generated and uploaded media to
- * disk under `MEDIA_DIR` (see `lib/guest/paths.ts`) and serves it same-origin
- * at `/generated/...` (`app/generated/[...path]/route.ts`). SHA-256 dedupe and
- * the hash index live in the local SQLite DB (`lib/guest/db.ts`).
- *
- * Thin, stable facade over `lib/guest/localStorage.ts`.
+ * Fachada estável da mídia do Studio — ver `lib/media/index.ts` (Vercel Blob
+ * em produção, disco local em desenvolvimento).
  */
-import { mirrorToStorage, ensureStorage } from "./guest/localStorage";
+export { ensureStorage, mirrorToStorage, uploadBuffer, uploadDataUrl } from "./media";
+import { ensureStorage, mirrorToStorage } from "./media";
 
-export { uploadBuffer, uploadDataUrl, mirrorToStorage, ensureStorage } from "./guest/localStorage";
-
-/** Legacy names kept so call sites don't churn — both write to local disk. */
+/** Nomes antigos, mantidos para as rotas não mudarem. */
 export const mirrorToR2 = mirrorToStorage;
 export const ensureR2 = ensureStorage;

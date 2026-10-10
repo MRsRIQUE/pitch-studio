@@ -54,7 +54,9 @@ const IS_DEBUG = process.env.NEXT_PUBLIC_DEBUG === "true";
 
 type NavId = "api-keys" | "image-models" | "video-models" | "text-models" | "debug";
 
-const NAV_BASE: { id: NavId; label: string; icon: React.ReactNode }[] = [
+/* A aba "Chaves de API" saiu do Studio hospedado: as chaves dos provedores
+   ficam no servidor e o usuário paga em créditos do plano. */
+const NAV_TODOS: { id: NavId; label: string; icon: React.ReactNode }[] = [
   {
     id: "api-keys",
     label: "Chaves de API",
@@ -111,6 +113,7 @@ const DEBUG_NAV_ITEM: { id: NavId; label: string; icon: React.ReactNode } = {
   ),
 };
 
+const NAV_BASE = NAV_TODOS.filter((item) => item.id !== "api-keys");
 const NAV = IS_DEBUG ? [...NAV_BASE, DEBUG_NAV_ITEM] : NAV_BASE;
 
 /* ─── Props ─────────────────────────────────────────────────────────────────── */
@@ -1057,7 +1060,7 @@ function VideoModelsPanel({
       <ProviderLegend />
       <ModelGroup
         title="Modelos de vídeo"
-        accent="var(--brand-violet)"
+        accent="var(--brand-solid)"
         models={models}
         providers={providers}
         onProviderChange={onProviderChange}
@@ -1346,15 +1349,15 @@ function DebugPanel() {
 /* ─── Main modal ─────────────────────────────────────────────────────────────── */
 
 export default function SettingsModal({ onClose }: SettingsModalProps) {
-  const [activeNav, setActiveNav]             = useState<NavId>("api-keys");
+  const [activeNav, setActiveNav]             = useState<NavId>("image-models");
   const [modelProviders, setModelProviders]   = useState<Record<string, ProviderId>>({});
   const [azureDeployments, setAzureDeployments] = useState<Record<string, string>>({});
   const [azureBaseUrl, setAzureBaseUrl]               = useState("");
   const [azureTextDeployment, setAzureTextDeployment] = useState("auto-model");
   const [azureTextModelName, setAzureTextModelName]   = useState("model-router");
   const [kieKeyStatus, setKieKeyStatus]               = useState<"unknown" | "set" | "unset">("unknown");
-  const [higgsfieldKeyStatus, setHiggsfieldKeyStatus] = useState<"unknown" | "set" | "unset">("unknown");
-  const [azureKeyStatus, setAzureKeyStatus]   = useState<"unknown" | "set" | "unset">("unknown");
+  const [higgsfieldKeyStatus, setHiggsfieldKeyStatus] = useState<"unknown" | "set" | "unset">("unset"); // Higgsfield não existe no Studio hospedado
+  const [azureKeyStatus, setAzureKeyStatus]   = useState<"unknown" | "set" | "unset">("unset"); // nem o Azure
   const [codexStatus, setCodexStatus]         = useState<CodexStatus>({ kind: "unknown" });
   const setKieKeySet    = useWorkflowStore((s) => s.setKieKeySet);
   const setAzureKeySet  = useWorkflowStore((s) => s.setAzureKeySet);
@@ -1387,22 +1390,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
         .then((d) => setKieKeyStatus(d.hasToken ? "set" : "unset"))
         .catch(() => setKieKeyStatus("unset"))
     );
-    authHeader().then((h) =>
-      fetch("/api/settings/higgsfield-key", { headers: h })
-        .then((r) => r.json())
-        .then((d) => setHiggsfieldKeyStatus(d.hasCredentials ? "set" : "unset"))
-        .catch(() => setHiggsfieldKeyStatus("unset"))
-    );
-    // Check if Azure key is saved on the server
-    authHeader().then((h) =>
-      fetch("/api/settings/azure-key", { headers: h })
-        .then((r) => r.json())
-        .then((d) => setAzureKeyStatus(d.hasToken ? "set" : "unset"))
-        .catch(() => setAzureKeyStatus("unset"))
-    );
-    // Check whether the server has a working codex-imagegen + codex login
-    refreshCodexStatus();
-  }, [refreshCodexStatus]);
+  }, []);
 
   /* Close on Escape */
   useEffect(() => {

@@ -689,9 +689,9 @@ export default function PromptNode({ id, data, selected }: NodeProps<PromptNodeT
             }}
             className="flex items-center gap-1.5 transition-colors duration-150"
             style={{
-              background: textMode !== "text" ? "rgba(134, 140, 255,0.1)" : "var(--ms-grayA-2-hex)",
+              background: textMode !== "text" ? "rgba(96, 165, 250,0.1)" : "var(--ms-grayA-2-hex)",
               color: textMode !== "text" ? "var(--ms-text-link)" : "var(--ms-text-tertiary)",
-              border: `1px solid ${textMode !== "text" ? "rgba(134, 140, 255,0.25)" : "var(--ms-grayA-3-hex)"}`,
+              border: `1px solid ${textMode !== "text" ? "rgba(96, 165, 250,0.25)" : "var(--ms-grayA-3-hex)"}`,
               borderRadius: 6,
               padding: "2px 7px 2px 5px",
               fontSize: 10,

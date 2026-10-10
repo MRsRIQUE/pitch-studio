@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { PitchLogo, PitchMark } from "@/components/PitchLogo";
+import { SaySellLogo, SaySellMark } from "@/components/SaySellLogo";
+import { URL_COMPRAR_CREDITOS } from "@/hooks/useCreditos";
 import { useWorkflowStore } from "@/lib/store";
 import {
   ImageIcon,
@@ -11,7 +12,6 @@ import {
   MoreHorizontal,
   Plus,
   ArrowRight,
-  Flame,
   Sparkles,
   Lightbulb,
   Palette,
@@ -101,7 +101,7 @@ function PixelAvatar({ seed, size = 36 }: { seed: string; size?: number }) {
 
 // ── Static icons ──────────────────────────────────────────────────────────────
 function LogoIcon() {
-  return <PitchMark size={26} />;
+  return <SaySellMark size={26} />;
 }
 
 function CreditIcon({ size = 12 }: { size?: number }) {
@@ -128,15 +128,12 @@ export function AppSidebar() {
   const setKieKeySet      = useWorkflowStore((s) => s.setKieKeySet);
   const setAzureKeySet    = useWorkflowStore((s) => s.setAzureKeySet);
 
+  // No Studio hospedado as chaves dos provedores ficam no servidor: a kie.ai
+  // está sempre conectada e o Azure não existe. O que limita a geração é o
+  // saldo de créditos do plano, não uma chave do usuário.
   React.useEffect(() => {
-    fetch("/api/settings/kie-key")
-      .then((r) => r.json())
-      .then((d) => setKieKeySet(!!d.hasToken))
-      .catch(() => setKieKeySet(null));
-    fetch("/api/settings/azure-key")
-      .then((r) => r.json())
-      .then((d) => setAzureKeySet(!!d.hasToken))
-      .catch(() => setAzureKeySet(null));
+    setKieKeySet(true);
+    setAzureKeySet(false);
   }, [setKieKeySet, setAzureKeySet]);
 
   React.useEffect(() => {
@@ -193,11 +190,8 @@ export function AppSidebar() {
      (`Customize`) entre eles. A ordem, os nomes e o que cada um abre estão em
      `.migracao/MAPA-AFORDANCIAS.md`, bloco 01.
 
-     Nós temos SETE, e é aqui que a barra deixa de ser 3 + 3: os Produtos
-     Quentes entram como quarto item do grupo de cima. Eles são fonte de
-     MATERIAL, irmãos de Inspiração — não uma preferência da conta, que é o
-     que o grupo "Personalizar" guarda. O rótulo de grupo e o segundo grupo
-     descem 40px, um passo, e o resto da métrica não muda. */
+     Os Produtos Quentes (Firestore do PitchAI) saíram do Studio hospedado;
+     voltam quando houver a versão com os quentes do próprio SaySell. */
   const navTopo = [
     { label: "Criar",      href: `/gallery?tab=${tab}&view=create`, icon: ImageIcon, active: pathname === "/gallery" && isCreationView },
     { label: "Inspiração", href: "/inspiracao",                     icon: Sparkles,  active: pathname.startsWith("/inspiracao") },
@@ -205,10 +199,6 @@ export function AppSidebar() {
        de cima — o mesmo que a Arena tinha antes de sair —, então a barra volta à
        contagem da referência: 3 itens, rótulo de grupo, 3 itens. */
     { label: "Estruturar", href: "/estruturar",                     icon: Lightbulb, active: pathname.startsWith("/estruturar") },
-    /* Os produtos que vêm do banco do PitchAI. A mesma grade também vive
-       no painel da direita da tela de projeto — lá para arrastar direto
-       para o grafo, aqui para procurar com espaço. */
-    { label: "Quentes",    href: "/quentes",                        icon: Flame,     active: pathname.startsWith("/quentes") },
     /* O kit turbo 1.000 seguidores: um formato travado, um episódio por
        dia. É fluxo de criação, irmão do Estruturar — por isso fica no
        grupo de cima e não em "Personalizar". */
@@ -253,7 +243,7 @@ export function AppSidebar() {
       <SidebarHeader className="flex-row items-center justify-between h-[84px] pl-5 pr-2 py-[22px] gap-0">
         {/* `logo-btn` de 40px de altura em x 20: mascote 32 + gap 8 + lockup 63. */}
         <div className="flex h-10 items-center group-data-[collapsible=icon]:hidden">
-          <PitchLogo size={32} />
+          <SaySellLogo size={32} />
         </div>
         {/* Collapsed: logo fades to trigger on hover */}
         <div className="hidden group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-1">
@@ -353,7 +343,7 @@ export function AppSidebar() {
             <span>Créditos</span>
             <strong className="metric">{balance !== null ? balance.toLocaleString() : "0"}</strong>
           </div>
-          <button type="button" className="miora-upgrade group-data-[collapsible=icon]:hidden" onClick={() => window.open("https://kie.ai?ref=25abb3f2236cbff9780ab9c2f84479ec", "_blank")}>Adicionar créditos</button>
+          <button type="button" className="miora-upgrade group-data-[collapsible=icon]:hidden" onClick={() => window.open(URL_COMPRAR_CREDITOS, "_blank")}>Adicionar créditos</button>
           <div className="miora-credit-rail hidden group-data-[collapsible=icon]:flex">
             <CreditIcon size={13} />
             <strong className="metric">{balance !== null ? balance.toLocaleString() : "0"}</strong>
@@ -428,9 +418,9 @@ export function AppSidebar() {
             {/* Comprar créditos */}
             <DropdownMenuItem
               className="flex items-center justify-between rounded-none px-4 py-3 text-[14px] text-ms-text-secondary hover:text-ms-text focus:text-ms-text focus:bg-ms-bg-hover cursor-pointer"
-              onClick={() => window.open("https://kie.ai?ref=25abb3f2236cbff9780ab9c2f84479ec", "_blank")}
+              onClick={() => window.open(URL_COMPRAR_CREDITOS, "_blank")}
             >
-              <span>Comprar créditos na Kie</span>
+              <span>Comprar créditos</span>
               <CreditIcon size={15} />
             </DropdownMenuItem>
 

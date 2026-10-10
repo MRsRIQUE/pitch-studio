@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { uploadBuffer } from "@/lib/storage";
-import { GUEST_USER_ID } from "@/lib/guestMode";
-import * as guestDb from "@/lib/guest/db";
+import { getSessionUser, unauthorized } from "@/lib/auth/currentUser";
+import { data } from "@/lib/data";
 
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
   try {
     // Raw binary body — client sends the file bytes directly with Content-Type set to
     // the video MIME type. This avoids Next.js multipart/form-data parsing issues.
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     const cdnUrl = await uploadBuffer(buffer, mimeType, "references");
 
-    guestDb.insertUpload({ user_id: GUEST_USER_ID, r2_url: cdnUrl, mime_type: mimeType, source: "user_upload" });
+    await (await data()).insertUpload(user.uid, { r2_url: cdnUrl, mime_type: mimeType, source: "user_upload" });
 
     return NextResponse.json({ cdnUrl });
   } catch (e: unknown) {

@@ -52,11 +52,11 @@ export default function CromoCreditos({ onConectar }: { onConectar: () => void }
       <button
         type="button"
         className="cr-creditos cr-creditos--sem-chave"
-        title="Nenhuma chave da Kie.ai configurada — conecte nos Ajustes para ver o saldo"
+        title="Sessão expirada — entre de novo para ver o saldo"
         onClick={onConectar}
       >
         <IconeCredito />
-        <span>Conectar Kie</span>
+        <span>Entrar</span>
       </button>
     );
   }
@@ -64,8 +64,8 @@ export default function CromoCreditos({ onConectar }: { onConectar: () => void }
   const baixo = saldo !== null && saldo < LIMITE_BAIXO;
   const texto = saldo === null ? "—" : formatarCreditos(saldo);
   const titulo = saldo === null
-    ? (erro ? "Não foi possível ler o saldo da Kie.ai" : "Lendo o saldo da Kie.ai…")
-    : `${texto} créditos na Kie.ai${baixo ? " — saldo baixo" : ""}. Clique para adicionar créditos.`;
+    ? (erro ? "Não foi possível ler o saldo" : "Lendo o saldo…")
+    : `${texto} créditos do Studio${baixo ? " — saldo baixo" : ""}. Clique para adicionar créditos.`;
 
   return (
     <span

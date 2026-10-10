@@ -26,7 +26,7 @@ const CSS = `
     transform: translateY(-4px);
     border-color: rgba(0,0,0,0.13);
     box-shadow:
-      0 0 0 1px rgba(67,24,255,0.12),
+      0 0 0 1px rgba(0,87,255,0.12),
       0 16px 48px rgba(0,0,0,0.7),
       0 4px 12px rgba(0,0,0,0.4);
   }
@@ -102,15 +102,15 @@ const CSS = `
                 background 240ms ease;
   }
   .wsd-new:hover {
-    border-color: rgba(67,24,255,0.35);
+    border-color: rgba(0,87,255,0.35);
     background: #0e1219;
     box-shadow:
-      0 0 0 1px rgba(67,24,255,0.12),
+      0 0 0 1px rgba(0,87,255,0.12),
       0 16px 48px rgba(0,0,0,0.6);
     transform: translateY(-4px);
   }
   .wsd-new:hover .wsd-plus-orb {
-    box-shadow: 0 0 32px rgba(67,24,255,0.4), 0 0 0 1px rgba(0,0,0,0.15) inset;
+    box-shadow: 0 0 32px rgba(0,87,255,0.4), 0 0 0 1px rgba(0,0,0,0.15) inset;
   }
   .wsd-new-art {
     flex: 1; aspect-ratio: 3/2;
@@ -171,7 +171,7 @@ const CSS = `
   .wsd-tmpl {
     position: relative;
     background: var(--app-v2-bg-page);
-    border: 1px dashed rgba(67,24,255,0.3);
+    border: 1px dashed rgba(0,87,255,0.3);
     border-radius: 18px;
     overflow: hidden;
     cursor: pointer;
@@ -182,26 +182,22 @@ const CSS = `
                 background 240ms ease;
   }
   .wsd-tmpl:hover {
-    border-color: rgba(67,24,255,0.55);
+    border-color: rgba(0,87,255,0.55);
     background: #0e1019;
     box-shadow:
-      0 0 0 1px rgba(67,24,255,0.15),
+      0 0 0 1px rgba(0,87,255,0.15),
       0 16px 48px rgba(0,0,0,0.6);
     transform: translateY(-4px);
   }
   .wsd-tmpl:hover .wsd-tmpl-orb {
-    box-shadow: 0 0 32px rgba(67,24,255,0.45), 0 0 0 1px rgba(0,0,0,0.15) inset;
+    box-shadow: 0 0 32px rgba(0,87,255,0.45), 0 0 0 1px rgba(0,0,0,0.15) inset;
   }
 `;
 
 // ── Template card ─────────────────────────────────────────────────────────────
 
-const TEMPLATE_PREVIEWS = [
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/1.png",
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/2.png",
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/3.png",
-  "https://pub-73a59b956f1c4a7db2934522c13d8027.r2.dev/workflow-template/4.png",
-];
+// As miniaturas vinham do R2 do HeliosGen (hoje 401); o card do UGC usa a arte.
+const TEMPLATE_PREVIEWS: string[] = [];
 
 function TemplateCard({
   onLoad,
@@ -241,7 +237,7 @@ function TemplateCard({
       </div>
       <div style={{
         padding: "14px 16px 16px",
-        borderTop: "1px solid rgba(67,24,255,0.1)",
+        borderTop: "1px solid rgba(0,87,255,0.1)",
         display: "flex", flexDirection: "column", gap: "10px",
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -252,12 +248,12 @@ function TemplateCard({
             onClick={onReset}
             title="Reset template"
             style={{
-              appearance: "none", border: "1px solid rgba(67,24,255,0.25)", background: "rgba(67,24,255,0.08)",
+              appearance: "none", border: "1px solid rgba(0,87,255,0.25)", background: "rgba(0,87,255,0.08)",
               borderRadius: "7px", width: "28px", height: "28px", display: "grid", placeItems: "center",
-              cursor: "pointer", color: "var(--brand-violet)", transition: "all 140ms ease", flexShrink: 0,
+              cursor: "pointer", color: "var(--brand-solid)", transition: "all 140ms ease", flexShrink: 0,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(67,24,255,0.18)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(67,24,255,0.08)"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,87,255,0.18)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(0,87,255,0.08)"; }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -281,9 +277,9 @@ function TemplateCard({
  *  porque este template nasce vazio — não há capa para mostrar. */
 function TrocaPessoaArt() {
   return (
-    <svg viewBox="0 0 160 106" width="70%" height="70%" fill="none" stroke="rgba(180,170,255,0.85)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 160 106" width="70%" height="70%" fill="none" stroke="rgba(170, 201, 255,0.85)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="8" y="10" width="44" height="28" rx="5" />
-      <path d="M24 18v12l10-6z" fill="rgba(180,170,255,0.85)" stroke="none" />
+      <path d="M24 18v12l10-6z" fill="rgba(170, 201, 255,0.85)" stroke="none" />
       <rect x="8" y="46" width="44" height="28" rx="5" />
       <circle cx="30" cy="57" r="5" />
       <path d="M18 72c2-6 6-9 12-9s10 3 12 9" />
@@ -302,7 +298,7 @@ function TrocaPessoaArt() {
  *  para não parecer o mesmo ícone de vídeo-pronto-pra-postar dos outros cards. */
 function LiveArt() {
   return (
-    <svg viewBox="0 0 160 106" width="70%" height="70%" fill="none" stroke="rgba(180,170,255,0.85)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 160 106" width="70%" height="70%" fill="none" stroke="rgba(170, 201, 255,0.85)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="45" y="8" width="70" height="90" rx="6" />
       <path d="M68 8v-4h20v4" />
       <path d="M59 30h52M59 44h52M59 58h40M59 72h46" />
@@ -848,7 +844,7 @@ export default function WorkflowDashboard() {
           padding: "0 32px",
         }}>
           <CreateCard onCreate={handleCreate} />
-          <TemplateCard onLoad={handleLoadTemplate} onReset={handleResetTemplate} />
+          <TemplateCard onLoad={handleLoadTemplate} onReset={handleResetTemplate} art={<TrocaPessoaArt />} />
           <TemplateCard
             onLoad={handleLoadTrocaPessoa}
             onReset={handleResetTrocaPessoa}

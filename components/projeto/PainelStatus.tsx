@@ -16,7 +16,7 @@
    x medido. Aqui é a marca, na mesma caixa de 20.
    ============================================================ */
 
-import { PitchMark } from "@/components/PitchLogo";
+import { SaySellMark } from "@/components/SaySellLogo";
 import "@/components/projeto/painel.css";
 
 export function PainelStatus({ texto }: { texto: string }) {
@@ -25,7 +25,7 @@ export function PainelStatus({ texto }: { texto: string }) {
   return (
     <div className="pj-status" role="status" aria-live="polite">
       <span className="pj-status-marca" aria-hidden>
-        <PitchMark size={20} />
+        <SaySellMark size={20} />
       </span>
       <span className="pj-status-texto">{texto}</span>
     </div>

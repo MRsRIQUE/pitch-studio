@@ -31,18 +31,11 @@ export const MODEL_GROUPS: ModelGroup[] = [
       { id: "gpt-5-2", label: "GPT 5.2", desc: "Latest" },
     ],
   },
-  {
-    label: "Azure",
-    models: [
-      { id: "azure-auto", label: "Azure Auto", desc: "Router" },
-    ],
-  },
 ];
 
 export const MODELS: Model[] = MODEL_GROUPS.flatMap(g => g.models);
-export const CHAT_MODEL_GROUPS: ModelGroup[] = [
-  { label: "Sua conta ChatGPT", models: [{ id: "codex-chatgpt", label: "Codex · ChatGPT", desc: "Sessão local" }] },
-  ...MODEL_GROUPS,
-];
+// O Codex (sessão local do ChatGPT) e o Azure eram do app desktop; no Studio
+// hospedado o Assistente conversa só pela kie.ai, cobrado em créditos.
+export const CHAT_MODEL_GROUPS: ModelGroup[] = MODEL_GROUPS;
 export const CHAT_MODELS: Model[] = CHAT_MODEL_GROUPS.flatMap(g => g.models);
 export type ModelId = string;

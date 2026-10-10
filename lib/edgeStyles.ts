@@ -2,16 +2,16 @@ import type { CSSProperties } from "react";
 
 // Colours match the handle border colours exactly
 export const EDGE_COLORS: Record<string, string> = {
-  prompt: "#868CFF", // teal   — matches node-handle-icon-prompt
+  prompt: "#60A5FA", // teal   — matches node-handle-icon-prompt
   image: "#ffb547", // orange — matches node-handle-icon-resource
-  startFrame: "#868cff", // indigo — matches node-handle-icon-image
-  endFrame: "#868cff", // indigo — matches node-handle-icon-image
+  startFrame: "#60A5FA", // indigo — matches node-handle-icon-image
+  endFrame: "#60A5FA", // indigo — matches node-handle-icon-image
   resource: "#ffb547", // orange — matches node-handle-icon-resource
   videoRef: "#0bc5ea", // cyan   — matches node-handle-icon-videoref
   referenceVideo: "#1b84ff", // sky    — matches node-handle-icon-refvideo
-  audioRef: "#868cff", // violet — matches node-handle-icon-audioref
+  audioRef: "#60A5FA", // violet — matches node-handle-icon-audioref
   character: "#01b574", // pink   — matches node-handle-icon-character (motion control startFrame)
-  default: "#33334f", // neutral
+  default: "#333d4f", // neutral
 };
 
 // Handles that carry image data get a heavier stroke
@@ -29,16 +29,16 @@ export function getSourceHandleColor(nodeType: string | undefined, sourceHandleI
   switch (sourceHandleId) {
     case "startFrameOut":
     case "endFrameOut":
-    case "imagePickOut": return "#868cff";
+    case "imagePickOut": return "#60A5FA";
     case "videoRefOut": return "#0bc5ea";
-    case "audioRefOut": return "#868cff";
+    case "audioRefOut": return "#60A5FA";
   }
   // Legacy / single-output nodes — derive from node type
   switch (nodeType) {
-    case "promptNode": return "#868CFF";
+    case "promptNode": return "#60A5FA";
     case "assistantNode": return "#FFB547";
-    case "imageInputNode": return "#868cff";
-    case "generateNode": return "#868cff";
+    case "imageInputNode": return "#60A5FA";
+    case "generateNode": return "#60A5FA";
     case "videoInputNode": return "#0bc5ea";
     case "videoGeneratorNode": return "#0bc5ea";
     default: return EDGE_COLORS.default;

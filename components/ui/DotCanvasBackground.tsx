@@ -56,7 +56,7 @@ export default function DotCanvasBackground() {
         const alpha = (Math.sin(p.phase + t * p.speed) + 1) / 2;
         const a = alpha * 0.35;
         if (a < 0.01) continue;
-        ctx.fillStyle = `rgba(134, 140, 255,${a})`;
+        ctx.fillStyle = `rgba(96, 165, 250,${a})`;
         ctx.fillRect(p.x, p.y, 1.5, 1.5);
       }
       raf = requestAnimationFrame(draw);

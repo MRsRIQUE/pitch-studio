@@ -4,6 +4,7 @@ import { tmpdir } from "os";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import sharp from "sharp";
+import { FFMPEG } from "./ffmpegBin";
 
 const execFileAsync = promisify(execFile);
 
@@ -19,7 +20,7 @@ export async function stripMetadata(buffer: Buffer, contentType: string): Promis
     const outputPath = join(tmpDir, `output.${extension}`);
     try {
       await writeFile(inputPath, buffer);
-      await execFileAsync("ffmpeg", [
+      await execFileAsync(FFMPEG, [
         "-i", inputPath,
         "-map_metadata", "-1",
         "-c", "copy",

@@ -7,6 +7,7 @@ import CornerResizer from "./CornerResizer";
 import { useWorkflowStore, NodeData } from "@/lib/store";
 import { sha256Hex } from "@/lib/assetHash";
 import MediaStudio from "./MediaStudio";
+import { uploadAssetFetch } from "@/lib/media/uploadAssetFetch";
 
 
 type ImageInputNodeType = Node<NodeData, "imageInputNode">;
@@ -148,7 +149,7 @@ export default function ImageInputNode({ id, data, selected }: NodeProps<ImageIn
           "Content-Type": file.type || "image/jpeg",
           ...authHeaders,
         };
-        const res     = await fetch("/api/upload-asset", { method: "POST", headers: uploadHeaders, body: bytes });
+        const res     = await uploadAssetFetch({ method: "POST", headers: uploadHeaders, body: bytes });
         const { cdnUrl } = await res.json() as { cdnUrl?: string };
         if (cdnUrl) {
           updateNodeData(id, { r2Url: cdnUrl, inputImage: cdnUrl });
@@ -349,7 +350,7 @@ export default function ImageInputNode({ id, data, selected }: NodeProps<ImageIn
 
         <details className="nodrag" style={{ position: "absolute", left: 8, bottom: 8, zIndex: 40, maxWidth: 420 }}>
           <summary className="media-tools-trigger cursor-pointer rounded-full bg-black/75 px-3 py-1.5 text-[11px] font-semibold text-white">Studio Tools · abrir ferramentas</summary>
-          <div className="media-studio-panel mt-2 w-[390px] max-h-[580px] overflow-auto rounded-xl border border-[#ded9eb] bg-white p-3 shadow-2xl" onPointerDown={(e) => e.stopPropagation()}>
+          <div className="media-studio-panel mt-2 w-[390px] max-h-[580px] overflow-auto rounded-xl border border-[#d9e0eb] bg-white p-3 shadow-2xl" onPointerDown={(e) => e.stopPropagation()}>
             <MediaStudio id={id} data={data} kind="image" />
           </div>
         </details>

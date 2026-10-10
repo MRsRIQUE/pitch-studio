@@ -148,7 +148,7 @@
 
   /* ── Escala de tamanhos ───────────────────────────────────
      Esta é a escala que faz a UI parecer Miora — não o desenho da
-     letra. Adotada inteira, mantendo DM Sans como família. */
+     letra. Adotada inteira, com a Inter do site como família. */
   --text-ms-xs: var(--ms-text-xs);          /* 10px */
   --text-ms-sm: var(--ms-text-sm);          /* 11px */
   --text-ms-base: var(--ms-text-base);      /* 12px */

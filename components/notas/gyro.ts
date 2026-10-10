@@ -252,7 +252,7 @@ export function pontosDoGyro(t: number, S = NOTA.bola, k: Knobs = KNOBS_NEUTROS)
 }
 
 /* ── O acento, agora na marca ─────────────────────────────────
-   O canvas 2D não resolve `var(--brand-violet)`: `fillStyle` quer uma cor de
+   O canvas 2D não resolve `var(--brand-solid)`: `fillStyle` quer uma cor de
    verdade. Então o token é lido do documento uma vez e memorizado. O reserva
    existe para o caminho de renderização no servidor e para o caso de a folha
    de tokens ainda não ter chegado. */
@@ -260,10 +260,10 @@ let acentoMemorizado: string | null = null;
 
 export function acentoDaMarca(): string {
   if (acentoMemorizado) return acentoMemorizado;
-  if (typeof window === "undefined") return "#4318FF";
+  if (typeof window === "undefined") return "#0057FF";
   const lido = getComputedStyle(document.documentElement)
-    .getPropertyValue("--brand-violet")
+    .getPropertyValue("--brand-solid")
     .trim();
-  acentoMemorizado = lido || "#4318FF";
+  acentoMemorizado = lido || "#0057FF";
   return acentoMemorizado;
 }

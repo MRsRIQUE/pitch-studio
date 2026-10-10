@@ -54,7 +54,7 @@ body {
   --scroll-trilho: transparent;
 }
 
-/* A mesma lista que `pitch.css` usa para virar o hover de marca em lilás: são
+/* A mesma lista que `pitch.css` usa para virar o hover de marca em azul claro: são
    as duas superfícies escuras do app. */
 :is(.pitch-night, .ms-memoria-dark) {
   --scroll-polegar: var(--ms-whiteA-3-hex);
@@ -153,14 +153,14 @@ body {
 
 /* `.app-v2-navi-item.is-assets-brand.is-active` — o único item cujo estado ativo
    sai do cinza e usa a cor da marca. No Miora é `#fd7e1414` sobre `#fd7e14`;
-   aqui, o violeta Pitch no mesmo alfa (14 hex = 8%). */
+   aqui, o azul SaySell no mesmo alfa (14 hex = 8%). */
 .miora-nav-item.is-marca.is-active {
-  background: #4318FF14 !important;
-  color: var(--brand-violet) !important;
+  background: #0057FF14 !important;
+  color: var(--brand-solid) !important;
 }
 
 .miora-nav-item.is-marca.is-active svg {
-  color: var(--brand-violet);
+  color: var(--brand-solid);
 }
 
 /* `app-v2-navi-project-enter .3s cubic-bezier(.4,0,.2,1) both`, com a escada de
@@ -320,14 +320,14 @@ body {
 }
 
 .miora-workflows { color: #202020; }
-.miora-workflow-hero { display: flex; align-items: center; justify-content: space-between; gap: 40px; margin: 32px; padding: 42px; border: 1px solid #e2ddf6; border-radius: 22px; background: linear-gradient(120deg,#efedfa,#e3dff8); }
+.miora-workflow-hero { display: flex; align-items: center; justify-content: space-between; gap: 40px; margin: 32px; padding: 42px; border: 1px solid #dde6f6; border-radius: 22px; background: linear-gradient(120deg,#edf2fa,#dfe8f8); }
 .miora-workflow-hero > div:first-child { max-width: 460px; }
 .miora-workflow-hero span { font-size: 11px; color: var(--brand-ink); }
 .miora-workflow-hero h2 { font-size: 38px; line-height: 1.1; letter-spacing: -.045em; margin: 14px 0; font-weight: 500; color: #292929; }
 .miora-workflow-hero p { font-size: 13px; line-height: 1.7; color: #696660; }
-.miora-workflow-preview { display: flex; align-items: center; gap: 18px; color: #a5a0c2; }
-.miora-workflow-preview > div { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 14px; width: 120px; height: 130px; border-radius: 18px; border: 1px solid #fff; box-shadow: 0 10px 24px rgba(43, 26, 92, .09); background: #ffffffab; color: #8b84c4; transform: rotate(-4deg); }
-.miora-workflow-preview > div:nth-of-type(2) { transform: translateY(-18px); color: var(--brand-violet); }
+.miora-workflow-preview { display: flex; align-items: center; gap: 18px; color: #a0acc2; }
+.miora-workflow-preview > div { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 14px; width: 120px; height: 130px; border-radius: 18px; border: 1px solid #fff; box-shadow: 0 10px 24px rgba(26, 50, 92, .09); background: #ffffffab; color: #849bc4; transform: rotate(-4deg); }
+.miora-workflow-preview > div:nth-of-type(2) { transform: translateY(-18px); color: var(--brand-solid); }
 .miora-workflow-preview > div:nth-of-type(3) { transform: rotate(4deg); }
 .miora-workflows .wsd-card,.miora-workflows .wsd-new,.miora-workflows .wsd-tmpl { background: #fff; border-color: #e2e2e2; box-shadow: none; color: #202020; }
 .miora-workflows .wsd-card:hover,.miora-workflows .wsd-new:hover,.miora-workflows .wsd-tmpl:hover { background: #fff; border-color: #ccc; box-shadow: 0 12px 30px #0000000d; }
@@ -357,8 +357,8 @@ body {
 
 /* ── Painel noturno da marca ─────────────────────────────
    O kit define uma base "Noite" para as superfícies de criação — é onde o
-   canvas e o Assistente vivem. Nelas o acento é o Lilás #868CFF, porque o
-   Violeta não tem contraste suficiente sobre fundo escuro.
+   canvas e o Assistente vivem. Nelas o acento é o azul claro #60A5FA, porque o
+   azul de ação não tem contraste suficiente sobre fundo escuro.
 
    O chrome do app é claro; esta classe reabre a ilha escura para a rota que
    já foi desenhada nela, em vez de reescrever suas cores uma a uma. */
@@ -914,8 +914,8 @@ body {
 
 /* ── Selection rectangle (drag) + post-release overlay ── */
 .react-flow__selection {
-  background: rgba(67, 24, 255, 0.04) !important;
-  border: 1px solid rgba(67, 24, 255, 0.3) !important;
+  background: rgba(0, 87, 255, 0.04) !important;
+  border: 1px solid rgba(0, 87, 255, 0.3) !important;
   border-radius: 3px;
   z-index: 0 !important;
   pointer-events: none;
@@ -928,8 +928,8 @@ body {
 }
 
 .react-flow__nodesselection-rect {
-  background: rgba(67, 24, 255, 0.03) !important;
-  border: 1px solid rgba(67, 24, 255, 0.2) !important;
+  background: rgba(0, 87, 255, 0.03) !important;
+  border: 1px solid rgba(0, 87, 255, 0.2) !important;
   border-radius: 3px;
 }
 
@@ -941,7 +941,7 @@ body {
 
 .react-flow__node.selected .node-card {
   border-color: var(--ms-solid-brand) !important;
-  box-shadow: 0 0 0 1px rgba(67, 24, 255, 0.25), 0 2px 16px rgba(0, 15, 30, 0.5);
+  box-shadow: 0 0 0 1px rgba(0, 87, 255, 0.25), 0 2px 16px rgba(0, 15, 30, 0.5);
 }
 
 .react-flow__node.selected .node-card.node-generating {
@@ -963,7 +963,7 @@ body {
 /* ── Ancestor highlight (upstream nodes of selected node) ── */
 .react-flow__node.node-ancestor .node-card {
   border-color: var(--ms-solid-brand) !important;
-  box-shadow: 0 0 0 1px rgba(67, 24, 255, 0.15), 0 2px 16px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(0, 87, 255, 0.15), 0 2px 16px rgba(0, 0, 0, 0.5);
   transition: border-color 150ms, box-shadow 150ms;
 }
 
@@ -1020,7 +1020,7 @@ body {
    O canvas é claro. Superfícies pretas e pílulas translúcidas perdiam o texto
    sobre a prévia dos nodes; estes estilos mantêm a hierarquia com contraste. */
 .workflow-node-picker {
-  box-shadow: 0 20px 52px rgba(42, 31, 74, 0.16), 0 5px 16px rgba(42, 31, 74, 0.08);
+  box-shadow: 0 20px 52px rgba(31, 47, 74, 0.16), 0 5px 16px rgba(31, 47, 74, 0.08);
 }
 
 .workflow-node-picker-item + .workflow-node-picker-item {
@@ -1031,7 +1031,7 @@ body {
   background: color-mix(in srgb, var(--ms-bg) 94%, var(--ms-bg-brand-subtle));
   border: 1px solid var(--ms-border);
   color: var(--ms-text);
-  box-shadow: 0 2px 7px rgba(42, 31, 74, 0.1);
+  box-shadow: 0 2px 7px rgba(31, 47, 74, 0.1);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -1049,7 +1049,7 @@ button.node-control-pill:focus-visible {
 .node-control-menu {
   background: var(--ms-bg);
   border-color: var(--ms-border);
-  box-shadow: 0 16px 38px rgba(42, 31, 74, 0.16), 0 4px 12px rgba(42, 31, 74, 0.08);
+  box-shadow: 0 16px 38px rgba(31, 47, 74, 0.16), 0 4px 12px rgba(31, 47, 74, 0.08);
 }
 
 .node-control-menu-item:hover,
@@ -1136,9 +1136,9 @@ button.node-control-pill:focus-visible {
 /* Applied via an injected <style> tag (not via classList) so React can't wipe it */
 @keyframes node-identify-input-blink {
   0%, 100% { box-shadow: 0 2px 16px rgba(0,0,0,0.5); border-color: transparent; }
-  18%       { box-shadow: 0 0 0 3px rgba(67, 24, 255,0.55), 0 0 30px rgba(67, 24, 255,0.15); border-color: rgba(67, 24, 255,0.65); }
+  18%       { box-shadow: 0 0 0 3px rgba(0, 87, 255,0.55), 0 0 30px rgba(0, 87, 255,0.15); border-color: rgba(0, 87, 255,0.65); }
   35%       { box-shadow: 0 2px 16px rgba(0,0,0,0.5); border-color: transparent; }
-  58%       { box-shadow: 0 0 0 2px rgba(67, 24, 255,0.35), 0 0 20px rgba(67, 24, 255,0.08); border-color: rgba(67, 24, 255,0.45); }
+  58%       { box-shadow: 0 0 0 2px rgba(0, 87, 255,0.35), 0 0 20px rgba(0, 87, 255,0.08); border-color: rgba(0, 87, 255,0.45); }
   75%       { box-shadow: 0 2px 16px rgba(0,0,0,0.5); border-color: transparent; }
 }
 
@@ -1241,7 +1241,7 @@ button.node-control-pill:focus-visible {
 .toolbar-btn-primary:hover:not(:disabled) {
   background: var(--ms-solid-brand);
   border-color: var(--ms-solid-brand);
-  box-shadow: 0 0 12px rgba(67, 24, 255, 0.35);
+  box-shadow: 0 0 12px rgba(0, 87, 255, 0.35);
 }
 
 .toolbar-btn-primary:disabled {
@@ -1257,17 +1257,17 @@ button.node-control-pill:focus-visible {
 
 .video-node-card.node-card:hover {
   border-color: var(--ms-border);
-  box-shadow: 0 0 0 1px rgba(67, 24, 255, 0.12), 0 2px 20px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1px rgba(0, 87, 255, 0.12), 0 2px 20px rgba(0, 0, 0, 0.6);
 }
 
 .react-flow__node.selected .video-node-card.node-card {
   border-color: var(--ms-solid-brand) !important;
-  box-shadow: 0 0 0 1px rgba(67, 24, 255, 0.25), 0 2px 16px rgba(0, 15, 30, 0.5);
+  box-shadow: 0 0 0 1px rgba(0, 87, 255, 0.25), 0 2px 16px rgba(0, 15, 30, 0.5);
 }
 
 .react-flow__node.node-ancestor .video-node-card.node-card {
   border-color: var(--ms-solid-brand) !important;
-  box-shadow: 0 0 0 1px rgba(67, 24, 255, 0.15), 0 0 18px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(0, 87, 255, 0.15), 0 0 18px rgba(0, 0, 0, 0.5);
 }
 
 /* ── Carousel slide ─────────────────────────────────────────────────────── */
@@ -1322,7 +1322,7 @@ button.node-control-pill:focus-visible {
   border-radius: 999px;
   background: var(--ms-bg);
   border: 1px solid var(--ms-border);
-  box-shadow: 0 8px 24px rgba(42, 31, 74, 0.12), 0 1px 3px rgba(42, 31, 74, 0.08);
+  box-shadow: 0 8px 24px rgba(31, 47, 74, 0.12), 0 1px 3px rgba(31, 47, 74, 0.08);
   white-space: nowrap;
 }
 .canvas-pilula-sep {
@@ -1554,8 +1554,8 @@ button.node-control-pill:focus-visible {
     linear-gradient(var(--ms-bg), var(--ms-bg)) padding-box,
     conic-gradient(
       from var(--border-angle, 0deg),
-      rgba(67, 24, 255, 0.05) 0deg,
-      rgba(67, 24, 255, 0.05) 150deg,
+      rgba(0, 87, 255, 0.05) 0deg,
+      rgba(0, 87, 255, 0.05) 150deg,
       #00266A 200deg,
       #005FCC 250deg,
       #00AEFF 305deg,

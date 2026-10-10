@@ -8,6 +8,7 @@ import { useWorkflowStore, NodeData } from "@/lib/store";
 import { VIDEO_MODELS } from "@/lib/modelConfig";
 import { sha256Hex } from "@/lib/assetHash";
 import MediaStudio from "./MediaStudio";
+import { uploadAssetFetch } from "@/lib/media/uploadAssetFetch";
 
 type VideoInputNodeType = Node<NodeData, "videoInputNode">;
 
@@ -260,7 +261,7 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
       const bytes = await blob.arrayBuffer();
       const authHeaders: Record<string, string> = {};
 
-      const res  = await fetch("/api/upload-asset", {
+      const res  = await uploadAssetFetch({
         method: "POST",
         headers: { "Content-Type": "image/jpeg", ...authHeaders },
         body: bytes,
@@ -413,7 +414,7 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
     setUploading(true);
 
     try {
-      const res  = await fetch("/api/upload-asset", {
+      const res  = await uploadAssetFetch({
         method: "POST",
         headers: { "Content-Type": file.type || "video/mp4", ...authHeaders },
         body: bytes,
@@ -1314,7 +1315,7 @@ export default function VideoInputNode({ id, data, selected }: NodeProps<VideoIn
               {uploadErr}
             </div>
           )}
-          {videoUrl && <details className="nodrag" style={{ position: "absolute", left: 8, bottom: 8, zIndex: 40, maxWidth: 420 }}><summary className="media-tools-trigger cursor-pointer rounded-full bg-black/75 px-3 py-1.5 text-[11px] font-semibold text-white">Ferramentas de vídeo · abrir</summary><div className="media-studio-panel mt-2 w-[390px] max-h-[580px] overflow-auto rounded-xl border border-[#ded9eb] bg-white p-3 shadow-2xl" onPointerDown={(e) => e.stopPropagation()}><MediaStudio id={id} data={data} kind="video" /></div></details>}
+          {videoUrl && <details className="nodrag" style={{ position: "absolute", left: 8, bottom: 8, zIndex: 40, maxWidth: 420 }}><summary className="media-tools-trigger cursor-pointer rounded-full bg-black/75 px-3 py-1.5 text-[11px] font-semibold text-white">Ferramentas de vídeo · abrir</summary><div className="media-studio-panel mt-2 w-[390px] max-h-[580px] overflow-auto rounded-xl border border-[#d9e0eb] bg-white p-3 shadow-2xl" onPointerDown={(e) => e.stopPropagation()}><MediaStudio id={id} data={data} kind="video" /></div></details>}
         </div>
 
         <input ref={fileRef} type="file" accept="video/*" className="hidden"

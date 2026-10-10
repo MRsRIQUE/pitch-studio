@@ -44,7 +44,7 @@ export const RECEITAS: Receita[] = [
     titulo: "UGC realista: pessoa, produto e vídeo falado",
     resumo:
       "Uma pessoa gerada que parece gravada no celular, segurando o seu produto e falando com a câmera. O segredo não é o modelo: é o prompt de produção com ações marcadas por segundo.",
-    credito: "Receita de @ViralOps_ no X (set/2026), adaptada ao Pitch Studio",
+    credito: "Receita de @ViralOps_ no X (set/2026), adaptada ao SaySell Studio",
     modelos: ["nano-banana-pro", "gpt-image-2", "seedance-2-5"],
     passos: [
       "Crie o personagem: descreva a pessoa ou parta de uma foto casual de referência (enquadramento, pose e luz vêm dela; a pessoa é nova).",
@@ -72,22 +72,6 @@ export const RECEITAS: Receita[] = [
       "Ajuste a fala (instante e texto) e gere. Se a troca não pegou, diga no Corrigir o que ficou do vídeo original.",
     ],
     acoes: [{ rotulo: "Abrir o template", tipo: "template", template: "troca-pessoa" }],
-  },
-  {
-    id: "cena-de-produto",
-    titulo: "Cena de produto com o seu personagem",
-    resumo:
-      "Um produto quente, um personagem do seu elenco, e a cena montada no grafo em um clique: a foto parada primeiro, para você ver se a mão pegou o produto certo antes de gastar o vídeo.",
-    modelos: ["nano-banana-pro", "seedance-2-5"],
-    passos: [
-      "Em Quentes, limpe a foto do produto (recorte) e clique em Usar.",
-      "Escolha o personagem. A cena nasce com o prompt de produção já com timeline e fala de exemplo.",
-      "Gere a imagem, confira, e só então gere o vídeo.",
-    ],
-    acoes: [
-      { rotulo: "Ir para Quentes", tipo: "rota", href: "/quentes" },
-      { rotulo: "Meus personagens", tipo: "rota", href: "/personagens" },
-    ],
   },
 ];
 

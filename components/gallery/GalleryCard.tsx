@@ -478,7 +478,7 @@ export function GalleryCard({
             {copied ? (
               /* O check da confirmação é o único ponto de marca dentro do
                  véu — é o mesmo violeta do estado marcado da seleção. */
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--brand-violet)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--brand-solid)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6 9 17l-5-5" />
               </svg>
             ) : (

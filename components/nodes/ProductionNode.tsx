@@ -12,6 +12,7 @@ import ProductionTimeline from "./ProductionTimeline";
 import ScriptStudio from "./ScriptStudio";
 const DirectorConsole = dynamic(() => import("./DirectorConsole"), { ssr: false });
 import "./production.css";
+import { uploadAssetFetch } from "@/lib/media/uploadAssetFetch";
 
 const DIRECTION: Record<string, string[]> = {
   Gênero: ["Drama", "Comédia", "Documentário", "Fantasia", "Ficção científica", "Suspense"],
@@ -44,7 +45,7 @@ export default function ProductionNode({ id, data, type, selected }: NodeProps<N
     if (file.size > 100 * 1024 * 1024) { setError("O limite por arquivo é 100 MB."); return; }
     setBusy(true); setError("");
     try {
-      const res = await fetch("/api/upload-asset", { method: "POST", headers: { "Content-Type": file.type }, body: file });
+      const res = await uploadAssetFetch({ method: "POST", headers: { "Content-Type": file.type }, body: file });
       const result = await res.json();
       if (!res.ok || !result.cdnUrl) throw new Error(result.error || "Não foi possível salvar o arquivo.");
       patch({ [kind === "audio" ? "audioUrl" : "videoUrl"]: result.cdnUrl, mediaName: file.name });

@@ -1,5 +1,1135 @@
 {
+  "source": "https://kie.ai/pricing (api.kie.ai/client/v1/model-pricing/page)",
+  "checkedAt": "2026-10-09",
   "rates": [
+    {
+      "modelDescription": "Wan 2.2 A14B Turbo API image to Video, 720p",
+      "interfaceType": "video",
+      "provider": "Wan",
+      "creditPrice": "16",
+      "creditUnit": "per video",
+      "usdPrice": "0.08",
+      "falPrice": "0.10",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/wan/v2-2?model=wan%2F2-2-a14b-image-to-video-turbo",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Wan 2.2 A14B Turbo API image to Video, 480p",
+      "interfaceType": "video",
+      "provider": "Wan",
+      "creditPrice": "8",
+      "creditUnit": "per video",
+      "usdPrice": "0.04",
+      "falPrice": "0.05",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/wan/v2-2?model=wan%2F2-2-a14b-image-to-video-turbo",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Wan 2.2 A14B Turbo API text to Video, 720p",
+      "interfaceType": "video",
+      "provider": "Wan",
+      "creditPrice": "16",
+      "creditUnit": "per video",
+      "usdPrice": "0.08",
+      "falPrice": "0.10",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/wan/v2-2?model=wan%2F2-2-a14b-text-to-video-turbo",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Wan 2.2 A14B Turbo API text to Video, 480p",
+      "interfaceType": "video",
+      "provider": "Wan",
+      "creditPrice": "8",
+      "creditUnit": "per video",
+      "usdPrice": "0.04",
+      "falPrice": "0.05",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/wan/v2-2",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "seedream 3.0",
+      "interfaceType": "image",
+      "provider": "ByteDance",
+      "creditPrice": "3.5",
+      "creditUnit": "per image",
+      "usdPrice": "0.0175",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/seedream",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "seedream v4, text-to-image",
+      "interfaceType": "image",
+      "provider": "ByteDance",
+      "creditPrice": "5",
+      "creditUnit": "per image",
+      "usdPrice": "0.025",
+      "falPrice": "0.04",
+      "discountRate": 37.5,
+      "anchor": "https://kie.ai/seedream-api?model=bytedance%2Fseedream-v4-text-to-image",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "seedream v4, edit",
+      "interfaceType": "image",
+      "provider": "ByteDance",
+      "creditPrice": "5",
+      "creditUnit": "per image",
+      "usdPrice": "0.025",
+      "falPrice": "0.04",
+      "discountRate": 37.5,
+      "anchor": "https://kie.ai/seedream-api?model=bytedance%2Fseedream-v4-edit",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-lite, text-to-video, 1080p",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "10",
+      "creditUnit": "per second",
+      "usdPrice": "0.05",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-lite-text-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-lite, text-to-video, 720p",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "4.5",
+      "creditUnit": "per second",
+      "usdPrice": "0.0225",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-lite-text-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-lite, text-to-video, 480p",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "2",
+      "creditUnit": "per second",
+      "usdPrice": "0.01",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-lite-text-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-lite, image-to-video, 1080p",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "10",
+      "creditUnit": "per second",
+      "usdPrice": "0.05",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-lite-image-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-lite, image-to-video, 720p",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "4.5",
+      "creditUnit": "per second",
+      "usdPrice": "0.0225",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-lite-image-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-lite, image-to-video, 480p",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "2",
+      "creditUnit": "per second",
+      "usdPrice": "0.01",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-lite-image-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-pro-fast, image-to-video, 1080p-10s",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "72",
+      "creditUnit": "per video",
+      "usdPrice": "0.36",
+      "falPrice": "0.49",
+      "discountRate": 26.53,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-pro-fast-image-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-pro-fast, image-to-video, 1080p-5s",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "36",
+      "creditUnit": "per video",
+      "usdPrice": "0.18",
+      "falPrice": "0.245",
+      "discountRate": 26.53,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-pro-fast-image-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-pro-fast, image-to-video, 720p-10s",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "36",
+      "creditUnit": "per video",
+      "usdPrice": "0.18",
+      "falPrice": "0.206",
+      "discountRate": 12.62,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-pro-fast-image-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-pro-fast, image-to-video, 720p-5s",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "16",
+      "creditUnit": "per video",
+      "usdPrice": "0.08",
+      "falPrice": "0.103",
+      "discountRate": 22.33,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-pro-fast-image-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-pro, text-to-video, 1080p",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "14",
+      "creditUnit": "per second",
+      "usdPrice": "0.07",
+      "falPrice": "0.122",
+      "discountRate": 42.62,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-pro-text-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-pro, text-to-video, 720p",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "6",
+      "creditUnit": "per second",
+      "usdPrice": "0.03",
+      "falPrice": "0.0515",
+      "discountRate": 41.75,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-pro-text-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-pro, text-to-video, 480p",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "2.8",
+      "creditUnit": "per second",
+      "usdPrice": "0.014",
+      "falPrice": "0.0243",
+      "discountRate": 42.39,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-pro-text-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-pro, image-to-video, 1080p",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "14",
+      "creditUnit": "per second",
+      "usdPrice": "0.07",
+      "falPrice": "0.122",
+      "discountRate": 42.62,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-pro-image-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-pro, image-to-video, 720p",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "6",
+      "creditUnit": "per second",
+      "usdPrice": "0.03",
+      "falPrice": "0.0515",
+      "discountRate": 41.75,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-pro-image-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "bytedance/seedance-v1-pro, image-to-video, 480p",
+      "interfaceType": "video",
+      "provider": "ByteDance",
+      "creditPrice": "2.8",
+      "creditUnit": "per second",
+      "usdPrice": "0.014",
+      "falPrice": "0.0243",
+      "discountRate": 42.39,
+      "anchor": "https://kie.ai/bytedance/seedance-v1?model=bytedance%2Fv1-pro-image-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, reference-to-video, 4k with video input",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "67",
+      "creditUnit": "per second",
+      "usdPrice": "0.335",
+      "falPrice": "0.42",
+      "discountRate": 20.24,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Freference-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, reference-to-video, 4k with native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "67",
+      "creditUnit": "per second",
+      "usdPrice": "0.335",
+      "falPrice": "0.42",
+      "discountRate": 20.24,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Freference-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, reference-to-video, 4k no native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "67",
+      "creditUnit": "per second",
+      "usdPrice": "0.335",
+      "falPrice": "0.42",
+      "discountRate": 20.24,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Freference-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, reference-to-video, 1080p with video input",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "27",
+      "creditUnit": "per second",
+      "usdPrice": "0.135",
+      "falPrice": "0.168",
+      "discountRate": 19.64,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Freference-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, reference-to-video, 1080p with native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "23",
+      "creditUnit": "per second",
+      "usdPrice": "0.115",
+      "falPrice": "0.14",
+      "discountRate": 17.86,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Freference-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, reference-to-video, 1080p no native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "18",
+      "creditUnit": "per second",
+      "usdPrice": "0.09",
+      "falPrice": "0.112",
+      "discountRate": 19.64,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Freference-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, reference-to-video, 720p with video input",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "20",
+      "creditUnit": "per second",
+      "usdPrice": "0.1",
+      "falPrice": "0.126",
+      "discountRate": 20.63,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Freference-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, reference-to-video, 720p with native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "18",
+      "creditUnit": "per second",
+      "usdPrice": "0.09",
+      "falPrice": "0.112",
+      "discountRate": 19.64,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Freference-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, reference-to-video, 720p no native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "14",
+      "creditUnit": "per second",
+      "usdPrice": "0.07",
+      "falPrice": "0.084",
+      "discountRate": 16.67,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Freference-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, transformation, 4k",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "67",
+      "creditUnit": "per second",
+      "usdPrice": "0.335",
+      "falPrice": "0.42",
+      "discountRate": 20.24,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Ftransformation",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, transformation, 1080p",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "27",
+      "creditUnit": "per second",
+      "usdPrice": "0.135",
+      "falPrice": "0.168",
+      "discountRate": 19.64,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Ftransformation",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, transformation, 720p",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "20",
+      "creditUnit": "per second",
+      "usdPrice": "0.1",
+      "falPrice": "0.126",
+      "discountRate": 20.63,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Ftransformation",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, image-to-video, 4k with native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "67",
+      "creditUnit": "per second",
+      "usdPrice": "0.335",
+      "falPrice": "0.42",
+      "discountRate": 20.24,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Fimage-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, image-to-video, 4k no native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "67",
+      "creditUnit": "per second",
+      "usdPrice": "0.335",
+      "falPrice": "0.42",
+      "discountRate": 20.24,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Ftext-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, image-to-video, 1080p with native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "23",
+      "creditUnit": "per second",
+      "usdPrice": "0.115",
+      "falPrice": "0.14",
+      "discountRate": 17.86,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Fimage-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, image-to-video, 1080p no native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "18",
+      "creditUnit": "per second",
+      "usdPrice": "0.09",
+      "falPrice": "0.112",
+      "discountRate": 19.64,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Fimage-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, image-to-video, 720p with native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "18",
+      "creditUnit": "per second",
+      "usdPrice": "0.09",
+      "falPrice": "0.112",
+      "discountRate": 19.64,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Fimage-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, image-to-video, 720p no native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "14",
+      "creditUnit": "per second",
+      "usdPrice": "0.07",
+      "falPrice": "0.084",
+      "discountRate": 16.67,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Fimage-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, text-to-video, 4k with native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "67",
+      "creditUnit": "per second",
+      "usdPrice": "0.335",
+      "falPrice": "0.42",
+      "discountRate": 20.24,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Ftext-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, text-to-video, 4k no native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "67",
+      "creditUnit": "per second",
+      "usdPrice": "0.335",
+      "falPrice": "0.42",
+      "discountRate": 20.24,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Ftext-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, text-to-video, 1080p with native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "23",
+      "creditUnit": "per second",
+      "usdPrice": "0.115",
+      "falPrice": "0.14",
+      "discountRate": 17.86,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Ftext-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, text-to-video, 1080p no native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "18",
+      "creditUnit": "per second",
+      "usdPrice": "0.09",
+      "falPrice": "0.112",
+      "discountRate": 19.64,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Ftext-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, text-to-video, 720p with native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "18",
+      "creditUnit": "per second",
+      "usdPrice": "0.09",
+      "falPrice": "0.112",
+      "discountRate": 19.64,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Ftext-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "kling 3.0 omni, text-to-video, 720p no native audio",
+      "interfaceType": "video",
+      "provider": "Kling",
+      "creditPrice": "14",
+      "creditUnit": "per second",
+      "usdPrice": "0.07",
+      "falPrice": "0.084",
+      "discountRate": 16.67,
+      "anchor": "https://kie.ai/kling-o3?model=kling-3.0-omni%2Ftext-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "claude-haiku-5-5, chat, Input",
+      "interfaceType": "chat",
+      "provider": "Anthropic",
+      "creditPrice": "12",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.06",
+      "falPrice": "0.10",
+      "discountRate": 40,
+      "anchor": "https://kie.ai/claude-haiku-5-5",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "claude-haiku-5-5, chat, Output",
+      "interfaceType": "chat",
+      "provider": "Anthropic",
+      "creditPrice": "60",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.30",
+      "falPrice": "0.50",
+      "discountRate": 40,
+      "anchor": "https://kie.ai/claude-haiku-5-5",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "nano-banana-2-1, 4K",
+      "interfaceType": "image",
+      "provider": "Google",
+      "creditPrice": "9",
+      "creditUnit": "per image",
+      "usdPrice": "0.045",
+      "falPrice": "0.16",
+      "discountRate": 71.88,
+      "anchor": "https://kie.ai/nano-banana-2-1",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "nano-banana-2-1, 2K",
+      "interfaceType": "image",
+      "provider": "Google",
+      "creditPrice": "6",
+      "creditUnit": "per image",
+      "usdPrice": "0.030",
+      "falPrice": "0.12",
+      "discountRate": 75,
+      "anchor": "https://kie.ai/nano-banana-2-1",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "nano-banana-2-1, 1K",
+      "interfaceType": "image",
+      "provider": "Google",
+      "creditPrice": "4",
+      "creditUnit": "per image",
+      "usdPrice": "0.020",
+      "falPrice": "0.080",
+      "discountRate": 75,
+      "anchor": "https://kie.ai/nano-banana-2-1",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "gpt-6-1-sol, chat, Cached Input",
+      "interfaceType": "chat",
+      "provider": "OpenAI",
+      "creditPrice": "6",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.03",
+      "falPrice": "0.10",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gpt-6-1-sol",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "gpt-6-1-sol, chat, Cache Writes",
+      "interfaceType": "chat",
+      "provider": "OpenAI",
+      "creditPrice": "150",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.75",
+      "falPrice": "2.5",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gpt-6-1-sol",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "gpt-6-1-sol, chat, output",
+      "interfaceType": "chat",
+      "provider": "OpenAI",
+      "creditPrice": "600",
+      "creditUnit": "per million tokens",
+      "usdPrice": "3",
+      "falPrice": "10",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gpt-6-1-sol",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "gpt-6-1-sol, chat, Input",
+      "interfaceType": "chat",
+      "provider": "OpenAI",
+      "creditPrice": "120",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.6",
+      "falPrice": "2",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gpt-6-1-sol",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "claude-sonnet-5-5, chat, output",
+      "interfaceType": "chat",
+      "provider": "Anthropic",
+      "creditPrice": "800",
+      "creditUnit": "per million tokens",
+      "usdPrice": "4",
+      "falPrice": "10",
+      "discountRate": 60,
+      "anchor": "https://kie.ai/claude-sonnet-5-5",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "claude-sonnet-5-5, chat, Input",
+      "interfaceType": "chat",
+      "provider": "Anthropic",
+      "creditPrice": "160",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.8",
+      "falPrice": "2",
+      "discountRate": 60,
+      "anchor": "https://kie.ai/claude-sonnet-5-5",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "seedream 5 Flash, layer-decomposition, 2K",
+      "interfaceType": "image",
+      "provider": "ByteDance",
+      "creditPrice": "3.24",
+      "creditUnit": "per image",
+      "usdPrice": "0.0162",
+      "falPrice": "0.018",
+      "discountRate": 10,
+      "anchor": "https://kie.ai/seedream-5-0-flash?model=seedream%2F5-flash-layer-decomposition",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "seedream 5 Flash, layer-decomposition, 1.5K",
+      "interfaceType": "image",
+      "provider": "ByteDance",
+      "creditPrice": "3.24",
+      "creditUnit": "per image",
+      "usdPrice": "0.0162",
+      "falPrice": "0.018",
+      "discountRate": 10,
+      "anchor": "https://kie.ai/seedream-5-0-flash?model=seedream%2F5-flash-layer-decomposition",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "seedream 5 Flash, layer-decomposition, 1K",
+      "interfaceType": "image",
+      "provider": "ByteDance",
+      "creditPrice": "3.24",
+      "creditUnit": "per image",
+      "usdPrice": "0.0162",
+      "falPrice": "0.018",
+      "discountRate": 10,
+      "anchor": "https://kie.ai/seedream-5-0-flash?model=seedream%2F5-flash-layer-decomposition",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "seedream 5 Flash, Text to image, 2K",
+      "interfaceType": "image",
+      "provider": "ByteDance",
+      "creditPrice": "3.24",
+      "creditUnit": "per image",
+      "usdPrice": "0.0162",
+      "falPrice": "0.018",
+      "discountRate": 10,
+      "anchor": "https://kie.ai/seedream-5-0-flash?model=seedream%2F5-flash-text-to-image",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "seedream 5 Flash, Text to image, 1.5K",
+      "interfaceType": "image",
+      "provider": "ByteDance",
+      "creditPrice": "3.24",
+      "creditUnit": "per image",
+      "usdPrice": "0.0162",
+      "falPrice": "0.018",
+      "discountRate": 10,
+      "anchor": "https://kie.ai/seedream-5-0-flash?model=seedream%2F5-flash-text-to-image",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "seedream 5 Flash, Text to image , 1K",
+      "interfaceType": "image",
+      "provider": "ByteDance",
+      "creditPrice": "3.24",
+      "creditUnit": "per image",
+      "usdPrice": "0.0162",
+      "falPrice": "0.018",
+      "discountRate": 10,
+      "anchor": "https://kie.ai/seedream-5-0-flash?model=seedream%2F5-flash-text-to-image",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "seedream 5 Flash, Image to image, 2K",
+      "interfaceType": "image",
+      "provider": "ByteDance",
+      "creditPrice": "3.24",
+      "creditUnit": "per image",
+      "usdPrice": "0.0162",
+      "falPrice": "0.018",
+      "discountRate": 10,
+      "anchor": "https://kie.ai/seedream-5-0-flash?model=seedream%2F5-flash-image-to-image",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "seedream 5 Flash, Image to image, 1.5K",
+      "interfaceType": "image",
+      "provider": "ByteDance",
+      "creditPrice": "3.24",
+      "creditUnit": "per image",
+      "usdPrice": "0.0162",
+      "falPrice": "0.018",
+      "discountRate": 10,
+      "anchor": "https://kie.ai/seedream-5-0-flash?model=seedream%2F5-flash-image-to-image",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "seedream 5 Flash, Image to image , 1K",
+      "interfaceType": "image",
+      "provider": "ByteDance",
+      "creditPrice": "3.24",
+      "creditUnit": "per image",
+      "usdPrice": "0.0162",
+      "falPrice": "0.018",
+      "discountRate": 10,
+      "anchor": "https://kie.ai/seedream-5-0-flash?model=seedream%2F5-flash-image-to-image",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Gemini 3.8 Flash-Lite TTS, Text to speech, Input",
+      "interfaceType": "music",
+      "provider": "Google",
+      "creditPrice": "70",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.35",
+      "falPrice": "0.50",
+      "discountRate": 30,
+      "anchor": "https://kie.ai/gemini-3.8-flash-lite-tts",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Gemini 3.8 Flash-Lite TTS, Text to Speech, Audio Output",
+      "interfaceType": "music",
+      "provider": "Google",
+      "creditPrice": "840",
+      "creditUnit": "per million tokens",
+      "usdPrice": "4.20",
+      "falPrice": "6.00",
+      "discountRate": 30,
+      "anchor": "https://kie.ai/gemini-3.8-flash-lite-tts",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Gemini 3.8 Flash TTS, Text to Speech, Input",
+      "interfaceType": "music",
+      "provider": "Google",
+      "creditPrice": "70",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.35",
+      "falPrice": "0.50",
+      "discountRate": 30,
+      "anchor": "https://kie.ai/gemini-3.8-flash-tts",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Gemini 3.8 Flash TTS, Text to Speech, Audio Output",
+      "interfaceType": "music",
+      "provider": "Google",
+      "creditPrice": "1260",
+      "creditUnit": "per million tokens",
+      "usdPrice": "6.30",
+      "falPrice": "9.00",
+      "discountRate": 30,
+      "anchor": "https://kie.ai/gemini-3.8-flash-tts",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "claude-opus-5-5, chat, Input",
+      "interfaceType": "chat",
+      "provider": "Anthropic",
+      "creditPrice": "320",
+      "creditUnit": "per million tokens",
+      "usdPrice": "1.60",
+      "falPrice": "4.00",
+      "discountRate": 60,
+      "anchor": "https://kie.ai/claude-opus-5-5",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "claude-opus-5-5, chat, Output",
+      "interfaceType": "chat",
+      "provider": "Anthropic",
+      "creditPrice": "1600",
+      "creditUnit": "per million tokens",
+      "usdPrice": "8.00",
+      "falPrice": "20.00",
+      "discountRate": 60,
+      "anchor": "https://kie.ai/claude-opus-5-5",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "gpt-6-luna, chat, Input",
+      "interfaceType": "chat",
+      "provider": "OpenAI",
+      "creditPrice": "6",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.03",
+      "falPrice": "0.10",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gpt-6-sol-and-luna?model=gpt-6-luna",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "gpt-6-luna, chat, Output",
+      "interfaceType": "chat",
+      "provider": "OpenAI",
+      "creditPrice": "30",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.15",
+      "falPrice": "0.50",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gpt-6-sol-and-luna?model=gpt-6-luna",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "gpt-6-luna, chat, Cache Writes",
+      "interfaceType": "chat",
+      "provider": "OpenAI",
+      "creditPrice": "7.5",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.0375",
+      "falPrice": "0.125",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gpt-6-sol-and-luna?model=gpt-6-luna",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "gpt-6-luna, chat, Cached Input",
+      "interfaceType": "chat",
+      "provider": "OpenAI",
+      "creditPrice": "0.6",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.003",
+      "falPrice": "0.01",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gpt-6-sol-and-luna?model=gpt-6-luna",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "gpt-6-sol, chat, Input",
+      "interfaceType": "chat",
+      "provider": "OpenAI",
+      "creditPrice": "120",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.60",
+      "falPrice": "2.00",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gpt-6-sol-and-luna?model=gpt-6-sol",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "gpt-6-sol, chat, Output",
+      "interfaceType": "chat",
+      "provider": "OpenAI",
+      "creditPrice": "600",
+      "creditUnit": "per million tokens",
+      "usdPrice": "3.00",
+      "falPrice": "10.00",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gpt-6-sol-and-luna?model=gpt-6-sol",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "gpt-6-sol, chat, Cache Writes",
+      "interfaceType": "chat",
+      "provider": "OpenAI",
+      "creditPrice": "150",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.75",
+      "falPrice": "2.50",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gpt-6-sol-and-luna?model=gpt-6-sol",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "gpt-6-sol, chat, Cached Input",
+      "interfaceType": "chat",
+      "provider": "OpenAI",
+      "creditPrice": "12",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.06",
+      "falPrice": "0.20",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gpt-6-sol-and-luna?model=gpt-6-sol",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Kimi K3, Chat, Output",
+      "interfaceType": "chat",
+      "provider": "Other",
+      "creditPrice": "2400",
+      "creditUnit": "per million tokens",
+      "usdPrice": "12.00",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/kimi-k3",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Kimi K3, Chat, Cached Input",
+      "interfaceType": "chat",
+      "provider": "Other",
+      "creditPrice": "48",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.24",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/kimi-k3",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Kimi K3, Chat, Input",
+      "interfaceType": "chat",
+      "provider": "Other",
+      "creditPrice": "480",
+      "creditUnit": "per million tokens",
+      "usdPrice": "2.40",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/kimi-k3",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "DeepSeek V4.1 Flash, Chat, Output",
+      "interfaceType": "chat",
+      "provider": "DeepSeek",
+      "creditPrice": "95",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.475",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/deepseek-v4-1-Flash",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "DeepSeek V4.1 Flash, Chat, Cached Input",
+      "interfaceType": "chat",
+      "provider": "DeepSeek",
+      "creditPrice": "0.5",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.0025",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/deepseek-v4-1-Flash",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "DeepSeek V4.1 Flash, Chat, Input",
+      "interfaceType": "chat",
+      "provider": "DeepSeek",
+      "creditPrice": "24",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.12",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/deepseek-v4-1-Flash",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "grok-4-7, Chat, Input",
+      "interfaceType": "chat",
+      "provider": "Grok",
+      "creditPrice": "160",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.80",
+      "falPrice": "2.00",
+      "discountRate": 60,
+      "anchor": "https://kie.ai/grok-4-7",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "grok-4-7, Chat, Output",
+      "interfaceType": "chat",
+      "provider": "Grok",
+      "creditPrice": "480",
+      "creditUnit": "per million tokens",
+      "usdPrice": "2.40",
+      "falPrice": "6.00",
+      "discountRate": 60,
+      "anchor": "https://kie.ai/grok-4-7",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "grok-4-7, Chat, Cached Input",
+      "interfaceType": "chat",
+      "provider": "Grok",
+      "creditPrice": "40",
+      "creditUnit": "per million tokens",
+      "usdPrice": "0.20",
+      "falPrice": "0.50",
+      "discountRate": 60,
+      "anchor": "https://kie.ai/grok-4-7",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Qwen-Image-2.1, image to image, 2K",
+      "interfaceType": "image",
+      "provider": "Alibaba",
+      "creditPrice": "8",
+      "creditUnit": "per image",
+      "usdPrice": "0.04",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/qwen-image-2.1?model=qwen2-1%2Fimage-to-image",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Qwen-Image-2.1, image to image, 1K",
+      "interfaceType": "image",
+      "provider": "Alibaba",
+      "creditPrice": "4",
+      "creditUnit": "per image",
+      "usdPrice": "0.02",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/qwen-image-2.1?model=qwen2-1%2Fimage-to-image",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Qwen-Image-2.1, text to image, 2K",
+      "interfaceType": "image",
+      "provider": "Alibaba",
+      "creditPrice": "8",
+      "creditUnit": "per image",
+      "usdPrice": "0.04",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/qwen-image-2.1",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Qwen-Image-2.1, text to image, 1K",
+      "interfaceType": "image",
+      "provider": "Alibaba",
+      "creditPrice": "4",
+      "creditUnit": "per image",
+      "usdPrice": "0.02",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/qwen-image-2.1",
+      "discountPrice": false
+    },
     {
       "modelDescription": "gpt-image-2-5-sunburst, image-to-image, 4K",
       "interfaceType": "image",
@@ -8,7 +1138,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.08",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gpt-image-2-5?model=gpt-image-2-5-sunburst-image-to-image",
       "discountPrice": false
     },
@@ -20,7 +1150,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.05",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gpt-image-2-5?model=gpt-image-2-5-sunburst-image-to-image",
       "discountPrice": false
     },
@@ -32,7 +1162,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.03",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gpt-image-2-5?model=gpt-image-2-5-sunburst-image-to-image",
       "discountPrice": false
     },
@@ -44,7 +1174,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.08",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gpt-image-2-5?model=gpt-image-2-5-sunburst-text-to-image",
       "discountPrice": false
     },
@@ -56,7 +1186,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.05",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gpt-image-2-5?model=gpt-image-2-5-sunburst-text-to-image",
       "discountPrice": false
     },
@@ -68,7 +1198,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.03",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gpt-image-2-5?model=gpt-image-2-5-sunburst-text-to-image",
       "discountPrice": false
     },
@@ -80,7 +1210,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.08",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gpt-image-2-5",
       "discountPrice": false
     },
@@ -92,7 +1222,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.05",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gpt-image-2-5",
       "discountPrice": false
     },
@@ -104,7 +1234,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.03",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gpt-image-2-5",
       "discountPrice": false
     },
@@ -116,7 +1246,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.08",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gpt-image-2-5",
       "discountPrice": false
     },
@@ -128,7 +1258,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.05",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gpt-image-2-5",
       "discountPrice": false
     },
@@ -140,7 +1270,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.03",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gpt-image-2-5",
       "discountPrice": false
     },
@@ -152,8 +1282,8 @@
       "creditUnit": "per million tokens",
       "usdPrice": "2.80",
       "falPrice": "10.00",
-      "discountRate": 72.0,
-      "anchor": "",
+      "discountRate": 72,
+      "anchor": "https://kie.ai/gpt-6-astra",
       "discountPrice": false
     },
     {
@@ -164,8 +1294,8 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.28",
       "falPrice": "1.00",
-      "discountRate": 72.0,
-      "anchor": "",
+      "discountRate": 72,
+      "anchor": "https://kie.ai/gpt-6-astra",
       "discountPrice": false
     },
     {
@@ -176,8 +1306,8 @@
       "creditUnit": "per million tokens",
       "usdPrice": "3.50",
       "falPrice": "12.50",
-      "discountRate": 72.0,
-      "anchor": "",
+      "discountRate": 72,
+      "anchor": "https://kie.ai/gpt-6-astra",
       "discountPrice": false
     },
     {
@@ -188,8 +1318,8 @@
       "creditUnit": "per million tokens",
       "usdPrice": "14.00",
       "falPrice": "50.00",
-      "discountRate": 72.0,
-      "anchor": "",
+      "discountRate": 72,
+      "anchor": "https://kie.ai/gpt-6-astra",
       "discountPrice": false
     },
     {
@@ -197,11 +1327,11 @@
       "interfaceType": "chat",
       "provider": "Google",
       "creditPrice": "225",
-      "creditUnit": "per million",
+      "creditUnit": "per million tokens",
       "usdPrice": "1.125",
       "falPrice": "3.75",
-      "discountRate": 70.0,
-      "anchor": "",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gemini-3-8-flash",
       "discountPrice": false
     },
     {
@@ -209,11 +1339,11 @@
       "interfaceType": "chat",
       "provider": "Google",
       "creditPrice": "45",
-      "creditUnit": "per million",
+      "creditUnit": "per million tokens",
       "usdPrice": "0.225",
       "falPrice": "0.75",
-      "discountRate": 70.0,
-      "anchor": "",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gemini-3-8-flash",
       "discountPrice": false
     },
     {
@@ -224,7 +1354,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.84",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -236,7 +1366,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.84",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -248,7 +1378,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.84",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -260,7 +1390,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.63",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -272,7 +1402,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.63",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -284,7 +1414,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.63",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -296,7 +1426,7 @@
       "creditUnit": "per video",
       "usdPrice": "1.26",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -308,7 +1438,7 @@
       "creditUnit": "per video",
       "usdPrice": "1.05",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -320,7 +1450,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.525",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -332,7 +1462,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.525",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -344,7 +1474,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.525",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -356,7 +1486,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.945",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -368,7 +1498,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.42",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -380,7 +1510,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.42",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -392,7 +1522,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.42",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -404,7 +1534,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.84",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -416,7 +1546,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.315",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -428,7 +1558,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.315",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -440,7 +1570,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.315",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -452,7 +1582,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.735",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni-1-1-flash",
       "discountPrice": false
     },
@@ -464,8 +1594,8 @@
       "creditUnit": "per second",
       "usdPrice": "0.252",
       "falPrice": "0.28",
-      "discountRate": 10.0,
-      "anchor": "",
+      "discountRate": 10,
+      "anchor": "https://kie.ai/wan3.0-video-prime",
       "discountPrice": false
     },
     {
@@ -476,8 +1606,8 @@
       "creditUnit": "per second",
       "usdPrice": "0.126",
       "falPrice": "0.14",
-      "discountRate": 10.0,
-      "anchor": "",
+      "discountRate": 10,
+      "anchor": "https://kie.ai/wan3.0-video-prime",
       "discountPrice": false
     },
     {
@@ -488,8 +1618,8 @@
       "creditUnit": "per second",
       "usdPrice": "0.0612",
       "falPrice": "0.068",
-      "discountRate": 10.0,
-      "anchor": "",
+      "discountRate": 10,
+      "anchor": "https://kie.ai/wan3.0-video-prime",
       "discountPrice": false
     },
     {
@@ -500,8 +1630,8 @@
       "creditUnit": "per second",
       "usdPrice": "0.16",
       "falPrice": "0.20",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/wan3.0-video",
       "discountPrice": false
     },
     {
@@ -510,10 +1640,10 @@
       "provider": "Wan",
       "creditPrice": "16",
       "creditUnit": "per second",
-      "usdPrice": "0.09",
+      "usdPrice": "0.08",
       "falPrice": "0.1125",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 28.89,
+      "anchor": "https://kie.ai/wan3.0-video",
       "discountPrice": false
     },
     {
@@ -524,200 +1654,296 @@
       "creditUnit": "per second",
       "usdPrice": "0.04",
       "falPrice": "0.05",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/wan3.0-video",
       "discountPrice": false
     },
     {
-      "modelDescription": "pixverse-v6, Extend, 1080p(with aiduo)",
+      "modelDescription": "pixverse-v6, transition, 1080p (with audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
       "creditPrice": "18.4",
       "creditUnit": "per second",
       "usdPrice": "0.092",
       "falPrice": "0.115",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Ftransition",
       "discountPrice": false
     },
     {
-      "modelDescription": "pixverse-v6, Extend, 1080p(no aiduo)",
+      "modelDescription": "pixverse-v6, transition, 1080p (no audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
       "creditPrice": "14.4",
       "creditUnit": "per second",
       "usdPrice": "0.072",
       "falPrice": "0.090",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Ftransition",
       "discountPrice": false
     },
     {
-      "modelDescription": "pixverse-v6, Extend, 720p(with aiduo)",
+      "modelDescription": "pixverse-v6, transition, 720p (with audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
       "creditPrice": "9.6",
       "creditUnit": "per second",
       "usdPrice": "0.048",
       "falPrice": "0.060",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Ftransition",
       "discountPrice": false
     },
     {
-      "modelDescription": "pixverse-v6, Extend, 720p(no aiduo)",
+      "modelDescription": "pixverse-v6, transition, 720p (no audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
       "creditPrice": "7.2",
       "creditUnit": "per second",
       "usdPrice": "0.036",
       "falPrice": "0.045",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Ftransition",
       "discountPrice": false
     },
     {
-      "modelDescription": "pixverse-v6, Extend, 540p(with aiduo)",
+      "modelDescription": "pixverse-v6, transition, 540p (with audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
       "creditPrice": "7.2",
       "creditUnit": "per second",
-      "usdPrice": "0.028",
-      "falPrice": "0.035",
-      "discountRate": 20.0,
-      "anchor": "",
+      "usdPrice": "0.036",
+      "falPrice": "0.045",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Ftransition",
       "discountPrice": false
     },
     {
-      "modelDescription": "pixverse-v6, Extend, 540p(no aiduo)",
+      "modelDescription": "pixverse-v6, transition, 540p (no audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
       "creditPrice": "5.6",
       "creditUnit": "per second",
       "usdPrice": "0.028",
       "falPrice": "0.035",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Ftransition",
       "discountPrice": false
     },
     {
-      "modelDescription": "pixverse-v6, Extend, 360p(with aiduo)",
+      "modelDescription": "pixverse-v6, transition, 360p (with audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
       "creditPrice": "5.6",
       "creditUnit": "per second",
       "usdPrice": "0.028",
       "falPrice": "0.035",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Ftransition",
       "discountPrice": false
     },
     {
-      "modelDescription": "pixverse-v6, Extend, 360p(no aiduo)",
+      "modelDescription": "pixverse-v6, transition, 360p（no audio）",
+      "interfaceType": "video",
+      "provider": "Pixverse",
+      "creditPrice": "4",
+      "creditUnit": "per second",
+      "usdPrice": "0.02",
+      "falPrice": "0.025",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Ftransition",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "pixverse-v6, Extend, 1080p(with audio)",
+      "interfaceType": "video",
+      "provider": "Pixverse",
+      "creditPrice": "18.4",
+      "creditUnit": "per second",
+      "usdPrice": "0.092",
+      "falPrice": "0.115",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fextend",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "pixverse-v6, Extend, 1080p(no audio)",
+      "interfaceType": "video",
+      "provider": "Pixverse",
+      "creditPrice": "14.4",
+      "creditUnit": "per second",
+      "usdPrice": "0.072",
+      "falPrice": "0.090",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fextend",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "pixverse-v6, Extend, 720p(with audio)",
+      "interfaceType": "video",
+      "provider": "Pixverse",
+      "creditPrice": "9.6",
+      "creditUnit": "per second",
+      "usdPrice": "0.048",
+      "falPrice": "0.060",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fextend",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "pixverse-v6, Extend, 720p(no audio)",
+      "interfaceType": "video",
+      "provider": "Pixverse",
+      "creditPrice": "7.2",
+      "creditUnit": "per second",
+      "usdPrice": "0.036",
+      "falPrice": "0.045",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fextend",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "pixverse-v6, Extend, 540p(with audio)",
+      "interfaceType": "video",
+      "provider": "Pixverse",
+      "creditPrice": "7.2",
+      "creditUnit": "per second",
+      "usdPrice": "0.036",
+      "falPrice": "0.045",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fextend",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "pixverse-v6, Extend, 540p(no audio)",
+      "interfaceType": "video",
+      "provider": "Pixverse",
+      "creditPrice": "5.6",
+      "creditUnit": "per second",
+      "usdPrice": "0.028",
+      "falPrice": "0.035",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fextend",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "pixverse-v6, Extend, 360p(with audio)",
+      "interfaceType": "video",
+      "provider": "Pixverse",
+      "creditPrice": "5.6",
+      "creditUnit": "per second",
+      "usdPrice": "0.028",
+      "falPrice": "0.035",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fextend",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "pixverse-v6, Extend, 360p(no audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
       "creditPrice": "4",
       "creditUnit": "per second",
       "usdPrice": "0.020",
       "falPrice": "0.025",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fextend",
       "discountPrice": false
     },
     {
       "modelDescription": "pixverse-v6, Reference To Video, 1080p(with audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
-      "creditPrice": "20.7",
+      "creditPrice": "18.4",
       "creditUnit": "per second",
-      "usdPrice": "0.1035",
+      "usdPrice": "0.092",
       "falPrice": "",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Freference-to-video",
       "discountPrice": false
     },
     {
       "modelDescription": "pixverse-v6, Reference To Video, 1080p(no audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
-      "creditPrice": "16.2",
+      "creditPrice": "14.4",
       "creditUnit": "per second",
-      "usdPrice": "0.081",
+      "usdPrice": "0.072",
       "falPrice": "",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Freference-to-video",
       "discountPrice": false
     },
     {
       "modelDescription": "pixverse-v6, Reference To Video, 720p(with audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
-      "creditPrice": "10.8",
+      "creditPrice": "9.6",
       "creditUnit": "per second",
-      "usdPrice": "0.054",
+      "usdPrice": "0.048",
       "falPrice": "0.0675",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 28.89,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Freference-to-video",
       "discountPrice": false
     },
     {
       "modelDescription": "pixverse-v6, Reference To Video, 720p(no audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
-      "creditPrice": "8.1",
+      "creditPrice": "7.2",
       "creditUnit": "per second",
-      "usdPrice": "0.0405",
+      "usdPrice": "0.036",
       "falPrice": "",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Freference-to-video",
       "discountPrice": false
     },
     {
       "modelDescription": "pixverse-v6, Reference To Video, 540p(with audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
-      "creditPrice": "8.1",
+      "creditPrice": "7.2",
       "creditUnit": "per second",
-      "usdPrice": "0.0405",
+      "usdPrice": "0.036",
       "falPrice": "",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Freference-to-video",
       "discountPrice": false
     },
     {
       "modelDescription": "pixverse-v6, Reference To Video, 540p(no audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
-      "creditPrice": "6.3",
+      "creditPrice": "5.6",
       "creditUnit": "per second",
-      "usdPrice": "0.0315",
+      "usdPrice": "0.028",
       "falPrice": "",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Freference-to-video",
       "discountPrice": false
     },
     {
       "modelDescription": "pixverse-v6, Reference To Video, 360p(with audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
-      "creditPrice": "6.3",
+      "creditPrice": "5.6",
       "creditUnit": "per second",
-      "usdPrice": "0.0315",
+      "usdPrice": "0.028",
       "falPrice": "",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Freference-to-video",
       "discountPrice": false
     },
     {
       "modelDescription": "pixverse-v6, Reference To Video, 360p(no audio)",
       "interfaceType": "video",
       "provider": "Pixverse",
-      "creditPrice": "4.5",
+      "creditPrice": "4.0",
       "creditUnit": "per second",
-      "usdPrice": "0.0225",
+      "usdPrice": "0.020",
       "falPrice": "",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Freference-to-video",
       "discountPrice": false
     },
     {
@@ -728,8 +1954,8 @@
       "creditUnit": "per second",
       "usdPrice": "0.092",
       "falPrice": "0.115",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fimage-to-video",
       "discountPrice": false
     },
     {
@@ -740,8 +1966,8 @@
       "creditUnit": "per second",
       "usdPrice": "0.072",
       "falPrice": "0.090",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fimage-to-video",
       "discountPrice": false
     },
     {
@@ -752,8 +1978,8 @@
       "creditUnit": "per second",
       "usdPrice": "0.048",
       "falPrice": "0.060",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fimage-to-video",
       "discountPrice": false
     },
     {
@@ -764,8 +1990,8 @@
       "creditUnit": "per second",
       "usdPrice": "0.036",
       "falPrice": "0.045",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fimage-to-video",
       "discountPrice": false
     },
     {
@@ -776,8 +2002,8 @@
       "creditUnit": "per second",
       "usdPrice": "0.036",
       "falPrice": "0.045",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fimage-to-video",
       "discountPrice": false
     },
     {
@@ -788,8 +2014,8 @@
       "creditUnit": "per second",
       "usdPrice": "0.028",
       "falPrice": "0.035",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fimage-to-video",
       "discountPrice": false
     },
     {
@@ -800,8 +2026,8 @@
       "creditUnit": "per second",
       "usdPrice": "0.028",
       "falPrice": "0.035",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fimage-to-video",
       "discountPrice": false
     },
     {
@@ -812,8 +2038,32 @@
       "creditUnit": "per second",
       "usdPrice": "0.02",
       "falPrice": "0.025",
-      "discountRate": 20.0,
-      "anchor": "",
+      "discountRate": 20,
+      "anchor": "https://kie.ai/pixverse-v6?model=pixverse-v6%2Fimage-to-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "grok-imagine-image-2-0, segment-map",
+      "interfaceType": "image",
+      "provider": "Grok",
+      "creditPrice": "0",
+      "creditUnit": "per image",
+      "usdPrice": "0",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/grok-imagine-image-2?model=grok-imagine-image-2-0%2Fsegment-map",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "grok-imagine-image-2-0, segment-edit",
+      "interfaceType": "image",
+      "provider": "Grok",
+      "creditPrice": "4",
+      "creditUnit": "per image",
+      "usdPrice": "0.02",
+      "falPrice": "0.06",
+      "discountRate": 66.67,
+      "anchor": "https://kie.ai/grok-imagine-image-2?model=grok-imagine-image-2-0%2Fsegment-edit",
       "discountPrice": false
     },
     {
@@ -825,7 +2075,7 @@
       "usdPrice": "0.02",
       "falPrice": "0.06",
       "discountRate": 66.67,
-      "anchor": "",
+      "anchor": "https://kie.ai/grok-imagine-image-2?model=grok-imagine-image-2-0%2Ftext-to-image",
       "discountPrice": false
     },
     {
@@ -837,7 +2087,7 @@
       "usdPrice": "0.02",
       "falPrice": "0.06",
       "discountRate": 66.67,
-      "anchor": "",
+      "anchor": "https://kie.ai/grok-imagine-image-2?model=grok-imagine-image-2-0%2Fimage-edit",
       "discountPrice": false
     },
     {
@@ -845,11 +2095,11 @@
       "interfaceType": "chat",
       "provider": "Google",
       "creditPrice": "225",
-      "creditUnit": "per million",
+      "creditUnit": "per million tokens",
       "usdPrice": "1.125",
       "falPrice": "3.75",
-      "discountRate": 70.0,
-      "anchor": "",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gemini-3-7-flash",
       "discountPrice": false
     },
     {
@@ -857,11 +2107,11 @@
       "interfaceType": "chat",
       "provider": "Google",
       "creditPrice": "45",
-      "creditUnit": "per million",
+      "creditUnit": "per million tokens",
       "usdPrice": "0.225",
       "falPrice": "0.75",
-      "discountRate": 70.0,
-      "anchor": "",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gemini-3-7-flash",
       "discountPrice": false
     },
     {
@@ -869,10 +2119,10 @@
       "interfaceType": "chat",
       "provider": "Grok",
       "creditPrice": "160",
-      "creditUnit": "per 1M tokens",
+      "creditUnit": "per million tokens",
       "usdPrice": "0.80",
       "falPrice": "2.00",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/grok-4-6",
       "discountPrice": false
     },
@@ -881,10 +2131,10 @@
       "interfaceType": "chat",
       "provider": "Grok",
       "creditPrice": "480",
-      "creditUnit": "per 1M tokens",
+      "creditUnit": "per million tokens",
       "usdPrice": "2.40",
       "falPrice": "6.00",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/grok-4-6",
       "discountPrice": false
     },
@@ -893,10 +2143,10 @@
       "interfaceType": "chat",
       "provider": "Grok",
       "creditPrice": "40",
-      "creditUnit": "per 1M tokens",
+      "creditUnit": "per million tokens",
       "usdPrice": "0.20",
       "falPrice": "0.50",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/grok-4-6",
       "discountPrice": false
     },
@@ -904,11 +2154,11 @@
       "modelDescription": "bytedance/seedance-2-5, 1080p with video",
       "interfaceType": "video",
       "provider": "ByteDance",
-      "creditPrice": "68.5",
+      "creditPrice": "95",
       "creditUnit": "per second",
-      "usdPrice": "0.3425",
+      "usdPrice": "0.475",
       "falPrice": "0.6823",
-      "discountRate": 49.8,
+      "discountRate": 30.38,
       "anchor": "https://kie.ai/seedance-2-5",
       "discountPrice": false
     },
@@ -916,11 +2166,11 @@
       "modelDescription": "bytedance/seedance-2-5, 1080p no video",
       "interfaceType": "video",
       "provider": "ByteDance",
-      "creditPrice": "114",
+      "creditPrice": "158",
       "creditUnit": "per second",
-      "usdPrice": "0.570",
+      "usdPrice": "0.79",
       "falPrice": "1.1372",
-      "discountRate": 49.88,
+      "discountRate": 30.53,
       "anchor": "https://kie.ai/seedance-2-5",
       "discountPrice": false
     },
@@ -980,7 +2230,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.06",
       "falPrice": "0.075",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/qwen-image-3?model=qwen3%2Fpro-image-to-image",
       "discountPrice": false
     },
@@ -992,7 +2242,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.032",
       "falPrice": "0.04",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/qwen-image-3?model=qwen3%2Fpro-image-to-image",
       "discountPrice": false
     },
@@ -1028,7 +2278,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.06",
       "falPrice": "0.075",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/qwen-image-3?model=qwen3%2Fpro-text-to-image",
       "discountPrice": false
     },
@@ -1040,7 +2290,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.032",
       "falPrice": "0.04",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/qwen-image-3?model=qwen3%2Fpro-text-to-image",
       "discountPrice": false
     },
@@ -1052,7 +2302,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.024",
       "falPrice": "0.03",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/qwen-image-3?model=qwen3%2Fimage-to-image",
       "discountPrice": false
     },
@@ -1064,7 +2314,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.024",
       "falPrice": "0.03",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/qwen-image-3?model=qwen3%2Fimage-to-image",
       "discountPrice": false
     },
@@ -1100,7 +2350,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.024",
       "falPrice": "0.03",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/qwen-image-3?model=qwen3%2Ftext-to-image",
       "discountPrice": false
     },
@@ -1112,7 +2362,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.024",
       "falPrice": "0.03",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/qwen-image-3?model=qwen3%2Ftext-to-image",
       "discountPrice": false
     },
@@ -1125,7 +2375,7 @@
       "usdPrice": "0.04",
       "falPrice": "",
       "discountRate": 37.5,
-      "anchor": "",
+      "anchor": "https://kie.ai/minimax-h3",
       "discountPrice": false
     },
     {
@@ -1209,7 +2459,7 @@
       "usdPrice": "0.065",
       "falPrice": "",
       "discountRate": 29.81,
-      "anchor": "",
+      "anchor": "https://kie.ai/minimax-h3",
       "discountPrice": false
     },
     {
@@ -1220,8 +2470,8 @@
       "creditUnit": "per image",
       "usdPrice": "0.02",
       "falPrice": "",
-      "discountRate": 0.0,
-      "anchor": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/minimax-h3",
       "discountPrice": false
     },
     {
@@ -1232,7 +2482,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "10",
       "falPrice": "25",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/claude-opus-5",
       "discountPrice": false
     },
@@ -1244,7 +2494,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "2",
       "falPrice": "5",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/claude-opus-5",
       "discountPrice": false
     },
@@ -1253,10 +2503,10 @@
       "interfaceType": "chat",
       "provider": "Google",
       "creditPrice": "225",
-      "creditUnit": "per million",
+      "creditUnit": "per million tokens",
       "usdPrice": "1.125",
       "falPrice": "3.75",
-      "discountRate": 70.0,
+      "discountRate": 70,
       "anchor": "https://kie.ai/gemini-3-6-flash",
       "discountPrice": false
     },
@@ -1265,10 +2515,10 @@
       "interfaceType": "chat",
       "provider": "Google",
       "creditPrice": "45",
-      "creditUnit": "per million",
+      "creditUnit": "per million tokens",
       "usdPrice": "0.225",
       "falPrice": "0.75",
-      "discountRate": 70.0,
+      "discountRate": 70,
       "anchor": "https://kie.ai/gemini-3-6-flash",
       "discountPrice": false
     },
@@ -1280,8 +2530,8 @@
       "creditUnit": "per million tokens",
       "usdPrice": "14",
       "falPrice": "20",
-      "discountRate": 30.0,
-      "anchor": "",
+      "discountRate": 30,
+      "anchor": "https://kie.ai/gemini-2.5-pro-preview-tts",
       "discountPrice": false
     },
     {
@@ -1292,8 +2542,8 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.7",
       "falPrice": "1",
-      "discountRate": 30.0,
-      "anchor": "",
+      "discountRate": 30,
+      "anchor": "https://kie.ai/gemini-2.5-pro-preview-tts",
       "discountPrice": false
     },
     {
@@ -1304,8 +2554,8 @@
       "creditUnit": "per million tokens",
       "usdPrice": "14",
       "falPrice": "20",
-      "discountRate": 30.0,
-      "anchor": "",
+      "discountRate": 30,
+      "anchor": "https://kie.ai/gemini-3.1-flash-tts",
       "discountPrice": false
     },
     {
@@ -1316,8 +2566,8 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.7",
       "falPrice": "1",
-      "discountRate": 30.0,
-      "anchor": "",
+      "discountRate": 30,
+      "anchor": "https://kie.ai/gemini-3.1-flash-tts",
       "discountPrice": false
     },
     {
@@ -1328,7 +2578,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "3.36",
       "falPrice": "12",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-6?model=gpt-5-6-terra",
       "discountPrice": false
     },
@@ -1340,7 +2590,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.70",
       "falPrice": "2.5",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-6?model=gpt-5-6-terra",
       "discountPrice": false
     },
@@ -1352,7 +2602,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.056",
       "falPrice": "0.20",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-6?model=gpt-5-6-terra",
       "discountPrice": false
     },
@@ -1364,7 +2614,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.56",
       "falPrice": "2",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-6?model=gpt-5-6-terra",
       "discountPrice": false
     },
@@ -1376,7 +2626,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "8.4",
       "falPrice": "30",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-6?model=gpt-5-6-sol",
       "discountPrice": false
     },
@@ -1388,7 +2638,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "1.75",
       "falPrice": "6.25",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-6?model=gpt-5-6-sol",
       "discountPrice": false
     },
@@ -1400,7 +2650,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.14",
       "falPrice": "0.5",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-6?model=gpt-5-6-sol",
       "discountPrice": false
     },
@@ -1412,7 +2662,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "1.4",
       "falPrice": "5",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-6?model=gpt-5-6-sol",
       "discountPrice": false
     },
@@ -1424,7 +2674,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.07",
       "falPrice": "0.25",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-6?model=gpt-5-6-luna",
       "discountPrice": false
     },
@@ -1436,7 +2686,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.336",
       "falPrice": "1.2",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-6?model=gpt-5-6-luna",
       "discountPrice": false
     },
@@ -1448,7 +2698,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.0056",
       "falPrice": "0.02",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-6?model=gpt-5-6-luna",
       "discountPrice": false
     },
@@ -1460,7 +2710,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.056",
       "falPrice": "0.20",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-6?model=gpt-5-6-luna",
       "discountPrice": false
     },
@@ -1469,10 +2719,10 @@
       "interfaceType": "chat",
       "provider": "Grok",
       "creditPrice": "24",
-      "creditUnit": "",
+      "creditUnit": "per million tokens",
       "usdPrice": "0.12",
       "falPrice": "0.3",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/grok-4-5",
       "discountPrice": false
     },
@@ -1481,10 +2731,10 @@
       "interfaceType": "chat",
       "provider": "Grok",
       "creditPrice": "480",
-      "creditUnit": "",
+      "creditUnit": "per million tokens",
       "usdPrice": "2.40",
       "falPrice": "6.00",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/grok-4-5",
       "discountPrice": false
     },
@@ -1493,10 +2743,10 @@
       "interfaceType": "chat",
       "provider": "Grok",
       "creditPrice": "160",
-      "creditUnit": "",
+      "creditUnit": "per million tokens",
       "usdPrice": "0.80",
       "falPrice": "2.00",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/grok-4-5",
       "discountPrice": false
     },
@@ -1505,11 +2755,11 @@
       "interfaceType": "image",
       "provider": "ByteDance",
       "creditPrice": "14",
-      "creditUnit": "",
+      "creditUnit": "per image",
       "usdPrice": "0.07",
       "falPrice": "0.135",
       "discountRate": 48.15,
-      "anchor": "",
+      "anchor": "https://kie.ai/seedream-5-0-pro?model=seedream%2F5-pro-layer-decomposition",
       "discountPrice": false
     },
     {
@@ -1521,7 +2771,7 @@
       "usdPrice": "0.035",
       "falPrice": "0.0675",
       "discountRate": 48.15,
-      "anchor": "",
+      "anchor": "https://kie.ai/seedream-5-0-pro?model=seedream%2F5-pro-layer-decomposition",
       "discountPrice": false
     },
     {
@@ -1533,7 +2783,7 @@
       "usdPrice": "0.035",
       "falPrice": "0.0675",
       "discountRate": 48.15,
-      "anchor": "",
+      "anchor": "https://kie.ai/seedream-5-0-pro?model=seedream%2F5-pro-layer-decomposition",
       "discountPrice": false
     },
     {
@@ -1545,7 +2795,7 @@
       "usdPrice": "0.0025",
       "falPrice": "0.003",
       "discountRate": 16.67,
-      "anchor": "",
+      "anchor": "https://kie.ai/seedream-5-0-pro?model=seedream%2F5-pro-image-to-image",
       "discountPrice": false
     },
     {
@@ -1594,42 +2844,6 @@
       "falPrice": "0.045",
       "discountRate": 22.22,
       "anchor": "https://kie.ai/seedream-5-0-pro",
-      "discountPrice": false
-    },
-    {
-      "modelDescription": "grok-4-3, Chat, Cached Input",
-      "interfaceType": "chat",
-      "provider": "Grok",
-      "creditPrice": "16",
-      "creditUnit": "per million tokens",
-      "usdPrice": "0.08",
-      "falPrice": "0.20",
-      "discountRate": 60.0,
-      "anchor": "https://kie.ai/grok-4-3",
-      "discountPrice": false
-    },
-    {
-      "modelDescription": "grok-4-3, Chat, Output",
-      "interfaceType": "chat",
-      "provider": "Grok",
-      "creditPrice": "200",
-      "creditUnit": "per million tokens",
-      "usdPrice": "1",
-      "falPrice": "2.50",
-      "discountRate": 60.0,
-      "anchor": "https://kie.ai/grok-4-3",
-      "discountPrice": false
-    },
-    {
-      "modelDescription": "grok-4-3, Chat, Input",
-      "interfaceType": "chat",
-      "provider": "Grok",
-      "creditPrice": "100",
-      "creditUnit": "per million tokens",
-      "usdPrice": "0.5",
-      "falPrice": "1.25",
-      "discountRate": 60.0,
-      "anchor": "https://kie.ai/grok-4-3",
       "discountPrice": false
     },
     {
@@ -1797,7 +3011,7 @@
       "usdPrice": "0.1125",
       "falPrice": "0.14",
       "discountRate": 19.64,
-      "anchor": "",
+      "anchor": "https://kie.ai/kling-3-0-turbo",
       "discountPrice": false
     },
     {
@@ -1809,7 +3023,7 @@
       "usdPrice": "0.09",
       "falPrice": "0.112",
       "discountRate": 19.64,
-      "anchor": "",
+      "anchor": "https://kie.ai/kling-3-0-turbo",
       "discountPrice": false
     },
     {
@@ -1821,7 +3035,7 @@
       "usdPrice": "0.1125",
       "falPrice": "0.14",
       "discountRate": 19.64,
-      "anchor": "",
+      "anchor": "https://kie.ai/kling-3-0-turbo",
       "discountPrice": false
     },
     {
@@ -1833,7 +3047,7 @@
       "usdPrice": "0.09",
       "falPrice": "0.112",
       "discountRate": 19.64,
-      "anchor": "",
+      "anchor": "https://kie.ai/kling-3-0-turbo",
       "discountPrice": false
     },
     {
@@ -1844,7 +3058,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.04",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/volcengine-video-to-video-lip-sync",
       "discountPrice": false
     },
@@ -1928,7 +3142,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.0175",
       "falPrice": "0.025",
-      "discountRate": 30.0,
+      "discountRate": 30,
       "anchor": "https://kie.ai/seedance-1-5-pro",
       "discountPrice": false
     },
@@ -1952,7 +3166,7 @@
       "creditUnit": "per milion tokens",
       "usdPrice": "20",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/claude-fable-5",
       "discountPrice": false
     },
@@ -1964,12 +3178,12 @@
       "creditUnit": "per milion tokens",
       "usdPrice": "4",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/claude-fable-5",
       "discountPrice": false
     },
     {
-      "modelDescription": "grok-imagine-video-1-5-preview, image-to-video, 720p",
+      "modelDescription": "grok-imagine-video-1-5-preview, 720p",
       "interfaceType": "video",
       "provider": "Grok",
       "creditPrice": "4.5",
@@ -1981,14 +3195,14 @@
       "discountPrice": false
     },
     {
-      "modelDescription": "grok-imagine-video-1-5-preview, image-to-video, 480p",
+      "modelDescription": "grok-imagine-video-1-5-preview, 480p",
       "interfaceType": "video",
       "provider": "Grok",
       "creditPrice": "2.4",
       "creditUnit": "per second",
       "usdPrice": "0.012",
       "falPrice": "0.08",
-      "discountRate": 85.0,
+      "discountRate": 85,
       "anchor": "https://kie.ai/grok-imagine-video-1.5",
       "discountPrice": false
     },
@@ -2000,7 +3214,7 @@
       "creditUnit": "per milion tokens",
       "usdPrice": "10",
       "falPrice": "25",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/claude-opus-4.8",
       "discountPrice": false
     },
@@ -2012,7 +3226,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "2",
       "falPrice": "5",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/claude-opus-4.8",
       "discountPrice": false
     },
@@ -2021,11 +3235,11 @@
       "interfaceType": "chat",
       "provider": "Google",
       "creditPrice": "540",
-      "creditUnit": "per million",
+      "creditUnit": "per million tokens",
       "usdPrice": "2.7",
       "falPrice": "9",
-      "discountRate": 70.0,
-      "anchor": "",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gemini-3-5-flash",
       "discountPrice": false
     },
     {
@@ -2033,11 +3247,11 @@
       "interfaceType": "chat",
       "provider": "Google",
       "creditPrice": "90",
-      "creditUnit": "per million",
+      "creditUnit": "per million tokens",
       "usdPrice": "0.45",
       "falPrice": "1.5",
-      "discountRate": 70.0,
-      "anchor": "",
+      "discountRate": 70,
+      "anchor": "https://kie.ai/gemini-3-5-flash",
       "discountPrice": false
     },
     {
@@ -2048,7 +3262,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.84",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni",
       "discountPrice": false
     },
@@ -2060,7 +3274,7 @@
       "creditUnit": "per video",
       "usdPrice": "1.26",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni",
       "discountPrice": false
     },
@@ -2072,7 +3286,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.84",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni",
       "discountPrice": false
     },
@@ -2084,7 +3298,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.84",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni",
       "discountPrice": false
     },
@@ -2096,7 +3310,7 @@
       "creditUnit": "per video",
       "usdPrice": "1.05",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni",
       "discountPrice": false
     },
@@ -2108,7 +3322,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.945",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni",
       "discountPrice": false
     },
@@ -2120,7 +3334,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.735",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni",
       "discountPrice": false
     },
@@ -2132,7 +3346,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.63",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni",
       "discountPrice": false
     },
@@ -2144,7 +3358,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.525",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni",
       "discountPrice": false
     },
@@ -2156,7 +3370,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.42",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni",
       "discountPrice": false
     },
@@ -2168,7 +3382,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.315",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/gemini-omni",
       "discountPrice": false
     },
@@ -2204,7 +3418,7 @@
       "creditUnit": "per vedio",
       "usdPrice": "0.42",
       "falPrice": "0.75",
-      "discountRate": 44.0,
+      "discountRate": 44,
       "anchor": "https://kie.ai/gemini-omni",
       "discountPrice": false
     },
@@ -2216,7 +3430,7 @@
       "creditUnit": "per vedio",
       "usdPrice": "0.315",
       "falPrice": "0.5",
-      "discountRate": 37.0,
+      "discountRate": 37,
       "anchor": "https://kie.ai/gemini-omni",
       "discountPrice": false
     },
@@ -2264,7 +3478,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.14",
       "falPrice": "0.14",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/happyhorse-1-0?model=happyhorse%2Freference-to-video",
       "discountPrice": false
     },
@@ -2288,7 +3502,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.14",
       "falPrice": "0.14",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/happyhorse-1-0?model=happyhorse%2Fvideo-edit",
       "discountPrice": false
     },
@@ -2312,7 +3526,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.14",
       "falPrice": "0.14",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/happyhorse-1-0?model=happyhorse%2Fimage-to-video",
       "discountPrice": false
     },
@@ -2336,7 +3550,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.14",
       "falPrice": "0.14",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/happyhorse-1-0?model=happyhorse%2Ftext-to-video",
       "discountPrice": false
     },
@@ -2348,7 +3562,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.14",
       "falPrice": "0.5",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-5",
       "discountPrice": false
     },
@@ -2360,7 +3574,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "8.4",
       "falPrice": "30",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-5",
       "discountPrice": false
     },
@@ -2372,7 +3586,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "1.4",
       "falPrice": "5",
-      "discountRate": 72.0,
+      "discountRate": 72,
       "anchor": "https://kie.ai/gpt-5-5",
       "discountPrice": false
     },
@@ -2456,7 +3670,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.12",
       "falPrice": "0.15",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan-2-7-video?model=wan%2F2-7-videoedit",
       "discountPrice": false
     },
@@ -2468,7 +3682,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.08",
       "falPrice": "0.1",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan-2-7-video?model=wan%2F2-7-videoedit",
       "discountPrice": false
     },
@@ -2480,7 +3694,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.12",
       "falPrice": "0.15",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan-2-7-video?model=wan%2F2-7-r2v",
       "discountPrice": false
     },
@@ -2492,7 +3706,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.08",
       "falPrice": "0.1",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan-2-7-video?model=wan%2F2-7-r2v",
       "discountPrice": false
     },
@@ -2504,7 +3718,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.12",
       "falPrice": "0.15",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan-2-7-video?model=wan%2F2-7-image-to-video",
       "discountPrice": false
     },
@@ -2516,7 +3730,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.08",
       "falPrice": "0.1",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan-2-7-video?model=wan%2F2-7-image-to-video",
       "discountPrice": false
     },
@@ -2528,7 +3742,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.12",
       "falPrice": "0.15",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan-2-7-video?model=wan%2F2-7-text-to-video",
       "discountPrice": false
     },
@@ -2540,32 +3754,8 @@
       "creditUnit": "per second",
       "usdPrice": "0.08",
       "falPrice": "0.1",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan-2-7-video?model=wan%2F2-7-text-to-video",
-      "discountPrice": false
-    },
-    {
-      "modelDescription": "Gemini 3.1 Pro- openai, chat, output",
-      "interfaceType": "chat",
-      "provider": "Google",
-      "creditPrice": "700",
-      "creditUnit": "per million",
-      "usdPrice": "3.5",
-      "falPrice": "12",
-      "discountRate": 70.9,
-      "anchor": "https://kie.ai/gemini-3-1-pro",
-      "discountPrice": false
-    },
-    {
-      "modelDescription": "Gemini 3.1 Pro- openai, chat, input",
-      "interfaceType": "chat",
-      "provider": "Google",
-      "creditPrice": "100",
-      "creditUnit": "per million",
-      "usdPrice": "0.5",
-      "falPrice": "2",
-      "discountRate": 75.0,
-      "anchor": "https://kie.ai/gemini-3-1-pro",
       "discountPrice": false
     },
     {
@@ -2720,7 +3910,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.06",
       "falPrice": "0.075",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan-2-7-image?model=wan%2F2-7-image-pro",
       "discountPrice": false
     },
@@ -2732,7 +3922,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.024",
       "falPrice": "0.03",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan-2-7-image",
       "discountPrice": false
     },
@@ -2741,7 +3931,7 @@
       "interfaceType": "video",
       "provider": "Grok",
       "creditPrice": "45",
-      "creditUnit": "",
+      "creditUnit": "per video",
       "usdPrice": "0.225",
       "falPrice": "0.8",
       "discountRate": 71.88,
@@ -2753,10 +3943,10 @@
       "interfaceType": "video",
       "provider": "Grok",
       "creditPrice": "24",
-      "creditUnit": "",
+      "creditUnit": "per video",
       "usdPrice": "0.12",
       "falPrice": "0.6",
-      "discountRate": 80.0,
+      "discountRate": 80,
       "anchor": "https://kie.ai/grok-imagine?model=grok-imagine%2Fextend",
       "discountPrice": false
     },
@@ -2765,7 +3955,7 @@
       "interfaceType": "video",
       "provider": "Grok",
       "creditPrice": "27",
-      "creditUnit": "",
+      "creditUnit": "per video",
       "usdPrice": "0.135",
       "falPrice": "0.48",
       "discountRate": 71.88,
@@ -2777,10 +3967,10 @@
       "interfaceType": "video",
       "provider": "Grok",
       "creditPrice": "14.4",
-      "creditUnit": "",
+      "creditUnit": "per video",
       "usdPrice": "0.072",
       "falPrice": "0.36",
-      "discountRate": 80.0,
+      "discountRate": 80,
       "anchor": "https://kie.ai/grok-imagine?model=grok-imagine%2Fextend",
       "discountPrice": false
     },
@@ -2850,9 +4040,9 @@
       "provider": "Anthropic",
       "creditPrice": "170",
       "creditUnit": "per million tokens",
-      "usdPrice": " 0.850",
+      "usdPrice": "0.850",
       "falPrice": "3",
-      "discountRate": 71.7,
+      "discountRate": 71.67,
       "anchor": "https://kie.ai/claude-sonnet-4-6",
       "discountPrice": false
     },
@@ -2861,7 +4051,7 @@
       "interfaceType": "chat",
       "provider": "Anthropic",
       "creditPrice": "855",
-      "creditUnit": "",
+      "creditUnit": "per million toke",
       "usdPrice": "4.275",
       "falPrice": "15",
       "discountRate": 71.5,
@@ -2929,75 +4119,27 @@
       "discountPrice": false
     },
     {
-      "modelDescription": "Qwen2 - Image edit, text-to-image",
+      "modelDescription": "Qwen2, text-to-image",
       "interfaceType": "image",
       "provider": "Qwen",
       "creditPrice": "5.6",
       "creditUnit": "per image",
       "usdPrice": "0.028",
       "falPrice": "0.035",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/qwen-image-2?model=qwen2%2Ftext-to-image",
       "discountPrice": false
     },
     {
-      "modelDescription": "Qwen2 - Image edit, image-to-image",
+      "modelDescription": "Qwen2, image-to-image",
       "interfaceType": "image",
       "provider": "Qwen",
       "creditPrice": "5.6",
       "creditUnit": "per image",
       "usdPrice": "0.028",
       "falPrice": "0.035",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/qwen-image-2",
-      "discountPrice": false
-    },
-    {
-      "modelDescription": "gpt-5.4-codex, Chat, Output",
-      "interfaceType": "chat",
-      "provider": "OpenAI",
-      "creditPrice": "1120",
-      "creditUnit": "per million tokens",
-      "usdPrice": "5.60",
-      "falPrice": "15",
-      "discountRate": 62.67,
-      "anchor": "https://kie.ai/codex",
-      "discountPrice": false
-    },
-    {
-      "modelDescription": "gpt-5.4-codex, Chat, Input",
-      "interfaceType": "chat",
-      "provider": "OpenAI",
-      "creditPrice": "140",
-      "creditUnit": "per million tokens",
-      "usdPrice": "0.70",
-      "falPrice": "2.5",
-      "discountRate": 72.0,
-      "anchor": "https://kie.ai/codex",
-      "discountPrice": false
-    },
-    {
-      "modelDescription": "gpt-5.4, Chat, Output",
-      "interfaceType": "chat",
-      "provider": "OpenAI",
-      "creditPrice": "1120",
-      "creditUnit": "per million tokens",
-      "usdPrice": "5.60",
-      "falPrice": "15",
-      "discountRate": 62.67,
-      "anchor": "https://kie.ai/gpt-5-4",
-      "discountPrice": false
-    },
-    {
-      "modelDescription": "gpt-5.4, Chat, Input",
-      "interfaceType": "chat",
-      "provider": "OpenAI",
-      "creditPrice": "140",
-      "creditUnit": "per million tokens",
-      "usdPrice": "0.70",
-      "falPrice": "2.5",
-      "discountRate": 72.0,
-      "anchor": "https://kie.ai/gpt-5-4",
       "discountPrice": false
     },
     {
@@ -3032,7 +4174,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "4.0",
       "falPrice": "10",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/codex",
       "discountPrice": false
     },
@@ -3044,7 +4186,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.50",
       "falPrice": "1.25",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/codex",
       "discountPrice": false
     },
@@ -3056,7 +4198,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "5.6",
       "falPrice": "14",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/codex",
       "discountPrice": false
     },
@@ -3068,7 +4210,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.70",
       "falPrice": "1.75",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/codex",
       "discountPrice": false
     },
@@ -3080,7 +4222,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "5.6",
       "falPrice": "14",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/codex",
       "discountPrice": false
     },
@@ -3092,7 +4234,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.70",
       "falPrice": "1.75",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/codex",
       "discountPrice": false
     },
@@ -3104,7 +4246,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "4.00",
       "falPrice": "10",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/codex",
       "discountPrice": false
     },
@@ -3116,7 +4258,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.50",
       "falPrice": "1.25",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/codex",
       "discountPrice": false
     },
@@ -3140,7 +4282,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.06",
       "falPrice": "0.12",
-      "discountRate": 50.0,
+      "discountRate": 50,
       "anchor": "https://kie.ai/nano-banana-2",
       "discountPrice": false
     },
@@ -3152,7 +4294,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.04",
       "falPrice": "0.08",
-      "discountRate": 50.0,
+      "discountRate": 50,
       "anchor": "https://kie.ai/nano-banana-2",
       "discountPrice": false
     },
@@ -3176,7 +4318,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "3.5",
       "falPrice": "14",
-      "discountRate": 75.0,
+      "discountRate": 75,
       "anchor": "https://kie.ai/gpt-5-2",
       "discountPrice": false
     },
@@ -3265,14 +4407,14 @@
       "discountPrice": false
     },
     {
-      "modelDescription": "Suno, Boost Music Style Boost",
+      "modelDescription": "Suno, Boost Music Style",
       "interfaceType": "music",
       "provider": "Suno",
       "creditPrice": "0.4",
       "creditUnit": "per request",
       "usdPrice": "0.002",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fboost-music-style",
       "discountPrice": false
     },
@@ -3284,7 +4426,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.005",
       "falPrice": "0.01",
-      "discountRate": 50.0,
+      "discountRate": 50,
       "anchor": "https://kie.ai/recraft-remove-background",
       "discountPrice": false
     },
@@ -3296,7 +4438,7 @@
       "creditUnit": "per 1000 characters",
       "usdPrice": "0.07",
       "falPrice": "0.1",
-      "discountRate": 30.0,
+      "discountRate": 30,
       "anchor": "https://kie.ai/elevenlabs/text-to-dialogue-v3",
       "discountPrice": false
     },
@@ -3308,7 +4450,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.90",
       "falPrice": "3",
-      "discountRate": 70.0,
+      "discountRate": 70,
       "anchor": "https://kie.ai/gemini-3-flash",
       "discountPrice": false
     },
@@ -3320,7 +4462,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.15",
       "falPrice": "0.5",
-      "discountRate": 70.0,
+      "discountRate": 70,
       "anchor": "https://kie.ai/gemini-3-flash",
       "discountPrice": false
     },
@@ -3344,7 +4486,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "0.50",
       "falPrice": "2",
-      "discountRate": 75.0,
+      "discountRate": 75,
       "anchor": "https://kie.ai/gemini-3-pro",
       "discountPrice": false
     },
@@ -3448,11 +4590,11 @@
       "modelDescription": "wan 2.6, video-to-video, 5.0s-1080p",
       "interfaceType": "video",
       "provider": "Wan",
-      "creditPrice": "104.5",
+      "creditPrice": "105",
       "creditUnit": "per video",
-      "usdPrice": "0.5225",
+      "usdPrice": "0.525",
       "falPrice": "0.75",
-      "discountRate": 30.33,
+      "discountRate": 30,
       "anchor": "https://kie.ai/wan-2-6?model=wan%2F2-6-video-to-video",
       "discountPrice": false
     },
@@ -3460,11 +4602,11 @@
       "modelDescription": "wan 2.6, video-to-video, 10.0s-1080p",
       "interfaceType": "video",
       "provider": "Wan",
-      "creditPrice": "209.5",
+      "creditPrice": "210",
       "creditUnit": "per video",
-      "usdPrice": "1.0475",
+      "usdPrice": "1.05",
       "falPrice": "1.5",
-      "discountRate": 30.17,
+      "discountRate": 30,
       "anchor": "https://kie.ai/wan-2-6?model=wan%2F2-6-video-to-video",
       "discountPrice": false
     },
@@ -3476,7 +4618,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.7",
       "falPrice": "1.0",
-      "discountRate": 30.0,
+      "discountRate": 30,
       "anchor": "https://kie.ai/wan-2-6?model=wan%2F2-6-video-to-video",
       "discountPrice": false
     },
@@ -3484,11 +4626,11 @@
       "modelDescription": "wan 2.6, image-to-video, 10.0s-1080p",
       "interfaceType": "video",
       "provider": "Wan",
-      "creditPrice": "209.5",
+      "creditPrice": "210",
       "creditUnit": "per video",
-      "usdPrice": "1.0475",
+      "usdPrice": "1.05",
       "falPrice": "1.5",
-      "discountRate": 30.17,
+      "discountRate": 30,
       "anchor": "https://kie.ai/wan-2-6?model=wan%2F2-6-image-to-video",
       "discountPrice": false
     },
@@ -3500,7 +4642,7 @@
       "creditUnit": "per video",
       "usdPrice": "1.575",
       "falPrice": "2.25",
-      "discountRate": 30.0,
+      "discountRate": 30,
       "anchor": "https://kie.ai/wan-2-6?model=wan%2F2-6-image-to-video",
       "discountPrice": false
     },
@@ -3512,7 +4654,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.35",
       "falPrice": "0.5",
-      "discountRate": 30.0,
+      "discountRate": 30,
       "anchor": "https://kie.ai/wan-2-6?model=wan%2F2-6-video-to-video",
       "discountPrice": false
     },
@@ -3536,7 +4678,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.35",
       "falPrice": "0.5",
-      "discountRate": 30.0,
+      "discountRate": 30,
       "anchor": "https://kie.ai/wan-2-6?model=wan%2F2-6-image-to-video",
       "discountPrice": false
     },
@@ -3548,7 +4690,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.7",
       "falPrice": "1.0",
-      "discountRate": 30.0,
+      "discountRate": 30,
       "anchor": "https://kie.ai/wan-2-6?model=wan%2F2-6-image-to-video",
       "discountPrice": false
     },
@@ -3560,7 +4702,7 @@
       "creditUnit": "per video",
       "usdPrice": "1.05",
       "falPrice": "1.5",
-      "discountRate": 30.0,
+      "discountRate": 30,
       "anchor": "https://kie.ai/wan-2-6?model=wan%2F2-6-image-to-video",
       "discountPrice": false
     },
@@ -3596,7 +4738,7 @@
       "creditUnit": "per video",
       "usdPrice": "1.575",
       "falPrice": "2.25",
-      "discountRate": 30.0,
+      "discountRate": 30,
       "anchor": "https://kie.ai/wan-2-6?model=wan%2F2-6-text-to-video",
       "discountPrice": false
     },
@@ -3608,7 +4750,7 @@
       "creditUnit": "per video",
       "usdPrice": "1.05",
       "falPrice": "1.5",
-      "discountRate": 30.0,
+      "discountRate": 30,
       "anchor": "https://kie.ai/wan-2-6?model=wan%2F2-6-text-to-video",
       "discountPrice": false
     },
@@ -3620,7 +4762,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.7",
       "falPrice": "1.0",
-      "discountRate": 30.0,
+      "discountRate": 30,
       "anchor": "https://kie.ai/wan-2-6?model=wan%2F2-6-text-to-video",
       "discountPrice": false
     },
@@ -3632,7 +4774,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.35",
       "falPrice": "0.5",
-      "discountRate": 30.0,
+      "discountRate": 30,
       "anchor": "https://kie.ai/wan-2-6?model=wan%2F2-6-text-to-video",
       "discountPrice": false
     },
@@ -3644,7 +4786,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.004",
       "falPrice": "0.005",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/z-image",
       "discountPrice": false
     },
@@ -3752,7 +4894,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.09",
       "falPrice": "0.15",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/nano-banana-pro",
       "discountPrice": false
     },
@@ -3764,7 +4906,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.12",
       "falPrice": "0.3",
-      "discountRate": 60.0,
+      "discountRate": 60,
       "anchor": "https://kie.ai/nano-banana-pro",
       "discountPrice": false
     },
@@ -3776,7 +4918,7 @@
       "creditUnit": "per upscale",
       "usdPrice": "0.10",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/grok-imagine?model=grok-imagine%2Fupscale",
       "discountPrice": false
     },
@@ -3788,7 +4930,7 @@
       "creditUnit": "per upscale",
       "usdPrice": "0.15",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/grok-imagine?model=grok-imagine%2Fupscale",
       "discountPrice": false
     },
@@ -3800,7 +4942,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.04",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/grok-imagine?model=grok-imagine%2Ftext-to-video",
       "discountPrice": false
     },
@@ -3810,9 +4952,9 @@
       "provider": "Grok",
       "creditPrice": "8",
       "creditUnit": "per second",
-      "usdPrice": "0.004",
+      "usdPrice": "0.04",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/grok-imagine?model=grok-imagine%2Fimage-to-video",
       "discountPrice": false
     },
@@ -3824,7 +4966,7 @@
       "creditUnit": "per generation",
       "usdPrice": "0.025",
       "falPrice": "0.05",
-      "discountRate": 50.0,
+      "discountRate": 50,
       "anchor": "https://kie.ai/grok-imagine?model=grok-imagine%2Ftext-to-image",
       "discountPrice": false
     },
@@ -3860,7 +5002,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.012",
       "falPrice": "0.05",
-      "discountRate": 76.0,
+      "discountRate": 76,
       "anchor": "https://kie.ai/grok-imagine?model=grok-imagine%2Fimage-to-video",
       "discountPrice": false
     },
@@ -3872,7 +5014,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.012",
       "falPrice": "0.05",
-      "discountRate": 76.0,
+      "discountRate": 76,
       "anchor": "https://kie.ai/grok-imagine?model=grok-imagine%2Ftext-to-video",
       "discountPrice": false
     },
@@ -3896,19 +5038,19 @@
       "creditUnit": "per 2 images",
       "usdPrice": "0.02",
       "falPrice": "0.02",
-      "discountRate": 0.0,
-      "anchor": "https://kie.ai/grok-imagine?model=grok-imagine%2Ftext-to-video",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/grok-imagine?model=grok-imagine%2Ftext-to-image",
       "discountPrice": false
     },
     {
-      "modelDescription": "grok-imagine, upscale, 360p→720p",
+      "modelDescription": "grok-imagine, upscale, 480p→720p",
       "interfaceType": "video",
       "provider": "Grok",
       "creditPrice": "10.0",
       "creditUnit": "per upscale",
       "usdPrice": "0.05",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/grok-imagine?model=grok-imagine%2Fupscale",
       "discountPrice": false
     },
@@ -3920,7 +5062,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.45",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/hailuo-2-3?model=hailuo%2F2-3-image-to-video-pro",
       "discountPrice": false
     },
@@ -3944,7 +5086,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.225",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/hailuo-2-3?model=hailuo%2F2-3-image-to-video-pro",
       "discountPrice": false
     },
@@ -4028,7 +5170,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.9",
       "falPrice": "1.2",
-      "discountRate": 25.0,
+      "discountRate": 25,
       "anchor": "https://kie.ai/veo-3-1",
       "discountPrice": false
     },
@@ -4051,7 +5193,7 @@
       "creditPrice": "30",
       "creditUnit": "per vedio",
       "usdPrice": "0.15",
-      "falPrice": "3.2",
+      "falPrice": "",
       "discountRate": 95.31,
       "anchor": "https://kie.ai/veo-3-1?model=veo%2Fextend",
       "discountPrice": false
@@ -4060,7 +5202,7 @@
       "modelDescription": "Google veo 3.1, text-to-video, Quality-4K",
       "interfaceType": "video",
       "provider": "Google",
-      "creditPrice": "380",
+      "creditPrice": "370",
       "creditUnit": "per video",
       "usdPrice": "1.85",
       "falPrice": "4.8",
@@ -4158,9 +5300,9 @@
       "provider": "Google",
       "creditPrice": "65",
       "creditUnit": "per video",
-      "usdPrice": "0,325",
+      "usdPrice": "0.325",
       "falPrice": "1.2",
-      "discountRate": 66.1,
+      "discountRate": 72.92,
       "anchor": "https://kie.ai/veo-3-1",
       "discountPrice": false
     },
@@ -4184,7 +5326,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.30",
       "falPrice": "1.2",
-      "discountRate": 75.0,
+      "discountRate": 75,
       "anchor": "https://kie.ai/veo-3-1",
       "discountPrice": false
     },
@@ -4196,7 +5338,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.30",
       "falPrice": "1.2",
-      "discountRate": 75.0,
+      "discountRate": 75,
       "anchor": "https://kie.ai/veo-3-1",
       "discountPrice": false
     },
@@ -4208,7 +5350,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.75",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/veo-3-1",
       "discountPrice": false
     },
@@ -4220,7 +5362,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.75",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/veo-3-1",
       "discountPrice": false
     },
@@ -4255,8 +5397,8 @@
       "creditPrice": "30",
       "creditUnit": "per video",
       "usdPrice": "0.15",
-      "falPrice": "0.45",
-      "discountRate": 66.67,
+      "falPrice": "0.40",
+      "discountRate": 62.5,
       "anchor": "https://kie.ai/veo-3-1",
       "discountPrice": false
     },
@@ -4291,8 +5433,8 @@
       "creditPrice": "60",
       "creditUnit": "per video",
       "usdPrice": "0.30",
-      "falPrice": "3.5",
-      "discountRate": 91.43,
+      "falPrice": "1.05",
+      "discountRate": 71.43,
       "anchor": "https://kie.ai/veo-3-1?model=veo%2Fextend",
       "discountPrice": false
     },
@@ -4317,7 +5459,7 @@
       "usdPrice": "0.6",
       "falPrice": "",
       "discountRate": 62.5,
-      "anchor": "https://docs.kie.ai/veo3-api/get-veo-3-4k-video",
+      "anchor": "https://kie.ai/veo-3-1?model=veo%2Fget-4k-video",
       "discountPrice": false
     },
     {
@@ -4328,7 +5470,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.3",
       "falPrice": "1.2",
-      "discountRate": 75.0,
+      "discountRate": 75,
       "anchor": "https://kie.ai/veo-3-1",
       "discountPrice": false
     },
@@ -4340,7 +5482,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.03",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/4o-image-api",
       "discountPrice": false
     },
@@ -4376,7 +5518,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.42",
       "falPrice": "0.7",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/kling-2-5?model=kling%2Fv2-5-turbo-text-to-video-pro",
       "discountPrice": false
     },
@@ -4388,7 +5530,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.21",
       "falPrice": "0.35",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/kling-2-5?model=kling%2Fv2-5-turbo-image-to-video-pro",
       "discountPrice": false
     },
@@ -4400,7 +5542,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.42",
       "falPrice": "0.7",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/kling-2-5?model=kling%2Fv2-5-turbo-image-to-video-pro",
       "discountPrice": false
     },
@@ -4412,7 +5554,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.21",
       "falPrice": "0.35",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/kling-2-5?model=kling%2Fv2-5-turbo-text-to-video-pro",
       "discountPrice": false
     },
@@ -4424,7 +5566,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.6",
       "falPrice": "1.0",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/wan-2-5?model=wan%2F2-5-text-to-video",
       "discountPrice": false
     },
@@ -4472,7 +5614,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.3",
       "falPrice": "0.5",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/wan-2-5?model=wan%2F2-5-text-to-video",
       "discountPrice": false
     },
@@ -4484,7 +5626,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.6",
       "falPrice": "1.0",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/wan-2-5?model=wan%2F2-5-image-to-video",
       "discountPrice": false
     },
@@ -4508,7 +5650,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.3",
       "falPrice": "0.5",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/wan-2-5?model=wan%2F2-5-image-to-video",
       "discountPrice": false
     },
@@ -4544,7 +5686,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.03",
       "falPrice": "0.04",
-      "discountRate": 25.0,
+      "discountRate": 25,
       "anchor": "https://kie.ai/wan-animate",
       "discountPrice": false
     },
@@ -4556,7 +5698,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.2",
       "falPrice": "0.25",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan/v2-2",
       "discountPrice": false
     },
@@ -4568,7 +5710,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.4",
       "falPrice": "0.5",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan/v2-2?model=wan%2F2-2-a14b-image-to-video-turbo",
       "discountPrice": false
     },
@@ -4580,7 +5722,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.3",
       "falPrice": "0.375",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan/v2-2?model=wan%2F2-2-a14b-image-to-video-turbo",
       "discountPrice": false
     },
@@ -4592,7 +5734,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.3",
       "falPrice": "0.375",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan/v2-2?model=wan%2F2-2-a14b-text-to-video-turbo",
       "discountPrice": false
     },
@@ -4604,7 +5746,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.2",
       "falPrice": "0.25",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan/v2-2?model=wan%2F2-2-a14b-text-to-video-turbo",
       "discountPrice": false
     },
@@ -4616,7 +5758,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.4",
       "falPrice": "0.5",
-      "discountRate": 20.0,
+      "discountRate": 20,
       "anchor": "https://kie.ai/wan/v2-2?model=wan%2F2-2-a14b-text-to-video-turbo",
       "discountPrice": false
     },
@@ -4628,7 +5770,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.03",
       "falPrice": "0.04",
-      "discountRate": 25.0,
+      "discountRate": 25,
       "anchor": "https://kie.ai/wan-animate",
       "discountPrice": false
     },
@@ -4654,6 +5796,18 @@
       "falPrice": "0.08",
       "discountRate": 21.88,
       "anchor": "https://kie.ai/wan-animate",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "hailuo 02, image-to-video, Standard-6.0s-768p",
+      "interfaceType": "video",
+      "provider": "Other",
+      "creditPrice": "30",
+      "creditUnit": "per video",
+      "usdPrice": "0.15",
+      "falPrice": "0.27",
+      "discountRate": 44.44,
+      "anchor": "https://kie.ai/hailuo-api?model=hailuo%2F02-image-to-video-standard",
       "discountPrice": false
     },
     {
@@ -4760,12 +5914,12 @@
       "creditUnit": "per second",
       "usdPrice": "0.04",
       "falPrice": "0.08",
-      "discountRate": 50.0,
+      "discountRate": 50,
       "anchor": "https://kie.ai/topaz-video-upscaler",
       "discountPrice": false
     },
     {
-      "modelDescription": "Kling AI Avtar , lip sync, Standard-up to 15 secondss-720p",
+      "modelDescription": "Kling AI Avtar , lip sync, Standard-720p",
       "interfaceType": "video",
       "provider": "Kling",
       "creditPrice": "8.0",
@@ -4777,7 +5931,7 @@
       "discountPrice": false
     },
     {
-      "modelDescription": "Kling AI Avtar , lip sync, Pro-up to 15 secondss-1080p",
+      "modelDescription": "Kling AI Avtar , lip sync, Pro-1080p",
       "interfaceType": "video",
       "provider": "Kling",
       "creditPrice": "16.0",
@@ -4808,7 +5962,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.06",
       "falPrice": "0.4",
-      "discountRate": 85.0,
+      "discountRate": 85,
       "anchor": "https://kie.ai/infinitalk",
       "discountPrice": false
     },
@@ -4897,42 +6051,6 @@
       "discountPrice": false
     },
     {
-      "modelDescription": "Ideogram V3 Reframe, image to image, Quality",
-      "interfaceType": "image",
-      "provider": "Ideogram",
-      "creditPrice": "10.0",
-      "creditUnit": "per image",
-      "usdPrice": "0.05",
-      "falPrice": "0.09",
-      "discountRate": 44.44,
-      "anchor": "https://kie.ai/ideogram-reframe",
-      "discountPrice": false
-    },
-    {
-      "modelDescription": "Ideogram V3 Reframe, image to image, Balanced",
-      "interfaceType": "image",
-      "provider": "Ideogram",
-      "creditPrice": "7.0",
-      "creditUnit": "per image",
-      "usdPrice": "0.035",
-      "falPrice": "0.06",
-      "discountRate": 41.67,
-      "anchor": "https://kie.ai/ideogram-reframe",
-      "discountPrice": false
-    },
-    {
-      "modelDescription": "Ideogram V3 Reframe, image to image, Turbo",
-      "interfaceType": "image",
-      "provider": "Ideogram",
-      "creditPrice": "3.5",
-      "creditUnit": "per image",
-      "usdPrice": "0.0175",
-      "falPrice": "0.03",
-      "discountRate": 41.67,
-      "anchor": "https://kie.ai/ideogram-reframe",
-      "discountPrice": false
-    },
-    {
       "modelDescription": "Elevenlabs Text to Speech, turbo 2.5",
       "interfaceType": "music",
       "provider": "Elevenlabs",
@@ -4940,7 +6058,7 @@
       "creditUnit": "per 1000 characters",
       "usdPrice": "0.03",
       "falPrice": "0.05",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/elevenlabs-tts?model=elevenlabs%2Ftext-to-speech-turbo-2-5",
       "discountPrice": false
     },
@@ -4952,7 +6070,7 @@
       "creditUnit": "per 1000 characters",
       "usdPrice": "0.06",
       "falPrice": "0.1",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/elevenlabs-tts?model=elevenlabs%2Ftext-to-speech-multilingual-v2",
       "discountPrice": false
     },
@@ -4964,7 +6082,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.06",
       "falPrice": "0.1",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/wan-speech-to-video-turbo",
       "discountPrice": false
     },
@@ -4976,7 +6094,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.12",
       "falPrice": "0.2",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/wan-speech-to-video-turbo",
       "discountPrice": false
     },
@@ -4988,7 +6106,7 @@
       "creditUnit": "per second",
       "usdPrice": "0.09",
       "falPrice": "0.15",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/wan-speech-to-video-turbo",
       "discountPrice": false
     },
@@ -5024,7 +6142,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.02",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/google/imagen4?model=google%2Fimagen4-fast",
       "discountPrice": false
     },
@@ -5036,7 +6154,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.06",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/google/imagen4?model=google%2Fimagen4-ultra",
       "discountPrice": false
     },
@@ -5065,15 +6183,27 @@
       "discountPrice": false
     },
     {
-      "modelDescription": "Runway Aleph",
+      "modelDescription": "Runway, extend-ai-video, 1080p",
       "interfaceType": "video",
       "provider": "Runway",
-      "creditPrice": "110.0",
+      "creditPrice": "30.0",
       "creditUnit": "per video",
-      "usdPrice": "0.55",
+      "usdPrice": "0.15",
       "falPrice": "",
-      "discountRate": 0.0,
-      "anchor": "https://docs.kie.ai/runway-api/generate-aleph-video",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/runway-api?model=runway%2Fextend-ai-video",
+      "discountPrice": false
+    },
+    {
+      "modelDescription": "Runway, extend-ai-video, 720p",
+      "interfaceType": "video",
+      "provider": "Runway",
+      "creditPrice": "12.0",
+      "creditUnit": "per video",
+      "usdPrice": "0.06",
+      "falPrice": "",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/runway-api?model=runway%2Fextend-ai-video",
       "discountPrice": false
     },
     {
@@ -5084,7 +6214,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.06",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/runway-api",
       "discountPrice": false
     },
@@ -5096,7 +6226,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.15",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/runway-api",
       "discountPrice": false
     },
@@ -5108,7 +6238,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.15",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/runway-api",
       "discountPrice": false
     },
@@ -5120,7 +6250,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.06",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/runway-api",
       "discountPrice": false
     },
@@ -5132,7 +6262,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.15",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/runway-api",
       "discountPrice": false
     },
@@ -5144,7 +6274,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.15",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/runway-api",
       "discountPrice": false
     },
@@ -5156,7 +6286,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.1",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fseparate-vocals",
       "discountPrice": false
     },
@@ -5168,7 +6298,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.0025",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2FtimeStamped-lyrics",
       "discountPrice": false
     },
@@ -5180,7 +6310,7 @@
       "creditUnit": "per request",
       "usdPrice": "0",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fcover-generate",
       "discountPrice": false
     },
@@ -5192,7 +6322,7 @@
       "creditUnit": "per request ",
       "usdPrice": "0",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fgenerate-persona",
       "discountPrice": false
     },
@@ -5204,7 +6334,7 @@
       "creditUnit": "per request",
       "usdPrice": "0",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fgenerate-midi-from-audio",
       "discountPrice": false
     },
@@ -5216,7 +6346,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.0125",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fsounds",
       "discountPrice": false
     },
@@ -5228,7 +6358,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.06",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fmashup",
       "discountPrice": false
     },
@@ -5240,8 +6370,8 @@
       "creditUnit": "per request",
       "usdPrice": "0.025",
       "falPrice": "",
-      "discountRate": 0.0,
-      "anchor": "https://docs.kie.ai/suno-api/replace-section",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Freplace-section",
       "discountPrice": false
     },
     {
@@ -5252,7 +6382,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.25",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fseparate-vocals",
       "discountPrice": false
     },
@@ -5264,7 +6394,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.05",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fseparate-vocals",
       "discountPrice": false
     },
@@ -5276,7 +6406,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.002",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fconvert-to-wav-format",
       "discountPrice": false
     },
@@ -5288,8 +6418,8 @@
       "creditUnit": "per request",
       "usdPrice": "0.002",
       "falPrice": "",
-      "discountRate": 0.0,
-      "anchor": "https://docs.kie.ai/suno-api/generate-lyrics",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fgenerate-lyrics",
       "discountPrice": false
     },
     {
@@ -5300,7 +6430,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.06",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fupload-and-cover-audio",
       "discountPrice": false
     },
@@ -5312,7 +6442,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.01",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fcreate-music-video",
       "discountPrice": false
     },
@@ -5324,7 +6454,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.06",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fextend",
       "discountPrice": false
     },
@@ -5336,7 +6466,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.06",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fadd-instrumental",
       "discountPrice": false
     },
@@ -5348,7 +6478,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.06",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fgenerate",
       "discountPrice": false
     },
@@ -5360,8 +6490,8 @@
       "creditUnit": "per request",
       "usdPrice": "0.06",
       "falPrice": "",
-      "discountRate": 0.0,
-      "anchor": "https://kie.ai/suno-api",
+      "discountRate": 0,
+      "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fextend",
       "discountPrice": false
     },
     {
@@ -5372,7 +6502,7 @@
       "creditUnit": "per request",
       "usdPrice": "0.06",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/suno-api",
       "discountPrice": false
     },
@@ -5396,7 +6526,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.09",
       "falPrice": "0.15",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/ideogram/character",
       "discountPrice": false
     },
@@ -5408,7 +6538,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.12",
       "falPrice": "0.2",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/ideogram/character?model=ideogram%2Fcharacter",
       "discountPrice": false
     },
@@ -5420,7 +6550,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.09",
       "falPrice": "0.15",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/ideogram/character?model=ideogram%2Fcharacter-remix",
       "discountPrice": false
     },
@@ -5432,7 +6562,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.12",
       "falPrice": "0.2",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/ideogram/character?model=ideogram%2Fcharacter-remix",
       "discountPrice": false
     },
@@ -5444,7 +6574,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.06",
       "falPrice": "0.1",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/ideogram/character?model=ideogram%2Fcharacter",
       "discountPrice": false
     },
@@ -5456,7 +6586,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.06",
       "falPrice": "0.1",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/ideogram/character?model=ideogram%2Fcharacter-remix",
       "discountPrice": false
     },
@@ -5468,7 +6598,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.12",
       "falPrice": "0.2",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/ideogram/character?model=ideogram%2Fcharacter-edit",
       "discountPrice": false
     },
@@ -5480,7 +6610,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.06",
       "falPrice": "0.1",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/ideogram/character?model=ideogram%2Fcharacter-edit",
       "discountPrice": false
     },
@@ -5492,7 +6622,7 @@
       "creditUnit": "per image",
       "usdPrice": "0.09",
       "falPrice": "0.15",
-      "discountRate": 40.0,
+      "discountRate": 40,
       "anchor": "https://kie.ai/ideogram/character?model=ideogram%2Fcharacter-edit",
       "discountPrice": false
     },
@@ -5540,7 +6670,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.125",
       "falPrice": "0.25",
-      "discountRate": 50.0,
+      "discountRate": 50,
       "anchor": "https://kie.ai/kling/v2-1?model=kling%2Fv2-1-standard",
       "discountPrice": false
     },
@@ -5552,7 +6682,7 @@
       "creditUnit": "per video",
       "usdPrice": "0.25",
       "falPrice": "0.5",
-      "discountRate": 50.0,
+      "discountRate": 50,
       "anchor": "https://kie.ai/kling/v2-1?model=kling%2Fv2-1-standard",
       "discountPrice": false
     },
@@ -5629,18 +6759,6 @@
       "discountPrice": false
     },
     {
-      "modelDescription": "Topaz Image Upscaler, image-upscale, 8K",
-      "interfaceType": "image",
-      "provider": "Topaz",
-      "creditPrice": "40.0",
-      "creditUnit": "per image",
-      "usdPrice": "0.2",
-      "falPrice": "0.32",
-      "discountRate": 37.5,
-      "anchor": "https://kie.ai/topaz-image-upscale",
-      "discountPrice": false
-    },
-    {
       "modelDescription": "Topaz Image Upscaler, image-upscale, 4K",
       "interfaceType": "image",
       "provider": "Topaz",
@@ -5665,30 +6783,6 @@
       "discountPrice": false
     },
     {
-      "modelDescription": "Gemini 2.5 flash, Chat, Output",
-      "interfaceType": "chat",
-      "provider": "Google",
-      "creditPrice": "150",
-      "creditUnit": "per million tokens",
-      "usdPrice": "0.75",
-      "falPrice": "2.50",
-      "discountRate": 70.0,
-      "anchor": "https://kie.ai/gemini-2.5-flash",
-      "discountPrice": false
-    },
-    {
-      "modelDescription": "Gemini 2.5 flash, Chat, Input",
-      "interfaceType": "chat",
-      "provider": "Google",
-      "creditPrice": "18",
-      "creditUnit": "per million tokens",
-      "usdPrice": "0.09",
-      "falPrice": "0.30",
-      "discountRate": 70.0,
-      "anchor": "Gemini 2.5 flash",
-      "discountPrice": false
-    },
-    {
       "modelDescription": "Gemini 2.5 Pro, Chat, Output",
       "interfaceType": "chat",
       "provider": "Google",
@@ -5696,7 +6790,7 @@
       "creditUnit": "per million tokens",
       "usdPrice": "3.00",
       "falPrice": "10",
-      "discountRate": 70.0,
+      "discountRate": 70,
       "anchor": "https://kie.ai/gemini-2.5-pro",
       "discountPrice": false
     },
@@ -5792,11 +6886,9 @@
       "creditUnit": "per request",
       "usdPrice": "0.04",
       "falPrice": "",
-      "discountRate": 0.0,
+      "discountRate": 0,
       "anchor": "https://kie.ai/google/imagen4?model=google%2Fimagen4",
       "discountPrice": false
     }
-  ],
-  "source": "https://kie.ai/pricing",
-  "checkedAt": "2026-09-09"
+  ]
 }

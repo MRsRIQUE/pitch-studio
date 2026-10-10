@@ -335,7 +335,7 @@
 }
 
 /* Enquanto a capa não chega, o mascote fica no fundo do media. O deles é IP;
-   o nosso é o PitchMark. */
+   o nosso é o SaySellMark. */
 .insp-card__placeholder {
   position: absolute;
   inset: 0;

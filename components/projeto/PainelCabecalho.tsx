@@ -21,7 +21,7 @@ import {
   Sparkles,
   LayoutGrid,
 } from "@/components/icones";
-import { PitchMark } from "@/components/PitchLogo";
+import { SaySellMark } from "@/components/SaySellLogo";
 import "@/components/projeto/painel.css";
 
 export function PainelCabecalho({
@@ -66,7 +66,7 @@ export function PainelCabecalho({
             aria-label="Voltar para o Criar"
             onClick={() => router.push("/gallery?view=create")}
           >
-            <PitchMark size={32} />
+            <SaySellMark size={32} />
           </button>
           <input
             key={tituloProjeto}

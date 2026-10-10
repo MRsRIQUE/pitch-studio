@@ -19,7 +19,7 @@
 
    Quem entra na lista abaixo perde a navegação — então precisa ter um
    caminho de volta dentro da própria tela. Na página de projeto é o
-   PitchMark do cabeçalho do painel.
+   SaySellMark do cabeçalho do painel.
    ============================================================ */
 
 import * as React from "react";
@@ -47,6 +47,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
  *  `/workflow` (a lista de projetos) **não** entra: lá é painel de cards, e a
  *  referência também tem navegação nas telas de lista. */
 function semNavegacao(pathname: string): boolean {
+  if (pathname === "/entrar" || pathname.startsWith("/share/")) return true;
   if (pathname === "/projeto" || pathname.startsWith("/projeto/")) return true;
   return /^\/workflow\/[^/]+/.test(pathname);
 }

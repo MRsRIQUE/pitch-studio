@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PitchMark } from "@/components/PitchLogo";
+import { SaySellMark } from "@/components/SaySellLogo";
 import { useWorkflowStore, Toast } from "@/lib/store";
 import "./superficies.css";
 
@@ -66,7 +66,7 @@ function RichToastItem({ toast, onDismiss, onClick }: { toast: Toast; onDismiss:
 
       {/* Ícone do app */}
       <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-ms-md border border-ms-border-subtle bg-ms-bg-component">
-        <PitchMark size={32} />
+        <SaySellMark size={32} />
       </div>
 
       {/* Texto */}

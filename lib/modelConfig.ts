@@ -556,7 +556,7 @@ export interface VideoModel {
   };
 }
 
-export const VIDEO_MODELS: VideoModel[] = [
+const ALL_VIDEO_MODELS: VideoModel[] = [
   // ── Higgsfield ───────────────────────────────────────────────────────────────
   {
     id: "higgsfield-seedance-2",
@@ -1158,3 +1158,11 @@ export const VIDEO_MODELS: VideoModel[] = [
     },
   },
 ];
+
+/**
+ * Os modelos do Higgsfield (Seedance 2.0 direto e Genjutsu) não têm preço fixo
+ * publicado e ficam fora do Studio hospedado até medirmos o custo — a política
+ * de planos do saysell-web também os recusa. Saem da lista, e com isso de todos
+ * os seletores.
+ */
+export const VIDEO_MODELS: VideoModel[] = ALL_VIDEO_MODELS.filter((m) => !m.apiInput.useHiggsfield);

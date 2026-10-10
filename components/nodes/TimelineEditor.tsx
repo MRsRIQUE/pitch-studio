@@ -6,6 +6,7 @@ import { MIN_CLIP_DURATION, newTimelineClip, newTimelineText, splitTimelineClip,
 import TimelinePreview from "./TimelinePreview";
 import { useTimelinePlayback } from "./useTimelinePlayback";
 import "./timeline.css";
+import { uploadAssetFetch } from "@/lib/media/uploadAssetFetch";
 
 const TRACK_HEIGHT = 60;
 
@@ -49,7 +50,7 @@ export default function TimelineEditor({ initial, onClose, onRendered }: {
     setBusy(true); setError("");
     try {
       if (file.size > 200 * 1024 * 1024) throw new Error("Limite: 200 MB.");
-      const res = await fetch("/api/upload-asset", { method: "POST", headers: { "Content-Type": file.type }, body: file });
+      const res = await uploadAssetFetch({ method: "POST", headers: { "Content-Type": file.type }, body: file });
       const result = await res.json();
       if (!res.ok || !result.cdnUrl) throw new Error(result.error || "Falha no upload.");
       let sourceDuration = 5;

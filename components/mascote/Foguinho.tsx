@@ -28,7 +28,7 @@ export function Foguinho({ size = 180, ...resto }: PropsFoguinho) {
       directions="/mascots/foguinho-directions.webp"
       reactions="/mascots/foguinho-reactions.webp"
       size={size}
-      label="Foguinho do Pitch AI"
+      label="Foguinho do SaySell Studio"
       {...resto}
     />
   );

@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GUEST_USER_ID } from "@/lib/guestMode";
-import * as guestDb from "@/lib/guest/db";
+import { getSessionUser, unauthorized } from "@/lib/auth/currentUser";
+import { data } from "@/lib/data";
 
 const LIMIT = 20;
 
 export async function GET(req: NextRequest) {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
+  const store = await data();
   const { searchParams } = req.nextUrl;
   const mediaType = searchParams.get("type") === "video" ? "video" : "image";
   const page      = Math.max(0, Number(searchParams.get("page") ?? 0));
@@ -30,7 +33,7 @@ export async function GET(req: NextRequest) {
   };
 
   const genItems: Item[] = (!source || source === "generation")
-    ? guestDb.getGenerations(GUEST_USER_ID, mediaType).map((g) => ({
+    ? (await store.getGenerations(user.uid, mediaType)).map((g) => ({
         id:                 g.id,
         url:                (mediaType === "video" ? g.video_url : g.image_url) as string,
         imageUrls:          g.image_urls?.length ? g.image_urls : undefined,
@@ -48,7 +51,7 @@ export async function GET(req: NextRequest) {
     : [];
 
   const uploadItems: Item[] = (!source || source === "upload")
-    ? guestDb.getUploads(GUEST_USER_ID, mediaType).map((u) => ({
+    ? (await store.getUploads(user.uid, mediaType)).map((u) => ({
         id:        u.id,
         url:       u.r2_url,
         mediaType: (u.mime_type?.startsWith("video/") ? "video" : "image") as "image" | "video",
@@ -80,10 +83,13 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
   const { id, source } = await req.json() as { id: string; source: "generation" | "upload" };
   if (!id || !source) return NextResponse.json({ error: "Missing id or source" }, { status: 400 });
 
-  if (source === "generation") guestDb.deleteGeneration(id, GUEST_USER_ID);
-  else guestDb.deleteUpload(id, GUEST_USER_ID);
+  const store = await data();
+  if (source === "generation") await store.deleteGeneration(user.uid, id);
+  else await store.deleteUpload(user.uid, id);
   return NextResponse.json({ ok: true });
 }

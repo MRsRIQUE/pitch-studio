@@ -10,6 +10,7 @@ import { MediaPickerModal } from "@/components/MediaPickerModal";
 import PersonagemPickerMenu from "@/components/PersonagemPickerMenu";
 
 import { Search, X, Upload, LayoutGrid, UserRound } from "@/components/icones";
+import { uploadAssetFetch } from "@/lib/media/uploadAssetFetch";
 
 /* Um retângulo de 1×1 não é um botão: é a posição de um cursor. É assim que
    o menu do botão direito diz "o nó nasce AQUI" sem mudar a assinatura que o
@@ -130,7 +131,7 @@ export default function AddNodeMenu({ anchorRect, onClose }: AddNodeMenuProps) {
       const headers: Record<string, string> = { "Content-Type": file.type || (isVideo ? "video/mp4" : "image/jpeg") };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       try {
-        const res = await fetch("/api/upload-asset", {
+        const res = await uploadAssetFetch({
           method: "POST",
           headers,
           body: bytes,

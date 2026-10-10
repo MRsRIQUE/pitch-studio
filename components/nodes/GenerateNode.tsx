@@ -945,7 +945,7 @@ export default function GenerateNode({ id, data, selected }: NodeProps<GenerateN
             <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1.5 z-20" style={{ alignItems: "flex-start" }}>
               <div
                 className="flex items-center gap-1.5 h-7 px-3 rounded-full pointer-events-none select-none"
-                style={{ background: "rgba(0,0,0,0.58)", backdropFilter: "blur(10px)", border: isPending ? "1px solid var(--ms-grayA-3-hex)" : "1px solid rgba(134, 140, 255,0.25)", flexShrink: 0 }}
+                style={{ background: "rgba(0,0,0,0.58)", backdropFilter: "blur(10px)", border: isPending ? "1px solid var(--ms-grayA-3-hex)" : "1px solid rgba(96, 165, 250,0.25)", flexShrink: 0 }}
               >
                 {isPending ? (
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ animation: "spin 0.9s linear infinite", flexShrink: 0 }}>
@@ -954,7 +954,7 @@ export default function GenerateNode({ id, data, selected }: NodeProps<GenerateN
                   </svg>
                 ) : (
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ animation: "spin 0.9s linear infinite", flexShrink: 0 }}>
-                    <circle cx="5" cy="5" r="4" stroke="rgba(134, 140, 255,0.25)" strokeWidth="1.5" />
+                    <circle cx="5" cy="5" r="4" stroke="rgba(96, 165, 250,0.25)" strokeWidth="1.5" />
                     <path d="M5 1 A4 4 0 0 1 9 5" stroke="var(--ms-icon-brand)" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
                 )}
@@ -1466,7 +1466,7 @@ export default function GenerateNode({ id, data, selected }: NodeProps<GenerateN
             <div
               className="flex items-center shrink-0"
               onMouseDown={(e) => e.stopPropagation()}
-              style={{ height: 26, borderRadius: 8, border: "1px solid var(--ms-border)", background: "var(--ms-bg)", boxShadow: "0 2px 7px rgba(42, 31, 74, 0.1)", overflow: "hidden" }}
+              style={{ height: 26, borderRadius: 8, border: "1px solid var(--ms-border)", background: "var(--ms-bg)", boxShadow: "0 2px 7px rgba(31, 47, 74, 0.1)", overflow: "hidden" }}
             >
               <button
                 onClick={(e) => { e.stopPropagation(); setGenCount(c => Math.max(1, c - 1)); }}

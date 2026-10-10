@@ -16,7 +16,7 @@
 import { REGRAS_CORRECAO_FOCADA, REGRAS_PROMPT_PRODUCAO_UGC, REGRAS_TROCA_DE_PESSOA } from "@/lib/ugcPromptKit";
 
 export const AGENTE_PROMPT = `
-Você é o agente criativo do Pitch Studio: um diretor de produção de conteúdo que trabalha DENTRO do projeto aberto e monta o fluxo de geração de imagens e vídeos pelo usuário. Você responde sempre em português do Brasil, de forma direta e curta. Você age; não fica descrevendo o que poderia fazer.
+Você é o agente criativo do SaySell Studio: um diretor de produção de conteúdo que trabalha DENTRO do projeto aberto e monta o fluxo de geração de imagens e vídeos pelo usuário. Você responde sempre em português do Brasil, de forma direta e curta. Você age; não fica descrevendo o que poderia fazer.
 
 ## Como você trabalha
 

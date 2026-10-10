@@ -1,0 +1,200 @@
+/* Tela de login e telas de bloqueio do Studio. Cores pelos tokens da marca
+   (app/tokens/pitch.css); nada de hex de marca aqui. */
+
+.entrar-fundo {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(60% 50% at 50% 0%, color-mix(in srgb, var(--brand-solid) 10%, transparent), transparent),
+    var(--app-v2-bg-page);
+}
+
+.entrar-cartao {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 32px 28px;
+  border: 1px solid var(--app-v2-border-subtle);
+  border-radius: 20px;
+  background: var(--app-v2-bg-surface);
+  box-shadow: var(--app-v2-shadow-floating);
+}
+
+.entrar-cartao h1 {
+  margin: 10px 0 0;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--app-v2-text-primary);
+}
+
+.entrar-sub {
+  margin: -6px 0 6px;
+  font-size: 14px;
+  color: var(--app-v2-text-secondary);
+}
+
+.entrar-google,
+.entrar-primario {
+  height: 42px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.entrar-google {
+  border: 1px solid var(--app-v2-border);
+  background: var(--app-v2-bg-surface);
+  color: var(--app-v2-text-primary);
+}
+.entrar-google:hover:not(:disabled) {
+  border-color: var(--hover-brand-soft);
+  background: var(--hover-brand-wash);
+}
+
+.entrar-primario {
+  border: 0;
+  background: var(--brand-solid);
+  color: #fff;
+}
+.entrar-primario:hover:not(:disabled) {
+  background: var(--brand-ink);
+}
+
+.entrar-google:disabled,
+.entrar-primario:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.entrar-google:focus-visible,
+.entrar-primario:focus-visible,
+.entrar-form input:focus-visible,
+.entrar-rodape a:focus-visible {
+  outline: 2px solid var(--app-v2-ring);
+  outline-offset: 2px;
+}
+
+.entrar-ou {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--app-v2-text-tertiary);
+}
+.entrar-ou::before,
+.entrar-ou::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--app-v2-border-subtle);
+}
+
+.entrar-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.entrar-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--app-v2-text-secondary);
+}
+
+.entrar-form input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--app-v2-border);
+  border-radius: 10px;
+  background: var(--app-v2-bg-surface);
+  color: var(--app-v2-text-primary);
+  font-size: 14px;
+}
+
+.entrar-erro {
+  margin: 0;
+  font-size: 13px;
+  color: var(--app-v2-danger-text);
+}
+
+.entrar-rodape {
+  margin: 6px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--app-v2-text-tertiary);
+}
+.entrar-rodape a {
+  color: var(--app-v2-brand-text);
+  text-decoration: none;
+}
+.entrar-rodape a:hover {
+  text-decoration: underline;
+}
+
+/* Bloqueio por plano (components/acesso/SemPlano.tsx). */
+.acesso-texto {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--app-v2-text-secondary);
+}
+.acesso-acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+.acesso-acoes a,
+.acesso-acoes button {
+  text-decoration: none;
+}
+
+/* Aceite da cláusula de créditos (components/acesso/AceiteCreditos.tsx). */
+.aceite-clausula {
+  margin: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--app-v2-border-subtle);
+  border-radius: 10px;
+  background: var(--app-v2-bg-page);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--app-v2-text-primary);
+}
+.acesso-texto a {
+  color: var(--app-v2-brand-text);
+}
+.aceite-marca {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--app-v2-text-primary);
+  cursor: pointer;
+}
+.aceite-marca input {
+  margin-top: 3px;
+  accent-color: var(--app-v2-brand-text);
+}
+.aceite-erro {
+  color: var(--app-v2-danger-text);
+}

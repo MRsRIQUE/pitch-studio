@@ -576,7 +576,7 @@
    herda do `SidebarInset`. Daí `flex-1 min-h-0` em CSS, e não em classe do
    Tailwind: este arquivo é o dono da geometria do cromo.
 
-   A tela de workflow é escura (`#0F0F1A`, pintado pelo canvas congelado), e é
+   A tela de workflow é escura (`#07101F`, pintado pelo canvas congelado), e é
    por isso que ela leva `.pitch-night`: o `--hover-brand` vira lilás sozinho.
    ------------------------------------------------------------ */
 .cr-root--workflow {
@@ -632,7 +632,7 @@
    shell fazia como página — e nada mais:
 
      1. sai do fluxo (era `flex: 1 1 auto` numa coluna que não existe aqui);
-     2. fica transparente (o fundo é o `#0F0F1A` do canvas congelado);
+     2. fica transparente (o fundo é o `#07101F` do canvas congelado);
      3. deixa o ponteiro passar, menos onde o painel de fato está.
 
    As variáveis `--design-app-v2-*` continuam vindo de `painel.css`: são elas

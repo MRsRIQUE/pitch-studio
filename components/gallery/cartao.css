@@ -517,7 +517,7 @@
 }
 
 /* ── Leque de vídeos do estado vazio ────────────────────────
-   No escuro o aro era `#868CFF` a 75% com um halo violeta. Sobre
+   No escuro o aro era `#60A5FA` a 75% com um halo violeta. Sobre
    o `#F9F9F9` da página isso mede 2,10:1 — abaixo dos 3:1 que um
    objeto gráfico precisa. O Violeta cheio da marca mede 7,09:1.
    O halo virou a sombra do kit: no claro, brilho não separa,
@@ -527,7 +527,7 @@
   overflow: hidden;
   width: clamp(64px, min(12vw, 16vh), 172px);
   height: clamp(64px, min(12vw, 16vh), 172px);
-  border: 3px solid var(--brand-violet);
+  border: 3px solid var(--brand-solid);
   box-shadow: var(--ms-shadow-md);
 }
 
