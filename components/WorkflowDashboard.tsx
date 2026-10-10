@@ -14,7 +14,7 @@ const CSS = `
   .wsd-card {
     position: relative;
     background: var(--app-v2-bg-page);
-    border: 1px solid rgba(0,0,0,0.06);
+    border: 1px solid rgb(var(--tinta) / 0.06);
     border-radius: 18px;
     overflow: hidden;
     cursor: pointer;
@@ -24,11 +24,11 @@ const CSS = `
   }
   .wsd-card:hover {
     transform: translateY(-4px);
-    border-color: rgba(0,0,0,0.13);
+    border-color: rgb(var(--tinta) / 0.13);
     box-shadow:
       0 0 0 1px rgba(0,87,255,0.12),
-      0 16px 48px rgba(0,0,0,0.7),
-      0 4px 12px rgba(0,0,0,0.4);
+      0 16px 48px rgb(var(--tinta) / 0.7),
+      0 4px 12px rgb(var(--tinta) / 0.4);
   }
   .wsd-card:hover .wsd-actions { opacity: 1; transform: translateY(0); }
   .wsd-card:hover .wsd-thumb-overlay { opacity: 1; }
@@ -44,14 +44,14 @@ const CSS = `
     width: 30px; height: 30px; border-radius: 8px;
     display: grid; place-items: center;
     background: rgba(10,12,18,0.82);
-    color: rgba(0,0,0,0.7);
-    border: 1px solid rgba(0,0,0,0.1);
+    color: rgb(var(--tinta) / 0.7);
+    border: 1px solid rgb(var(--tinta) / 0.1);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     cursor: pointer;
     transition: all 130ms ease;
   }
-  .wsd-act:hover { color: #fff; border-color: rgba(0,0,0,0.22); background: rgba(30,34,44,0.95); }
+  .wsd-act:hover { color: #fff; border-color: rgb(var(--tinta) / 0.22); background: rgba(30,34,44,0.95); }
 
   .wsd-thumbs {
     position: relative;
@@ -81,7 +81,7 @@ const CSS = `
   .wsd-foot {
     padding: 14px 16px 16px;
     display: flex; flex-direction: column; gap: 10px;
-    border-top: 1px solid rgba(0,0,0,0.05);
+    border-top: 1px solid rgb(var(--tinta) / 0.05);
     background: linear-gradient(180deg, rgba(12,14,20,0.5) 0%, rgba(8,10,16,0.9) 100%);
   }
   .wsd-foot-row {
@@ -91,7 +91,7 @@ const CSS = `
   .wsd-new {
     position: relative;
     background: var(--app-v2-bg-page);
-    border: 1px dashed rgba(0,0,0,0.12);
+    border: 1px dashed rgb(var(--tinta) / 0.12);
     border-radius: 18px;
     overflow: hidden;
     cursor: pointer;
@@ -106,7 +106,7 @@ const CSS = `
     background: #0e1219;
     box-shadow:
       0 0 0 1px rgba(0,87,255,0.12),
-      0 16px 48px rgba(0,0,0,0.6);
+      0 16px 48px rgb(var(--tinta) / 0.6);
     transform: translateY(-4px);
   }
   .wsd-new:hover .wsd-plus-orb {
@@ -120,8 +120,8 @@ const CSS = `
   .wsd-new-art::before {
     content:""; position:absolute; inset: 0;
     background-image:
-      linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px);
+      linear-gradient(rgb(var(--tinta) / 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--tinta) / 0.025) 1px, transparent 1px);
     background-size: 20px 20px;
     mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 0%, transparent 100%);
     -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 0%, transparent 100%);
@@ -152,15 +152,15 @@ const CSS = `
     appearance: none; cursor: pointer;
     display: inline-flex; align-items: center; gap: 8px;
     padding: 9px 16px;
-    background: rgba(0,0,0,0.04);
-    border: 1px solid rgba(0,0,0,0.12);
-    color: rgba(0,0,0,0.75); font-size: 12px; font-weight: 600; border-radius: 10px;
+    background: rgb(var(--tinta) / 0.04);
+    border: 1px solid rgb(var(--tinta) / 0.12);
+    color: rgb(var(--tinta) / 0.75); font-size: 12px; font-weight: 600; border-radius: 10px;
     transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, color 140ms ease;
     white-space: nowrap; font-family: inherit; letter-spacing: 0.01em;
   }
   .wsd-import-btn:hover:not(:disabled) {
-    background: rgba(0,0,0,0.08);
-    border-color: rgba(0,0,0,0.22);
+    background: rgb(var(--tinta) / 0.08);
+    border-color: rgb(var(--tinta) / 0.22);
     color: var(--app-v2-text-primary);
     transform: translateY(-1px);
   }
@@ -186,7 +186,7 @@ const CSS = `
     background: #0e1019;
     box-shadow:
       0 0 0 1px rgba(0,87,255,0.15),
-      0 16px 48px rgba(0,0,0,0.6);
+      0 16px 48px rgb(var(--tinta) / 0.6);
     transform: translateY(-4px);
   }
   .wsd-tmpl:hover .wsd-tmpl-orb {
@@ -400,15 +400,15 @@ function CardMenu({ spaceId, onOpen, onStartRename, onDelete, onClose }: CardMen
       style={{
         display: "flex", alignItems: "center", gap: "10px", width: "100%",
         padding: "8px 12px", background: "transparent", border: "none",
-        color: disabled ? "rgba(0,0,0,0.2)" : danger ? "#ff8a8a" : "rgba(0,0,0,0.85)",
+        color: disabled ? "rgb(var(--tinta) / 0.2)" : danger ? "#ff8a8a" : "rgb(var(--tinta) / 0.85)",
         fontSize: "13px", fontWeight: 450, cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.5 : 1, fontFamily: "inherit", textAlign: "left",
         transition: "background 120ms",
       }}
-      onMouseEnter={(e) => { if (!disabled) (e.currentTarget as HTMLElement).style.background = "rgba(0,0,0,0.06)"; }}
+      onMouseEnter={(e) => { if (!disabled) (e.currentTarget as HTMLElement).style.background = "rgb(var(--tinta) / 0.06)"; }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
     >
-      <span style={{ color: disabled ? "rgba(0,0,0,0.2)" : danger ? "#ff8a8a" : "rgba(0,0,0,0.4)", flexShrink: 0 }}>
+      <span style={{ color: disabled ? "rgb(var(--tinta) / 0.2)" : danger ? "#ff8a8a" : "rgb(var(--tinta) / 0.4)", flexShrink: 0 }}>
         {icon}
       </span>
       {label}
@@ -425,7 +425,7 @@ function CardMenu({ spaceId, onOpen, onStartRename, onDelete, onClose }: CardMen
         right: 0,
         width: "186px",
         background: "var(--app-v2-bg-surface)",
-        border: "1px solid rgba(0,0,0,0.1)",
+        border: "1px solid rgb(var(--tinta) / 0.1)",
         borderRadius: "12px",
         boxShadow: "0 16px 48px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.4)",
         overflow: "hidden",
@@ -433,10 +433,10 @@ function CardMenu({ spaceId, onOpen, onStartRename, onDelete, onClose }: CardMen
       }}
     >
       {item("Open", <OpenIcon />, () => { onClose(); onOpen(); })}
-      <div style={{ height: "1px", background: "rgba(0,0,0,0.07)", margin: "0 10px" }} />
+      <div style={{ height: "1px", background: "rgb(var(--tinta) / 0.07)", margin: "0 10px" }} />
       {item("Rename", <RenameIcon />, () => { onClose(); onStartRename(); })}
       {item("Duplicate", <DuplicateIcon />, () => { duplicateSpace(spaceId); onClose(); })}
-      <div style={{ height: "1px", background: "rgba(0,0,0,0.07)", margin: "0 10px" }} />
+      <div style={{ height: "1px", background: "rgb(var(--tinta) / 0.07)", margin: "0 10px" }} />
       {item("Delete", <DeleteIcon />, () => { onClose(); onDelete(); }, true, spaces.length <= 1)}
     </div>
   );
@@ -475,7 +475,7 @@ function DeleteConfirmModal({
         onClick={(e) => e.stopPropagation()}
         style={{
           background: "var(--app-v2-bg-surface)",
-          border: "1px solid rgba(0,0,0,0.1)",
+          border: "1px solid rgb(var(--tinta) / 0.1)",
           borderRadius: "16px", padding: "24px", width: "320px",
           boxShadow: "0 24px 64px rgba(0,0,0,0.8)",
         }}
@@ -483,7 +483,7 @@ function DeleteConfirmModal({
         <p style={{ fontSize: "15px", fontWeight: 600, color: "var(--app-v2-text-primary)", margin: "0 0 8px" }}>
           Delete workflow?
         </p>
-        <p style={{ fontSize: "13px", color: "rgba(0,0,0,0.45)", margin: "0 0 24px", lineHeight: 1.5 }}>
+        <p style={{ fontSize: "13px", color: "rgb(var(--tinta) / 0.45)", margin: "0 0 24px", lineHeight: 1.5 }}>
           &ldquo;{spaceName}&rdquo; will be permanently deleted. This cannot be undone.
         </p>
         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
@@ -491,8 +491,8 @@ function DeleteConfirmModal({
             onClick={onCancel}
             style={{
               padding: "8px 16px", borderRadius: "8px",
-              border: "1px solid rgba(0,0,0,0.15)", background: "transparent",
-              color: "rgba(0,0,0,0.6)", fontSize: "13px", fontWeight: 500,
+              border: "1px solid rgb(var(--tinta) / 0.15)", background: "transparent",
+              color: "rgb(var(--tinta) / 0.6)", fontSize: "13px", fontWeight: 500,
               cursor: "pointer", fontFamily: "inherit",
             }}
           >
@@ -616,7 +616,7 @@ function SpaceCard({ space, onOpen }: { space: Space; onOpen: () => void }) {
           <span style={{
             fontFamily: "var(--font-metric)",
             fontSize: "10px", fontWeight: 500,
-            color: "rgba(0,0,0,0.28)",
+            color: "rgb(var(--tinta) / 0.28)",
             letterSpacing: "0.05em", textTransform: "uppercase",
           }}>
             {timeAgo(new Date(ts))}
@@ -656,7 +656,7 @@ function CreateCard({ onCreate }: { onCreate: () => void }) {
       </div>
       <div style={{
         padding: "14px 16px 16px",
-        borderTop: "1px solid rgba(0,0,0,0.05)",
+        borderTop: "1px solid rgb(var(--tinta) / 0.05)",
         display: "flex", flexDirection: "column", gap: "10px",
       }}>
         <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--app-v2-text-primary)", letterSpacing: "-0.015em" }}>
@@ -665,7 +665,7 @@ function CreateCard({ onCreate }: { onCreate: () => void }) {
         <div style={{
           display: "flex", alignItems: "center", gap: "6px",
           fontSize: "10px", fontWeight: 500, letterSpacing: "0.04em",
-          color: "rgba(0,0,0,0.25)", textTransform: "uppercase",
+          color: "rgb(var(--tinta) / 0.25)", textTransform: "uppercase",
         }}>
           <span>Comece do zero</span>
         </div>
@@ -805,10 +805,10 @@ export default function WorkflowDashboard() {
               marginTop: "10px",
               display: "inline-flex", alignItems: "center", gap: "8px",
               fontFamily: "var(--font-metric)",
-              fontSize: "11px", fontWeight: 500, color: "rgba(0,0,0,0.4)",
+              fontSize: "11px", fontWeight: 500, color: "rgb(var(--tinta) / 0.4)",
               letterSpacing: "0.06em", textTransform: "uppercase",
             }}>
-              <b style={{ color: "rgba(0,0,0,0.7)", fontWeight: 500 }}>{sorted.length}</b>
+              <b style={{ color: "rgb(var(--tinta) / 0.7)", fontWeight: 500 }}>{sorted.length}</b>
               <span>workspace{sorted.length !== 1 ? "s" : ""}</span>
             </div>
           </div>

@@ -12,8 +12,9 @@
 
    1. O mascote da referência são CINCO vídeos em `static.d.gtimg.com`,
       um por categoria, com alfa. É IP da Tencent, e o mapa já resolve
-      isso no bloco 08: no lugar dele vai o Foguinho, o mascote do Pitch
-      AI (`components/mascote`) — segue o mouse e reage ao clique.
+      isso no bloco 08: no lugar dele vai o orbe da SELLA, a assistente
+      do SaySell (`components/sella`) — os olhos seguem o mouse e o
+      clique dá um pulinho.
 
    2. As cinco pílulas da referência são decoração — `pointer-events:
       none` — e só trocam de rótulo ao mudar de categoria. Aqui elas SÃO
@@ -35,7 +36,7 @@
    ============================================================ */
 
 import * as React from "react";
-import { Foguinho } from "@/components/mascote/Foguinho";
+import { SellaOrb } from "@/components/sella/SellaOrb";
 import { CATEGORIAS, type CategoriaId } from "@/lib/categoriaComposer";
 import { CategoriaAbas } from "./CategoriaAbas";
 import "@/app/gallery/composer.css";
@@ -57,13 +58,23 @@ export function HeroCriar({
   valor: CategoriaId | null;
   onChange: (v: CategoriaId | null) => void;
 }) {
+  const [toques, setToques] = React.useState(0);
   return (
     <div className="pcx-heroi">
       <CategoriaAbas valor={valor} onChange={onChange} />
 
       <div className="pcx-heroi-previa">
         <div className="pcx-heroi-mascote">
-          <Foguinho size={150} className="pcx-heroi-foguinho" />
+          {/* A SELLA no lugar do antigo mascote: os olhos seguem o mouse e o
+              clique dá um pulinho. */}
+          <button
+            type="button"
+            className="pcx-heroi-sella"
+            aria-label="SELLA, a assistente do SaySell"
+            onClick={() => setToques((n) => n + 1)}
+          >
+            <SellaOrb size={108} seguirMouse reagir={toques} />
+          </button>
         </div>
 
         <div className="pcx-heroi-tags">

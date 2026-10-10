@@ -1665,19 +1665,23 @@
   pointer-events: none;
 }
 
-/* O Foguinho é um personagem, então volta a fazer o que o mascote da
-   referência fazia: passa um pouco da base e encosta no composer. Ele
-   recebe o clique (o contêiner não), e fica recuado à esquerda para a
-   cabeça não ficar embaixo das pílulas, que começam em 44,49% da caixa. */
-.pcx-heroi-foguinho {
-  margin-left: -28px;
-  margin-bottom: -14px;
+/* O orbe da SELLA fica onde estava o mascote: à esquerda, para não cair
+   embaixo das pílulas (que começam em 44,49% da caixa), apoiado na base.
+   Ele recebe o clique; o contêiner não. */
+.pcx-heroi-sella {
+  display: grid;
+  place-items: center;
+  margin: 0 0 6px 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
   pointer-events: auto;
 }
-.pcx-heroi-foguinho:focus-visible {
+.pcx-heroi-sella:focus-visible {
   outline: 2px solid var(--app-v2-brand-solid);
-  outline-offset: 2px;
-  border-radius: 24px;
+  outline-offset: 4px;
 }
 
 /* `left:-5px; top:60px; width:100%; height:100%; z-index:4` */
@@ -1689,8 +1693,8 @@
   height: 100%;
   z-index: 4;
   transition: opacity .12s ease;
-  /* A camada cobre a caixa inteira, por cima do Foguinho: só as pílulas
-     recebem o clique, o vão entre elas deixa passar para o mascote. */
+  /* A camada cobre a caixa inteira, por cima do orbe: só as pílulas
+     recebem o clique, o vão entre elas deixa passar para a SELLA. */
   pointer-events: none;
 }
 

@@ -1,0 +1,144 @@
+/* ============================================================
+   TEMA ESCURO DO STUDIO — gerado, não editar à mão as escalas
+   (fonte: scratchpad gen_dark.mjs; navy do site SaySell)
+
+   Liga com a classe `dark` no <html> (ver app/layout.tsx e
+   components/TemaToggle.tsx). Só as escalas e meia dúzia de semânticas
+   mudam; o resto do sistema deriva delas.
+   ============================================================ */
+html.dark {
+  color-scheme: dark;
+  --ms-gray-1: 220 63.64% 12.94%; /* #0c1a36 */
+  --ms-gray-2: 221.14 71.43% 9.61%; /* #07122a */
+  --ms-gray-3: 220.71 60.87% 18.04%; /* #12244a */
+  --ms-gray-4: 220.31 58.18% 21.57%; /* #172c57 */
+  --ms-gray-5: 220.27 56.59% 25.29%; /* #1c3465 */
+  --ms-gray-6: 219.47 54.29% 27.45%; /* #203a6c */
+  --ms-gray-7: 218.73 48.47% 31.96%; /* #2a4679 */
+  --ms-gray-8: 220.47 42.57% 39.61%; /* #3a5690 */
+  --ms-gray-9: 220.33 25.96% 53.92%; /* #6b7fa8 */
+  --ms-gray-10: 220 28.08% 60.2%; /* #7d90b6 */
+  --ms-gray-11: 220.5 30.3% 74.12%; /* #a9b6d1 */
+  --ms-gray-12: 220 48.39% 93.92%; /* #e8edf7 */
+  --ms-brand-1: 222.63 65.52% 11.37%; /* #0a1530 */
+  --ms-brand-2: 222.5 64.86% 14.51%; /* #0d1b3d */
+  --ms-brand-3: 221.9 66.32% 18.63%; /* #10234f */
+  --ms-brand-4: 222.08 66.96% 22.55%; /* #132a60 */
+  --ms-brand-5: 221.74 66.67% 27.06%; /* #173373 */
+  --ms-brand-6: 221.62 65.68% 33.14%; /* #1d3f8c */
+  --ms-brand-7: 221.87 62.33% 43.73%; /* #2a54b5 */
+  --ms-brand-8: 221.1 85.78% 58.63%; /* #3b74f0 */
+  --ms-brand-9: 219.53 100% 50%; /* #0057ff */
+  --ms-brand-10: 219.64 100% 56.08%; /* #1f6bff */
+  --ms-brand-11: 218.46 100% 77.06%; /* #8ab4ff */
+  --ms-brand-12: 219.51 100% 91.96%; /* #d6e4ff */
+  --ms-blue-1: 211.76 36.17% 9.22%; /* #0f1720 */
+  --ms-blue-2: 216 50% 11.76%; /* #0f1b2d */
+  --ms-blue-3: 213.91 58.97% 15.29%; /* #10243e */
+  --ms-blue-4: 214 65.22% 18.04%; /* #102a4c */
+  --ms-blue-5: 212.88 70.87% 20.2%; /* #0f3058 */
+  --ms-blue-6: 211.65 77.78% 22.94%; /* #0d3868 */
+  --ms-blue-7: 210.76 85.61% 27.25%; /* #0a4481 */
+  --ms-blue-8: 211.15 89.66% 34.12%; /* #0954a5 */
+  --ms-blue-9: 205.88 100% 50%; /* #0091ff */
+  --ms-blue-10: 208.96 100% 60.59%; /* #369eff */
+  --ms-blue-11: 209.83 100% 66.08%; /* #52a9ff */
+  --ms-blue-12: 205.71 100% 95.88%; /* #eaf6ff */
+  --ms-red-1: 350 24% 9.8%; /* #1f1315 */
+  --ms-red-2: 357.14 34.43% 11.96%; /* #291415 */
+  --ms-red-3: 356.67 42.86% 16.47%; /* #3c181a */
+  --ms-red-4: 356.09 46.94% 19.22%; /* #481a1d */
+  --ms-red-5: 355.79 51.35% 21.76%; /* #541b1f */
+  --ms-red-6: 356.71 54.89% 26.08%; /* #671e22 */
+  --ms-red-7: 356.94 60.49% 31.76%; /* #822025 */
+  --ms-red-8: 357.76 65.05% 40.39%; /* #aa2429 */
+  --ms-red-9: 358.09 75.12% 59.02%; /* #e5484d */
+  --ms-red-10: 358.09 85.79% 64.12%; /* #f2555a */
+  --ms-red-11: 357.69 100% 69.41%; /* #ff6369 */
+  --ms-red-12: 353.33 90% 96.08%; /* #feecee */
+  --ms-green-1: 145 31.58% 7.45%; /* #0d1912 */
+  --ms-green-2: 136 33.33% 8.82%; /* #0f1e13 */
+  --ms-green-3: 138.46 40.63% 12.55%; /* #132d1b */
+  --ms-green-4: 141.08 46.84% 15.49%; /* #153a22 */
+  --ms-green-5: 141.7 50.54% 18.24%; /* #174628 */
+  --ms-green-6: 142.37 53.15% 21.76%; /* #1a5530 */
+  --ms-green-7: 143.38 56.2% 26.86%; /* #1e6b3c */
+  --ms-green-8: 144.95 57.71% 34.31%; /* #258a4f */
+  --ms-green-9: 151.03 54.72% 41.57%; /* #30a46c */
+  --ms-green-10: 151.28 49.37% 46.47%; /* #3cb179 */
+  --ms-green-11: 151.26 49.79% 53.14%; /* #4cc38a */
+  --ms-green-12: 136.36 73.33% 94.12%; /* #e5fbeb */
+  --ms-yellow-1: 45 100% 5.49%; /* #1c1500 */
+  --ms-yellow-2: 45.88 100% 6.67%; /* #221a00 */
+  --ms-yellow-3: 45 100% 8.63%; /* #2c2100 */
+  --ms-yellow-4: 45.28 100% 10.39%; /* #352800 */
+  --ms-yellow-5: 46.45 100% 12.16%; /* #3e3000 */
+  --ms-yellow-6: 49.32 100% 14.31%; /* #493c00 */
+  --ms-yellow-7: 49.29 89.36% 18.43%; /* #594a05 */
+  --ms-yellow-8: 50.36 100% 21.96%; /* #705e00 */
+  --ms-yellow-9: 52.85 92.16% 50%; /* #f5d90a */
+  --ms-yellow-10: 54.11 100% 68.04%; /* #ffef5c */
+  --ms-yellow-11: 48 100% 47.06%; /* #f0c000 */
+  --ms-yellow-12: 53.48 100% 90.98%; /* #fffad1 */
+  --ms-purple-1: 286.67 18.37% 9.61%; /* #1b141d */
+  --ms-purple-2: 283.33 30% 11.76%; /* #221527 */
+  --ms-purple-3: 281.25 38.1% 16.47%; /* #301a3a */
+  --ms-purple-4: 280 41.18% 20%; /* #3a1e48 */
+  --ms-purple-5: 279.23 44.07% 23.14%; /* #432155 */
+  --ms-purple-6: 276.92 46.1% 27.65%; /* #4e2667 */
+  --ms-purple-7: 274.48 49.15% 34.71%; /* #5f2d84 */
+  --ms-purple-8: 271.97 52.14% 45.88%; /* #7938b2 */
+  --ms-purple-9: 272 51.28% 54.12%; /* #8e4ec6 */
+  --ms-purple-10: 273.28 56.94% 59.02%; /* #9d5bd2 */
+  --ms-purple-11: 275.08 79.73% 70.98%; /* #bf7af0 */
+  --ms-purple-12: 281.25 72.73% 95.69%; /* #f7ecfc */
+  --ms-grayA-1: 0 0% 100%;
+  --ms-grayA-1-hex: #ffffff03;
+  --ms-grayA-2: 0 0% 100%;
+  --ms-grayA-2-hex: #ffffff06;
+  --ms-grayA-3: 0 0% 100%;
+  --ms-grayA-3-hex: #ffffff0f;
+  --ms-grayA-4: 0 0% 100%;
+  --ms-grayA-4-hex: #ffffff17;
+  --ms-grayA-5: 0 0% 100%;
+  --ms-grayA-5-hex: #ffffff1f;
+  --ms-grayA-6: 0 0% 100%;
+  --ms-grayA-6-hex: #ffffff26;
+  --ms-grayA-7: 0 0% 100%;
+  --ms-grayA-7-hex: #ffffff31;
+  --ms-grayA-8: 0 0% 100%;
+  --ms-grayA-8-hex: #ffffff44;
+  --ms-grayA-9: 0 0% 100%;
+  --ms-grayA-9-hex: #ffffff6e;
+  --ms-grayA-10: 0 0% 100%;
+  --ms-grayA-10-hex: #ffffff80;
+  --ms-grayA-11: 0 0% 100%;
+  --ms-grayA-11-hex: #ffffffad;
+  --ms-grayA-12: 0 0% 100%;
+  --ms-grayA-12-hex: #ffffffeb;
+
+  /* "solid" é o cinza 12 (claro no escuro): o texto em cima vira navy. */
+  --ms-text-on-solid: #07122a;
+  --ms-icon-on-solid: #07122a;
+  --ms-text-on-warning: #1c1500;
+
+  /* Marca no escuro: o azul de ação reprova como texto sobre navy; link,
+     ícone e anel usam o azul claro (mesma regra da Memória). */
+  --ms-text-link: hsl(var(--ms-brand-11));
+  --ms-text-brand: hsl(var(--ms-brand-11));
+  --ms-icon-brand: hsl(var(--ms-brand-11));
+  --ms-icon-link: hsl(var(--ms-brand-11));
+  --ms-ring: hsl(var(--ms-brand-8));
+  --ms-border-brand-strong: hsl(var(--ms-brand-8));
+  --hover-brand: var(--brand-light);
+  --hover-brand-soft: #60a5fa66;
+  --hover-brand-wash: #60a5fa14;
+  --brand-ink: #8ab4ff;
+
+  --ms-input-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  --ms-input-shadow-hover: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  --ms-input-shadow-focus: inset 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 3px hsl(var(--ms-brand-9) / 0.35);
+  --ms-input-shadow-danger: inset 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 3px hsl(var(--ms-red-9) / 0.35);
+  --ms-tabs-list-shadow: inset 0 0 2px 0 rgba(0, 0, 0, 0.4);
+  --ms-tabs-trigger-active-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 3px 12px 0 rgba(0, 0, 0, 0.35);
+}

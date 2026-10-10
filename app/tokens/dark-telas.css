@@ -1,0 +1,157 @@
+/* ============================================================
+   TEMA ESCURO — telas com cor cravada
+
+   O sistema de tokens (dark.css) cobre o que passa por --ms-* e
+   --app-v2-*. Estas são as regras e variáveis locais que trazem a cor
+   escrita à mão; aqui elas ganham a versão escura sem mexer no claro.
+   ============================================================ */
+/* Tinta de texto e linha translúcida, em canais RGB: `rgb(var(--tinta) / .4)`
+   é o preto a 40% no claro e o branco a 40% no escuro. Usada onde o
+   componente escrevia `rgba(0,0,0,.4)` direto (WorkflowDashboard). */
+:root {
+  --tinta: 0 0 0;
+}
+html.dark {
+  --tinta: 255 255 255;
+}
+
+/* As variáveis locais são declaradas no escopo de cada tela, então a versão
+   escura precisa do mesmo escopo (no :root ela perderia para a local). */
+html.dark .acervo-cabecalho {
+  --acervo-filtro-borda-ativa: rgba(255, 255, 255, 0.3);
+  --acervo-filtro-fundo-ativo: rgba(255, 255, 255, 0.06);
+}
+html.dark .pb-card {
+  --pb-card-hairline: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+html.dark .insp-page {
+  --insp-composer-border: rgba(255, 255, 255, 0.08);
+  --insp-composer-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --insp-composer-bg: hsl(var(--ms-gray-3));
+}
+html.dark .chat-input-loading-bar {
+  --ciclo-placeholder-base: hsl(var(--ms-gray-3));
+  --ciclo-placeholder-realce: hsl(var(--ms-gray-4));
+  --ciclo-onda-escura: #fff;
+  --ciclo-onda-clara: hsl(var(--ms-gray-9));
+  --ciclo-calha: hsl(var(--ms-gray-5));
+  --ciclo-bolha: hsl(var(--ms-gray-3));
+}
+
+/* Galeria e menu da conta (globals.css) */
+html.dark .miora-gallery-subnav {
+  border-bottom-color: var(--app-v2-border-subtle) !important;
+}
+html.dark .miora-gallery-subnav button {
+  color: var(--app-v2-text-secondary) !important;
+}
+html.dark .miora-gallery-subnav button[aria-pressed="true"] {
+  color: var(--app-v2-text-primary) !important;
+  background: hsl(var(--ms-gray-4)) !important;
+}
+html.dark .miora-gallery-subnav svg {
+  color: var(--app-v2-text-tertiary);
+}
+html.dark .miora-gallery-subnav .gallery-zoom-slider {
+  background: hsl(var(--ms-gray-6));
+}
+html.dark .miora-gallery-subnav .gallery-zoom-slider::-webkit-slider-thumb {
+  background: hsl(var(--ms-gray-11));
+}
+html.dark .miora-empty,
+html.dark .miora-workflows {
+  color: var(--app-v2-text-primary);
+}
+html.dark .miora-prompt-placeholder {
+  color: var(--app-v2-text-tertiary) !important;
+}
+html.dark .miora-account-menu [class*="text-white"] {
+  color: var(--app-v2-text-secondary) !important;
+}
+html.dark .miora-account-menu [role="menuitem"]:hover {
+  background: var(--ms-bg-hover) !important;
+}
+
+/* Workflows */
+html.dark .miora-workflow-hero {
+  border-color: hsl(var(--ms-brand-5));
+  background: linear-gradient(120deg, hsl(var(--ms-brand-2)), hsl(var(--ms-brand-4)));
+}
+html.dark .miora-workflow-hero h2 {
+  color: var(--app-v2-text-primary);
+}
+html.dark .miora-workflow-hero p {
+  color: var(--app-v2-text-secondary);
+}
+html.dark .miora-workflow-preview > div {
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+html.dark .miora-workflows :is(.wsd-card, .wsd-new, .wsd-tmpl, .wsd-foot, .wsd-act) {
+  background: var(--app-v2-bg-surface);
+  border-color: var(--app-v2-border-subtle);
+  color: var(--app-v2-text-primary);
+}
+html.dark .miora-workflows :is(.wsd-card, .wsd-new, .wsd-tmpl):hover {
+  background: var(--app-v2-bg-surface);
+  border-color: var(--app-v2-border-strong);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+html.dark .miora-workflows :is(.wsd-thumb-cell-empty, .wsd-thumbs) {
+  background: hsl(var(--ms-gray-3));
+}
+html.dark .miora-workflows .wsd-act:hover,
+html.dark .miora-workflows .wsd-import-btn:hover:not(:disabled) {
+  color: var(--app-v2-text-primary);
+  background: hsl(var(--ms-gray-4));
+}
+
+/* Nós de produção do canvas (components/nodes/production.css) */
+html.dark .pn-node :is(textarea, select, input:not([type="checkbox"])),
+html.dark .media-studio-panel :is(select, input, textarea) {
+  background: hsl(var(--ms-gray-2)) !important;
+  border-color: hsl(var(--ms-gray-7)) !important;
+  color: var(--app-v2-text-primary) !important;
+}
+html.dark .pn-node button,
+html.dark .media-studio-panel button {
+  background: hsl(var(--ms-brand-3)) !important;
+  border-color: hsl(var(--ms-brand-6)) !important;
+  color: hsl(var(--ms-brand-11)) !important;
+}
+html.dark :is(.pn-note, .pn-empty),
+html.dark .pn-node th {
+  background: hsl(var(--ms-gray-3));
+  color: var(--app-v2-text-secondary);
+}
+html.dark .pn-node td {
+  border-bottom-color: hsl(var(--ms-gray-6));
+}
+html.dark .media-studio-panel,
+html.dark .media-studio-panel label {
+  color: var(--app-v2-text-primary) !important;
+}
+
+/* Personagens */
+html.dark .pers-hero-cta,
+html.dark .pers-art-card > div {
+  background: hsl(var(--ms-gray-3));
+  color: var(--app-v2-text-secondary);
+}
+html.dark .media-studio-panel {
+  background: var(--app-v2-bg-surface) !important;
+  border-color: var(--app-v2-border-subtle) !important;
+}
+
+html.dark .miora-workflow-preview > div {
+  background: rgba(255, 255, 255, 0.06);
+  color: hsl(var(--ms-brand-11));
+}
+
+/* Notas: o gyro injeta as cores claras inline como variável. */
+html.dark .nota-gyro--pilula {
+  background: hsl(var(--ms-gray-3));
+}
+html.dark .nota-gyro__rotulo {
+  color: var(--app-v2-text-primary);
+}

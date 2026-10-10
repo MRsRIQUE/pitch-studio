@@ -104,22 +104,17 @@
   outline-offset: 4px;
 }
 
-/* O círculo lilás; o Foguinho é maior que ele e passa por cima da borda. */
+/* O orbe da SELLA ocupa o lugar do antigo avatar do mascote. */
 .qa-pilula__avatar {
-  position: relative;
+  display: grid;
+  place-items: center;
   flex: none;
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: linear-gradient(#f2f7ff, #cbdeff);
-  box-shadow: inset 0 1px 2px #fff;
-}
-
-.qa-pilula .qa-pilula__foguinho {
-  position: absolute !important;
-  left: -10px;
-  bottom: -5px;
-  pointer-events: none;
+  /* Aro claro: sem ele o orbe azul some no azul da pílula. */
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
 }
 
 .qa-pilula__rotulo {

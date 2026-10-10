@@ -1,8 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { AvatarBot, type EstadoAvatar } from "@/components/assistente/AvatarBot";
-import { Foguinho } from "@/components/mascote/Foguinho";
+import { SellaOrb } from "@/components/sella/SellaOrb";
 import { flushSync } from "react-dom";
 import { getToken } from "@/lib/galleryUtils";
 import { CHAT_MODEL_GROUPS as MODEL_GROUPS, CHAT_MODELS as MODELS, type ModelId } from "@/lib/models";
@@ -40,7 +39,7 @@ export function QuickAssist() {
   const [model, setModel] = useState<ModelId>(preferredModel as ModelId);
   const [modelOpen, setModelOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  /* Cada abertura (clique ou ⌘K) faz o Foguinho da pílula reagir. */
+  /* Cada abertura (clique ou ⌘K) faz o orbe da SELLA na pílula dar um pulinho. */
   const [reacoes, setReacoes] = useState(0);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -197,8 +196,6 @@ export function QuickAssist() {
   const isEmpty = messages.length === 0;
   const atalho = useAtalho();
 
-  /* O avatar nao inventa estado: le o que o assistente ja sabe de si. */
-  const estadoDoAvatar: EstadoAvatar = streaming ? "thinking" : open ? "listening" : "idle";
 
   /* O corte fica aqui, depois de todos os hooks: a ordem deles não pode mudar
      entre renders, e a rota muda sem desmontar o componente. */
@@ -206,9 +203,8 @@ export function QuickAssist() {
 
   return (
     <div ref={containerRef} className="quick-assist-root">
-      {/* Pílula que abre o assistente — o botão Assistente do pacote do
-          Foguinho: violeta em degradê, o Foguinho num avatar lilás que ele
-          ultrapassa por cima, e o selo do atalho em vidro. */}
+      {/* Pílula que abre o assistente: o orbe da SELLA no círculo à
+          esquerda, o rótulo e o selo do atalho em vidro. */}
       <button
         type="button"
         onClick={() => { if (!open) setReacoes(n => n + 1); setOpen(o => !o); }}
@@ -217,7 +213,7 @@ export function QuickAssist() {
         aria-expanded={open}
       >
         <span className="qa-pilula__avatar">
-          <Foguinho decorativo size={62} deadZone={16} reagir={reacoes} className="qa-pilula__foguinho" />
+          <SellaOrb size={34} reagir={reacoes} estado={streaming ? "pensando" : "observando"} />
         </span>
         <span className="qa-pilula__rotulo">Assistente</span>
         <kbd className="qa-pilula__atalho">{atalho}</kbd>
@@ -228,7 +224,7 @@ export function QuickAssist() {
         <div className="ms-superficie-entrada-baixo fixed bottom-[76px] right-6 z-[1001] flex max-h-[600px] w-[380px] flex-col overflow-hidden rounded-ms-2xl border border-ms-border-subtle bg-ms-bg shadow-ms-lg">
           {/* Header */}
           <div className="flex shrink-0 items-center border-b border-ms-border-subtle px-4 pb-3 pt-3.5">
-            <AvatarBot estado={estadoDoAvatar} size={20} />
+            <SellaOrb size={20} estado={streaming ? "pensando" : "observando"} />
             <span className="ml-2 text-ms-lg font-semibold tracking-[-0.02em] text-ms-text">Assistente</span>
             <div className="ml-auto flex items-center gap-2">
               {!isEmpty && (

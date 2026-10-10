@@ -1,0 +1,153 @@
+/* Orbe da SELLA (components/sella/SellaOrb.tsx). Cores fixas de propósito:
+   é a identidade dela, igual nos dois temas e no site SaySell. */
+.sella-orb {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  --sella-200: #bfdbfe;
+  --sella-400: #60a5fa;
+  --sella-azul: #0057ff;
+  --sella-ciano: #32d5f4;
+  --sella-navy: #07142e;
+  animation: sella-orb-respirar 4.2s ease-in-out infinite;
+}
+.sella-orb__core {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--sella-400) 62%, var(--sella-200)) 0%,
+    color-mix(in srgb, var(--sella-400) 78%, var(--sella-200)) 48%,
+    var(--sella-azul) 80%,
+    var(--sella-ciano) 94%,
+    var(--sella-azul) 100%
+  );
+  box-shadow:
+    0 0 calc(var(--u) * 3) color-mix(in srgb, var(--sella-200) 95%, transparent),
+    0 0 calc(var(--u) * 8) color-mix(in srgb, var(--sella-azul) 70%, transparent);
+}
+.sella-orb__halo {
+  position: absolute;
+  inset: calc(var(--u) * -2);
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--sella-azul),
+    var(--sella-400),
+    var(--sella-200),
+    var(--sella-azul),
+    var(--sella-navy),
+    var(--sella-azul)
+  );
+  animation: sella-orb-girar 4s linear infinite;
+}
+.sella-orb__olhos {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: calc(var(--u) * -1);
+  transition: transform 0.35s ease-out;
+}
+.sella-orb__palpebras {
+  display: flex;
+  gap: calc(var(--u) * 2.5);
+  transition: transform 0.4s ease-in-out;
+}
+.sella-orb__palpebras i {
+  width: calc(var(--u) * 3);
+  height: calc(var(--u) * 8);
+  border-radius: calc(var(--u) * 2);
+  background: #fff;
+  animation: sella-orb-piscar 4.5s ease-in-out infinite;
+}
+.sella-orb__palpebras i + i {
+  animation-delay: 0.1s;
+}
+.sella-orb[data-estado="pensando"] .sella-orb__olhos {
+  transform: translate(calc(var(--u) * 3), calc(var(--u) * -3));
+}
+.sella-orb[data-estado="pensando"] .sella-orb__palpebras {
+  transform: scaleY(0.6);
+}
+.sella-orb__boca {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--u) * 5);
+  display: flex;
+  align-items: flex-end;
+  gap: calc(var(--u) * 1.5);
+  height: calc(var(--u) * 5);
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.sella-orb__boca i {
+  width: calc(var(--u) * 1.5);
+  height: 100%;
+  border-radius: var(--u);
+  background: #fff;
+  transform-origin: bottom center;
+  animation: sella-orb-onda 0.5s ease-in-out infinite;
+}
+.sella-orb__boca i:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.sella-orb__boca i:nth-child(3) {
+  animation-delay: 0.24s;
+}
+.sella-orb[data-estado="falando"] .sella-orb__boca {
+  opacity: 1;
+}
+.sella-orb[data-estado="falando"] .sella-orb__olhos {
+  margin-top: calc(var(--u) * -3);
+}
+
+@keyframes sella-orb-respirar {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+@keyframes sella-orb-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes sella-orb-piscar {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.08);
+  }
+}
+@keyframes sella-orb-onda {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sella-orb,
+  .sella-orb__halo,
+  .sella-orb__palpebras i,
+  .sella-orb__boca i {
+    animation: none;
+  }
+  .sella-orb__olhos,
+  .sella-orb__palpebras {
+    transition: none;
+  }
+}

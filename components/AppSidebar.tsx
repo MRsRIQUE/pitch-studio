@@ -18,7 +18,8 @@ import {
   Network,
   Clapperboard,
 } from "@/components/icones";
-import { User } from "lucide-react";
+import { Moon, Sun, User } from "lucide-react";
+import { useTema } from "@/lib/tema";
 
 import { cn } from "@/lib/utils";
 import {
@@ -182,6 +183,8 @@ export function AppSidebar() {
   }
 
   const displayName = "Workspace pessoal";
+  const { tema, alternar: alternarTema } = useTema();
+  const rotuloTema = tema === "escuro" ? "Mudar para o tema claro" : "Mudar para o tema escuro";
   const avatarSeed = "guest";
 
   const isCreationView = searchParams.get("view") === "create";
@@ -256,7 +259,18 @@ export function AppSidebar() {
         </div>
         {/* `40×40`, `border-radius:12px`, encostado em x 202–242 pelo `pr-2` do
             cabeçalho. Estava em 28×28, o que o descolava 16px da borda. */}
-        <SidebarTrigger className="group-data-[collapsible=icon]:hidden transition-colors size-10 p-0 rounded-xl [&_svg]:size-4" />
+        <div className="flex items-center group-data-[collapsible=icon]:hidden">
+          <button
+            type="button"
+            onClick={alternarTema}
+            title={rotuloTema}
+            aria-label={rotuloTema}
+            className="flex size-10 items-center justify-center rounded-xl text-ms-icon-secondary transition-colors hover:bg-ms-bg-hover hover:text-ms-text [&_svg]:size-4"
+          >
+            {tema === "escuro" ? <Sun /> : <Moon />}
+          </button>
+          <SidebarTrigger className="transition-colors size-10 p-0 rounded-xl [&_svg]:size-4" />
+        </div>
       </SidebarHeader>
 
       {/* ── Menu ──
@@ -422,6 +436,17 @@ export function AppSidebar() {
             >
               <span>Comprar créditos</span>
               <CreditIcon size={15} />
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator className="bg-popover/[0.07] !my-0 !mx-0" />
+
+            {/* Tema — também no menu para quem usa a barra recolhida. */}
+            <DropdownMenuItem
+              className="flex items-center justify-between rounded-none px-4 py-3 text-[14px] text-ms-text-secondary hover:text-ms-text focus:text-ms-text focus:bg-ms-bg-hover cursor-pointer"
+              onClick={alternarTema}
+            >
+              <span>{tema === "escuro" ? "Tema claro" : "Tema escuro"}</span>
+              {tema === "escuro" ? <Sun size={15} /> : <Moon size={15} />}
             </DropdownMenuItem>
 
             <DropdownMenuSeparator className="bg-popover/[0.07] !my-0 !mx-0" />
